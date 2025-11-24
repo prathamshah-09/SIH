@@ -235,14 +235,13 @@ const UserManagement = () => {
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 md:px-0">
       {/* Header */}
-      <div>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
         <h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text}`}>{t('userManagement')}</h2>
-        <p className={`${theme.colors.muted} mt-2 text-xs sm:text-sm md:text-base`}>{t('createManageUsersDesc')}</p>
 
-        <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="mt-4 lg:mt-0 flex flex-row gap-2 sm:gap-3">
           <Dialog open={showAddStudent} onOpenChange={setShowAddStudent}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-lg text-white text-sm w-full sm:w-auto">
+              <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-lg text-white text-sm flex-1 sm:flex-none">
                 <Plus className="w-4 h-4 mr-2" />
                 {t('addStudent')}
               </Button>
@@ -317,7 +316,7 @@ const UserManagement = () => {
 
           <Dialog open={showAddCounsellor} onOpenChange={setShowAddCounsellor}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:shadow-lg text-white text-sm w-full sm:w-auto">
+              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:shadow-lg text-white text-sm flex-1 sm:flex-none">
                 <Plus className="w-4 h-4 mr-2" />
                 {t('addCounsellor')}
               </Button>
@@ -395,8 +394,8 @@ const UserManagement = () => {
       {/* Search and Filter */}
       <Card className={`${theme.colors.card} border-0 shadow-lg`}>
         <CardContent className="p-3 sm:p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-stretch sm:items-center">
-            <div className="flex-1 relative min-w-0">
+          <div className="flex flex-row gap-2 sm:gap-4 items-stretch sm:items-center">
+            <div className="flex-[7] relative min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="text"
@@ -409,7 +408,7 @@ const UserManagement = () => {
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className={`px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.colors.card} w-full sm:w-auto`}
+              className={`flex-[3] px-1 py-0 border rounded text-[10px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.colors.card}`}
             >
               <option value="all">{t('allUsers')}</option>
               <option value="student">{t('studentLabel')}</option>
@@ -520,11 +519,16 @@ const UserManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user) => (
+                  {filteredUsers.map((user) => {
+                    const isStudent = user.role === 'student';
+                    const avatarGradient = isStudent 
+                      ? 'bg-gradient-to-br from-blue-500 to-cyan-500' 
+                      : 'bg-gradient-to-br from-purple-500 to-pink-500';
+                    return (
                     <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" onClick={() => handleOpenEdit(user)}>
                       <td className="px-3 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs sm:text-sm font-semibold flex-shrink-0">
+                          <div className={`w-8 sm:w-10 h-8 sm:h-10 rounded-full ${avatarGradient} flex items-center justify-center text-white text-xs sm:text-sm font-semibold flex-shrink-0`}>
                             {user.name.charAt(0)}
                           </div>
                           <div className="min-w-0">
@@ -536,7 +540,8 @@ const UserManagement = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -545,35 +550,35 @@ const UserManagement = () => {
       </Card>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
         <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
-          <CardContent className="p-4 sm:p-5 md:p-6">
+          <CardContent className="p-3 sm:p-5 md:p-6">
             <div className="flex items-start">
               <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Users</p>
-                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.length}</p>
+                <p className={`${theme.colors.muted} text-xs font-medium`}>Users</p>
+                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
-          <CardContent className="p-4 sm:p-5 md:p-6">
+          <CardContent className="p-3 sm:p-5 md:p-6">
             <div className="flex items-start">
               <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Students</p>
-                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.filter(u => u.role === 'student').length}</p>
+                <p className={`${theme.colors.muted} text-xs font-medium`}>Students</p>
+                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.filter(u => u.role === 'student').length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow sm:col-span-2 md:col-span-1`}>
-          <CardContent className="p-4 sm:p-5 md:p-6">
+        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
+          <CardContent className="p-3 sm:p-5 md:p-6">
             <div className="flex items-start">
               <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Counsellors</p>
-                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.filter(u => u.role === 'counsellor').length}</p>
+                <p className={`${theme.colors.muted} text-xs font-medium`}>Counsellors</p>
+                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.filter(u => u.role === 'counsellor').length}</p>
               </div>
             </div>
           </CardContent>

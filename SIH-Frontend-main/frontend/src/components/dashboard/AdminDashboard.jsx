@@ -21,7 +21,8 @@ import {
   Sparkles,
   ChevronDown,
   Plus,
-  Mic
+  Mic,
+  Trash2
 } from 'lucide-react';
 
 import DashboardLayout from '@components/layout/DashboardLayout';
@@ -342,13 +343,12 @@ const AdminDashboard = () => {
             {t('adminDashboard')} 
             <Crown className="w-8 h-8 ml-3 text-yellow-500 animate-pulse" />
           </h2>
-          <p className={`${theme.colors.muted} mt-2 text-lg`}>{t('systemOverview')}</p>
         </div>
         <div />
       </div>
 
-      {/* Enhanced System Metrics (2x2) */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-6">
+      {/* Enhanced System Metrics (4 in laptop, 2x2 in mobile/tablet) */}
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
         {[
           { 
             key: 'totalUsers', 
@@ -388,13 +388,7 @@ const AdminDashboard = () => {
           }
         ].map(({ key, value, icon: Icon, color, bgColor, change, changeColor }) => (
           <Card key={key} className={`bg-gradient-to-r ${bgColor} border-0 hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group`}>
-            <CardContent className="p-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-4 bg-gradient-to-r ${color} rounded-full shadow-lg group-hover:scale-110 transition-transform`}>
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-                <Target className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-              </div>
+            <CardContent className="p-4 md:p-6 lg:p-8">
               <div>
                 <p className={`text-sm font-semibold ${theme.colors.muted} mb-2`}>{t(key)}</p>
                 <p className="text-3xl font-bold text-gray-800 group-hover:scale-105 transition-transform">{value}</p>
@@ -451,48 +445,49 @@ const AdminDashboard = () => {
   const renderChatbot = () => (
     <Card className={`h-[700px] flex flex-col ${theme.colors.card} border-0 shadow-2xl`}>
       <CardHeader>
-        <div className="flex flex-col md:flex-row items-start justify-between w-full">
-          <div>
-            <CardTitle className={`flex items-center ${theme.colors.text}`}>
+        <div className="w-full">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center">
               <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
-              {t('aiCompanionTitle')}
+              <CardTitle className={`${theme.colors.text} mb-0`}>{t('aiCompanion')}</CardTitle>
               <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
-            </CardTitle>
-            <CardDescription className={theme.colors.muted}>
-              {t('aiCompanionDesc')}
-            </CardDescription>
-          </div>
+            </div>
 
-          <div className="flex items-center space-x-2 mt-3 md:mt-0 md:self-end">
-            <Button size="sm" variant="outline" onClick={handleNewAdminChat} className="text-xs">
-              <Plus className="w-4 h-4 mr-2" />
-              {t('newChat') || 'New Chat'}
-            </Button>
+            <div className="flex items-center space-x-2">
+              <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewAdminChat} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Plus className="w-5 h-5" />
+              </button>
 
-            <div className="relative">
-              <Button size="sm" variant="outline" onClick={() => setShowHistoryPanel(!showHistoryPanel)} className="text-xs">
-                <ChevronDown className="w-4 h-4 mr-2" />
-                {t('showHistory') || 'Show History'}
-              </Button>
+              <div className="relative">
+                <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowHistoryPanel(s => !s)} className="p-2 rounded-md border hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <ChevronDown className="w-5 h-5" />
+                </button>
 
-              {showHistoryPanel && (
-                <div className="absolute right-0 mt-2 w-80 max-h-72 overflow-auto bg-white dark:bg-gray-800 border rounded-lg shadow-lg z-20 p-2">
-                  {chatHistory.length === 0 ? (
-                    <p className="text-sm text-gray-500 p-2">No saved chats</p>
-                  ) : (
-                    chatHistory.map((entry) => (
-                      <div key={entry.id} className="flex items-center justify-between px-2 py-1 hover:bg-gray-50 rounded">
-                        <button className="text-sm text-left truncate flex-1" onClick={() => handleLoadHistory(entry)}>
-                          <div className="font-medium truncate">{entry.title}</div>
-                        </button>
-                        <button className="text-red-500 text-xs ml-2" onClick={() => handleDeleteHistory(entry.id)}>{t('delete') || 'Delete'}</button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
+                {showHistoryPanel && (
+                  <div className="absolute right-0 mt-2 w-80 max-h-72 overflow-auto bg-white dark:bg-gray-800 border rounded-md p-2 z-40">
+                    {chatHistory.length === 0 ? (
+                      <div className="p-2 text-sm text-gray-500">{t('noConversationsFound') || 'No conversations found'}</div>
+                    ) : (
+                      chatHistory.map(h => (
+                        <div key={h.id} className="flex items-center justify-between p-1 rounded">
+                          <button onClick={() => handleLoadHistory(h)} className="flex-1 text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <div className="text-sm font-medium truncate" title={h.title}>{h.title}</div>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteHistory(h.id); }} aria-label="Delete history" className="ml-2 p-1 rounded hover:bg-red-50 text-red-600">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          <CardDescription className={theme.colors.muted}>
+            {t('aiCompanionDesc')}
+          </CardDescription>
         </div>
       </CardHeader>
 
@@ -679,13 +674,6 @@ const AdminDashboard = () => {
                   {t('announcements')} Hub
                   <Crown className="w-8 h-8 ml-3 text-yellow-500 animate-pulse" />
                 </h2>
-                <p className={`${theme.colors.muted} mt-2 text-lg`}>
-                  Create announcements and track student wellness with ease
-                </p>
-                <div className="flex items-center mt-2">
-                  <Badge className="bg-blue-100 text-blue-800 mr-2">📢 Mindease Integration</Badge>
-                  <Badge className="bg-green-100 text-green-800">✨ Enhanced Features</Badge>
-                </div>
               </div>
             </div>
 
