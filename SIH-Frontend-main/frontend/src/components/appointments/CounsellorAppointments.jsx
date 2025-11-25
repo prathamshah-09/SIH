@@ -165,6 +165,20 @@ const CounsellorAppointments = () => {
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState(new Date());
     const [newTimeSlot, setNewTimeSlot] = useState('');
+    const [expanded, setExpanded] = useState({});
+    const [newActionText, setNewActionText] = useState({});
+
+    const toggleExpanded = (id) => {
+        setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const handleAddActionItem = (appointmentId) => {
+        const text = (newActionText[appointmentId] || '').trim();
+        if (!text) return;
+        const newItem = { id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), text, completed: false };
+        setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, actionItems: [...(a.actionItems || []), newItem] } : a));
+        setNewActionText(prev => ({ ...prev, [appointmentId]: '' }));
+    };
     
     useEffect(() => {
         const interval = setInterval(() => {
@@ -391,26 +405,53 @@ const CounsellorAppointments = () => {
                             <div className="space-y-6">
                                 {pendingRequests.length > 0 ? pendingRequests.map(app => (
                                     <Card key={app.id} className={`${theme.colors.card} shadow-lg border-0 hover:shadow-xl transition-shadow border-l-4 border-l-orange-400`}>
-                                        <CardContent className="p-6">
+                                        <CardContent
+                                            className="p-2 sm:p-5"
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-expanded={!!expanded[app.id]}
+                                            onClick={(e) => { if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) return; toggleExpanded(app.id); }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleExpanded(app.id); }}
+                                        >
                                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4">
                                                 <div className="flex-1">
-                                                    <div className="flex items-center space-x-3 mb-2">
-                                                        <h3 className={`font-bold text-xl ${theme.colors.text}`}>
-                                                            {app.studentName}
-                                                        </h3>
-                                                        <Badge className="bg-orange-100 text-orange-700 px-3 py-1">
-                                                            {t('pending')}
-                                                        </Badge>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center space-x-3">
+                                                            <div className="text-left sm:text-left">
+                                                                <h3 className={`font-bold text-sm sm:text-lg ${theme.colors.text}`}>{app.studentName}</h3>
+                                                            </div>
+                                                            <Badge className="bg-orange-100 text-orange-700 px-3 py-1">
+                                                                {t('pending')}
+                                                            </Badge>
+                                                        </div>
+                                                        {/* Actions moved into collapsible area so dropdown controls visibility on all sizes */}
                                                     </div>
-                                                    <p className={`${theme.colors.muted} font-semibold`}>
-                                                        {t('requestedLabel')} {app.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} {t('fromLabel')} {app.time}
-                                                    </p>
-                                                    <p className={`text-sm ${theme.colors.muted}`}>
-                                                        {t('requestSubmitted')} {app.requestedDate.toLocaleDateString()}
-                                                    </p>
+
+                                                        {/* Details: shown on sm+ or when expanded on mobile (animated on mobile) */}
+                                                            <div className={`${expanded[app.id] ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden transition-all duration-300`}>
+                                                        <p className={`${theme.colors.muted} text-sm sm:font-semibold`}>
+                                                            {t('requestedLabel')} {app.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} {t('fromLabel')} {app.time}
+                                                        </p>
+                                                        <p className={`text-sm ${theme.colors.muted}`}>
+                                                            {t('requestSubmitted')} {app.requestedDate.toLocaleDateString()}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                
-                                                <div className="flex space-x-3 mt-4 lg:mt-0">
+
+                                                {/* chevron removed; name toggles details on mobile */}
+                                            </div>
+
+                                            {/* Details and actions duplicated for mobile inside collapsible area (desktop already shows above) */}
+                                            <div className={`${expanded[app.id] ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden transition-all duration-300`}>
+                                                <div>
+                                                    <h4 className={`font-semibold ${theme.colors.text} mb-2`}>{t('studentsNotes')}</h4>
+                                                    <div className={`p-4 bg-gradient-to-r ${theme.colors.secondary} rounded-lg border`}>
+                                                        <p className={`${theme.colors.text}`}>{app.preSessionNotes || t('noNotesProvided')}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Actions shown in collapsible area for all sizes */}
+                                                <div className="mt-3 flex space-x-3">
                                                     <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'accept')}
                                                         className="bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white"
@@ -435,13 +476,6 @@ const CounsellorAppointments = () => {
                                                         <XIcon className="w-4 h-4 mr-2" />
                                                         {t('decline')}
                                                     </Button>
-                                                </div>
-                                            </div>
-                                            
-                                            <div>
-                                                <h4 className={`font-semibold ${theme.colors.text} mb-2`}>{t('studentsNotes')}</h4>
-                                                <div className={`p-4 bg-gradient-to-r ${theme.colors.secondary} rounded-lg border`}>
-                                                    <p className={`${theme.colors.text}`}>{app.preSessionNotes || t('noNotesProvided')}</p>
                                                 </div>
                                             </div>
                                         </CardContent>
@@ -470,22 +504,35 @@ const CounsellorAppointments = () => {
                                 <div className="space-y-6">
                                 {upcomingAppointments.length > 0 ? upcomingAppointments.map(app => (
                                     <Card key={app.id} className={`${theme.colors.card} shadow-lg border-0 hover:shadow-xl transition-shadow border-l-4 border-l-cyan-400`}>
-                                        <CardContent className="p-6">
+                                        <CardContent
+                                            className="p-2 sm:p-5"
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-expanded={!!expanded[app.id]}
+                                            onClick={(e) => { if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) return; toggleExpanded(app.id); }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleExpanded(app.id); }}
+                                        >
                                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                                                 <div>
-                                                    <h3 className={`font-bold text-xl ${theme.colors.text} mb-1`}>
-                                                        {app.studentName}
-                                                    </h3>
-                                                    <p className={`font-bold text-lg ${theme.colors.text}`}>
-                                                        {app.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                                                    </p>
-                                                    <p className={`${theme.colors.muted} font-semibold`}>{app.time}</p>
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <div className="text-left">
+                                                                <h3 className={`font-bold text-sm sm:text-lg ${theme.colors.text} mb-1`}>{app.studentName}</h3>
+                                                            </div>
+                                                            <p className={`font-semibold text-xs sm:text-sm ${theme.colors.text}`}>
+                                                                {app.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                                            </p>
+                                                            <p className={`${theme.colors.muted} text-xs`}>{app.time}</p>
+                                                        </div>
+                                                        {/* chevron removed; name toggles details on mobile */}
+                                                    </div>
                                                 </div>
-                                                <Badge className="bg-cyan-100 text-cyan-700 px-3 py-1 mt-2 sm:mt-0">
+                                                <Badge className="hidden sm:inline-flex bg-cyan-100 text-cyan-700 px-3 py-1 mt-2 sm:mt-0">
                                                     {t('studentIdLabel')} {app.studentId}
                                                 </Badge>
                                             </div>
-                                            <div>
+
+                                            <div className={`${expanded[app.id] ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden transition-all duration-300`}>
                                                 <h4 className={`font-semibold ${theme.colors.text}`}>{t('studentsPreSessionNotes')}</h4>
                                                 <div className={`mt-2 p-4 bg-gradient-to-r ${theme.colors.secondary} rounded-lg border`}>
                                                     <p className={`${theme.colors.text}`}>{app.preSessionNotes || t('noNotesProvided')}</p>
@@ -508,62 +555,77 @@ const CounsellorAppointments = () => {
                                 <div className="space-y-8">
                                 {pastAppointments.length > 0 ? pastAppointments.map(app => (
                                     <Card key={app.id} className={`${theme.colors.card} shadow-lg border-0 border-l-4 border-l-green-400`}>
-                                        <CardContent className="p-6">
+                                        <CardContent
+                                            className="p-2 sm:p-5"
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-expanded={!!expanded[app.id]}
+                                            onClick={(e) => { if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) return; toggleExpanded(app.id); }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleExpanded(app.id); }}
+                                        >
                                             <div className="flex justify-between items-start mb-6">
-                                                <div>
-                                                    <h3 className={`font-bold text-lg ${theme.colors.text} mb-1`}>
-                                                        Session with {app.studentName}
-                                                    </h3>
-                                                    <p className={`font-bold text-lg ${theme.colors.text}`}>
-                                                        {app.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
-                                                    </p>
-                                                    <Badge className="bg-cyan-100 text-cyan-700 text-sm mt-1">
-                                                        {t('studentIdLabel')} {app.studentId}
-                                                    </Badge>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <div className="text-left">
+                                                                <h3 className={`font-bold text-xs sm:text-sm ${theme.colors.text} mb-1`}>Session with {app.studentName}</h3>
+                                                            </div>
+                                                            <p className={`font-semibold text-xs sm:text-sm ${theme.colors.text}`}>
+                                                                {app.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                                                            </p>
+                                                            <div className="mt-1">
+                                                                <Badge className="hidden sm:inline-flex bg-cyan-100 text-cyan-700 text-sm">
+                                                                    {t('studentIdLabel')} {app.studentId}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+                                                        {/* chevron removed; name toggles details on mobile */}
+                                                    </div>
                                                 </div>
                                                 <Badge className="bg-green-100 text-green-800">Completed</Badge>
                                             </div>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                <div>
-                                                    <label className={`font-semibold ${theme.colors.text}`}>{t('yourSessionNotesLabel')}</label>
-                                                    <textarea 
-                                                        rows="6" 
-                                                        placeholder={t('yourSessionNotesPlaceholder')} 
-                                                        value={app.postSessionNotes} 
-                                                        onChange={(e) => updateAppointmentDetails(app.id, {postSessionNotes: e.target.value})} 
-                                                        className={`mt-2 w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
-                                                    />
-                                                </div>
-                                                
-                                                <div>
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <h4 className={`font-semibold ${theme.colors.text}`}>{t('suggestedActionPlan')}</h4>
-                                                        <Button 
-                                                            onClick={() => handleGenerateActionPlan(app.id)} 
-                                                            disabled={isGeneratingPlan[app.id] || !app.postSessionNotes} 
-                                                            size="sm"
-                                                            className="bg-cyan-100 text-cyan-700 hover:bg-cyan-200 disabled:opacity-50"
-                                                        >
-                                                            {isGeneratingPlan[app.id] ? (
-                                                                <div className="animate-spin w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full mr-2"></div>
-                                                            ) : (
-                                                                <SparklesIcon className="w-4 h-4 mr-1.5" />
-                                                            )}
-                                                            {isGeneratingPlan[app.id] ? t('generating') : t('generatePlan')}
-                                                        </Button>
+
+                                            <div className={`${expanded[app.id] ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden transition-all duration-300`}> 
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                    <div>
+                                                        <label className={`font-semibold ${theme.colors.text}`}>{t('yourSessionNotesLabel')}</label>
+                                                        <textarea 
+                                                            rows="6" 
+                                                            placeholder={t('yourSessionNotesPlaceholder')} 
+                                                            value={app.postSessionNotes} 
+                                                            onChange={(e) => updateAppointmentDetails(app.id, {postSessionNotes: e.target.value})} 
+                                                            className={`mt-2 w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
+                                                        />
                                                     </div>
-                                                    <div className={`space-y-2 p-3 bg-gradient-to-r ${theme.colors.secondary} rounded-lg border h-40 overflow-y-auto`}>
-                                                        {app.actionItems.length > 0 ? app.actionItems.map(item => (
-                                                            <div key={item.id} className="flex items-center">
-                                                                <span className="text-cyan-500 mr-2">•</span>
-                                                                <p className={`${theme.colors.text} text-sm`}>{item.text}</p>
-                                                            </div>
-                                                        )) : (
-                                                            <p className={`${theme.colors.muted} text-sm text-center pt-12`}>
-                                                                {t('noActionItemsYet')}
-                                                            </p>
-                                                        )}
+                                                    
+                                                    <div>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <h4 className={`font-semibold ${theme.colors.text}`}>{t('suggestedActionPlan')}</h4>
+                                                        </div>
+                                                        <div className={`space-y-2 p-3 bg-gradient-to-r ${theme.colors.secondary} rounded-lg border h-40 overflow-y-auto`}>
+                                                            {app.actionItems.length > 0 ? app.actionItems.map(item => (
+                                                                <div key={item.id} className="flex items-center">
+                                                                    <span className="text-cyan-500 mr-2">•</span>
+                                                                    <p className={`${theme.colors.text} text-sm`}>{item.text}</p>
+                                                                </div>
+                                                            )) : (
+                                                                <p className={`${theme.colors.muted} text-sm text-center pt-12`}>
+                                                                    {t('noActionItemsYet')}
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="mt-3 flex gap-2 items-center">
+                                                            <input
+                                                                type="text"
+                                                                value={newActionText[app.id] || ''}
+                                                                onChange={(e) => setNewActionText(prev => ({ ...prev, [app.id]: e.target.value }))}
+                                                                className={`flex-grow p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
+                                                            />
+                                                            <Button onClick={() => handleAddActionItem(app.id)} size="sm" className="bg-cyan-500 text-white">
+                                                                {t('addButton') || 'Add'}
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
