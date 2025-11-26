@@ -51,19 +51,20 @@ const WellnessTools = () => {
     return (
       <div className="space-y-8">
         <div className="text-center">
-          <h2 className={`text-4xl font-bold ${theme.colors.text} mb-4`}>
+          <h2 className={`text-2xl sm:text-3xl font-bold ${theme.colors.text} mb-4`}>
             {t('selectProblem')}
           </h2>
-          <p className={`${theme.colors.muted} text-lg max-w-2xl mx-auto`}>
-            {t('chooseWhatDealing')}
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Mobile: simple list of problem names (only on small phones) */}
           <div className="md:hidden space-y-2 w-full">
             {Object.entries(wellnessProblems).map(([problemId, problem]) => (
-              <div key={problemId} className={`flex items-center p-3 rounded-lg ${theme.colors.card} border`}>
+              <div 
+                key={problemId} 
+                onClick={() => handleProblemSelect(problemId)}
+                className={`flex items-center p-3 rounded-lg ${theme.colors.card} border cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300`}
+              >
                 <div className="flex items-center gap-3">
                   <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full bg-white ${problem.color}`}>
                     <span className="text-2xl">{problem.icon}</span>
@@ -76,27 +77,27 @@ const WellnessTools = () => {
           {Object.entries(wellnessProblems).map(([problemId, problem]) => (
             <Card 
               key={problemId}
-              className={`${theme.colors.card} hidden md:block hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 border-0 group bg-gradient-to-br ${problem.bgColor}`}
+              className={`${theme.colors.card} hidden md:block hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 border-0 group`}
               onClick={() => handleProblemSelect(problemId)}
             >
               <CardContent>
                 {/* iPad-mini layout: show only icon and name (visible at md, hidden at lg) */}
-                <div className="hidden md:flex lg:hidden flex-col items-center p-8">
-                  <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full bg-white shadow-lg mb-4 ${problem.color}`}> 
-                    <span className="text-4xl">{problem.icon}</span>
+                <div className="hidden md:flex lg:hidden flex-col items-center p-4">
+                  <div className={`inline-flex items-center justify-center w-14 h-14 rounded-full bg-white shadow-lg mb-2 ${problem.color}`}> 
+                    <span className="text-2xl">{problem.icon}</span>
                   </div>
-                  <h3 className={`font-bold text-xl ${theme.colors.text} mt-2`}>{t(problemId)}</h3>
+                  <h3 className={`font-bold text-sm ${theme.colors.text} mt-1`}>{t(problemId)}</h3>
                 </div>
 
                 {/* Desktop / laptop layout: full card (visible at lg and up) */}
-                <div className="hidden lg:block p-8 text-center">
-                  <div className="mb-6">
-                    <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full bg-white shadow-lg mb-4 ${problem.color} group-hover:scale-110 transition-transform duration-300`}>
-                      <span className="text-4xl">{problem.icon}</span>
+                <div className="hidden lg:block p-5 text-center">
+                  <div className="mb-4">
+                    <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-lg mb-3 ${problem.color} group-hover:scale-110 transition-transform duration-300`}>
+                      <span className="text-3xl">{problem.icon}</span>
                     </div>
                   </div>
 
-                  <h3 className={`font-bold text-xl ${theme.colors.text} group-hover:${problem.color} transition-colors mb-3`}>
+                  <h3 className={`font-bold text-lg ${theme.colors.text} group-hover:${problem.color} transition-colors mb-2`}>
                     {t(problemId)}
                   </h3>
                 </div>
@@ -118,14 +119,13 @@ const WellnessTools = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Button
+        <button
           onClick={handleBackToProblems}
-          variant="outline"
-          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105`}
+          className={`p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110`}
+          title={t('backToProblems')}
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('backToProblems')}
-        </Button>
+          <ArrowLeft className="w-6 h-6" />
+        </button>
         
         <div className="flex items-center space-x-4">
           <div className="text-3xl">{problem.icon}</div>

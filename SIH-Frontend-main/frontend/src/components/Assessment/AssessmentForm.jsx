@@ -12,10 +12,12 @@ import {
   AlertTriangle,
   Send,
   Clock,
-  Shield
+  Shield,
+  Loader
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BACKEND_ENABLED, API_BASE } from '../../lib/backendConfig';
+import { generateAssessmentResponse } from '../../lib/geminiAPI';
 
 const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
   const { theme } = useTheme();
@@ -98,19 +100,45 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
             if (score >= 15) return 'Moderately Severe';
             if (score >= 10) return 'Moderate';
             if (score >= 5) return 'Mild';
-            return 'None-Minimal';
+            return 'Minimal';
           }
           if (formName === 'GAD-7') {
             if (score >= 15) return 'Severe';
             if (score >= 10) return 'Moderate';
             if (score >= 5) return 'Mild';
-            return 'None-Minimal';
+            return 'Minimal';
           }
           if (formName === 'GHQ-12') {
             if (score >= 24) return 'Severe Distress';
             if (score >= 18) return 'Moderate Distress';
             if (score >= 12) return 'Mild Distress';
             return 'Normal';
+          }
+          if (formName === 'BDI-II') {
+            if (score >= 29) return 'Severe';
+            if (score >= 20) return 'Moderate';
+            if (score >= 14) return 'Mild';
+            return 'Minimal';
+          }
+          if (formName === 'PHQ-2') {
+            if (score >= 3) return 'Moderate';
+            return 'Minimal';
+          }
+          if (formName === 'GAD-2') {
+            if (score >= 3) return 'Moderate';
+            return 'Minimal';
+          }
+          if (formName === 'MMSE') {
+            if (score <= 16) return 'Severe Cognitive Impairment';
+            if (score <= 20) return 'Moderate Cognitive Impairment';
+            if (score <= 24) return 'Mild Cognitive Impairment';
+            return 'Normal';
+          }
+          if (formName === 'C-SSRS') {
+            if (score >= 12) return 'High Risk';
+            if (score >= 7) return 'Moderate Risk';
+            if (score >= 1) return 'Low Risk';
+            return 'No Risk';
           }
           return 'Unknown';
         };
@@ -135,6 +163,17 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
         const severity_level = computeSeverity(form.name, totalScore);
         submission.severity_level = severity_level;
         submission.recommendations = getRecommendations(form.name, severity_level);
+
+        // Generate AI response using Gemini API
+        try {
+          toast.loading('Generating personalized insights...');
+          const aiResponse = await generateAssessmentResponse(form.name, totalScore, severity_level);
+          submission.ai_response = aiResponse;
+          toast.dismiss();
+        } catch (error) {
+          console.error('Error generating AI response:', error);
+          submission.ai_response = 'Thank you for completing this assessment. Please review your results with a mental health professional for personalized guidance.';
+        }
 
         // NOTE: Removed localStorage persistence; pass submission upward only.
 

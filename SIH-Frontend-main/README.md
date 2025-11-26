@@ -68,31 +68,20 @@ frontend/
 - **Routing:** React Router v6
 - **Icons:** Lucide React
 
-## 🗄️ Backend Integration
+## 🗄️ Data Storage
 
-Currently running with **mock data**. To integrate with your backend:
+Currently running with **mock data** (session-only):
 
-1. Update `frontend/src/lib/backendConfig.js`:
-
-```javascript
-export const BACKEND_ENABLED = true;
-export const API_BASE = "http://localhost:5000"; // Your API URL
-```
-
-2. Or use environment variables in `frontend/.env`:
-
-```env
-VITE_BACKEND_ENABLED=true
-VITE_API_BASE=http://localhost:5000
-```
-
-See `BACKEND_MIGRATION.md` for detailed backend integration guide.
+- All assessment data, wellness logs, and user interactions are ephemeral
+- Data persists only during the current session
+- Theme & Language preferences are saved in localStorage
+- Perfect for testing and development
 
 ## 📝 Storage
 
 - **Theme & Language:** Persisted in localStorage
 - **User Session:** Persisted in localStorage
-- **All other data:** Ephemeral (session-only) until backend is connected
+- **All other data:** Ephemeral (session-only)
 
 ## 🎨 Available Themes
 

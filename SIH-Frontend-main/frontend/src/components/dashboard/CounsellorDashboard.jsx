@@ -250,7 +250,7 @@ const CounsellorDashboard = () => {
       // Add initial bot greeting only for tablet/desktop (md+)
       const greeting = {
         id: 1,
-        text: "Hello! I'm your SensEase AI wellness companion. How are you feeling today? I'm here to listen and support you on your wellness journey. 💙",
+        text: "Hello! I'm your AI wellness companion. How are you feeling today? I'm here to listen and support you on your wellness journey. 💙",
         isBot: true,
         timestamp: new Date()
       };
@@ -751,53 +751,52 @@ const CounsellorDashboard = () => {
 
   const renderChatbot = () => (
     <Card className={`h-[700px] flex flex-col ${theme.colors.card} border-0 shadow-2xl`}>
-          <CardHeader>
-        <div className="flex flex-col md:flex-row items-start justify-between w-full">
-          <div>
-            <CardTitle className={`flex items-center ${theme.colors.text}`}>
+      <CardHeader>
+        <div className="w-full">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center">
               <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
-              {t('aiCompanionTitle')}
+              <CardTitle className={`${theme.colors.text} mb-0`}>{t('aiCompanion')}</CardTitle>
               <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
-            </CardTitle>
-            <CardDescription className={theme.colors.muted}>
-              {t('aiCompanionDesc')}
-            </CardDescription>
-          </div>
+            </div>
 
-          <div className="flex items-center space-x-2 mt-3 md:mt-0 md:self-end">
-            <Button variant="ghost" size="sm" onClick={handleNewCounsellorChat} className="flex items-center space-x-2">
-              <Plus className="w-4 h-4" />
-              <span className="text-sm">{t('newChat') || t('newMessage')}</span>
-            </Button>
-            <div className="relative">
-              <Button variant="ghost" size="sm" onClick={() => setShowHistoryPanel(s => !s)} className="flex items-center space-x-2">
-                <span className="text-sm">{t('showHistory') || t('recentActivityTitle')}</span>
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-              {showHistoryPanel && (
-                <div className="absolute right-0 mt-2 w-80 max-h-72 overflow-auto bg-white dark:bg-gray-800 border rounded-md p-2 z-40">
-                  {chatHistory.length === 0 ? (
-                    <div className="p-2 text-sm text-gray-500">{t('noConversationsFound') || 'No conversations found'}</div>
-                  ) : (
-                    chatHistory.map(h => (
-                      <div key={h.id} className="flex items-center justify-between p-1 rounded">
-                        <button onClick={() => handleLoadHistory(h)} className="flex-1 text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewCounsellorChat} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Plus className="w-5 h-5" />
+              </button>
+
+              <div className="relative">
+                <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowHistoryPanel(s => !s)} className="p-2 rounded-md border hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <ChevronDown className="w-5 h-5" />
+                </button>
+
+                {showHistoryPanel && (
+                  <div className="absolute right-0 mt-2 w-80 max-h-72 overflow-auto bg-white dark:bg-gray-800 border rounded-md p-2 z-40">
+                    {chatHistory.length === 0 ? (
+                      <div className="p-2 text-sm text-gray-500">{t('noConversationsFound') || 'No conversations found'}</div>
+                    ) : (
+                      chatHistory.map(h => (
+                        <div key={h.id} className="flex items-center justify-between p-1 rounded">
+                          <button onClick={() => handleLoadHistory(h)} className="flex-1 text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
                             <div className="text-sm font-medium truncate" title={h.title}>{h.title}</div>
-                          </div>
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteHistory(h.id); }} aria-label="Delete history" className="ml-2 p-1 rounded hover:bg-red-50 text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteHistory(h.id); }} aria-label="Delete history" className="ml-2 p-1 rounded hover:bg-red-50 text-red-600">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          <CardDescription className={theme.colors.muted}>
+            {t('aiCompanionDesc')}
+          </CardDescription>
         </div>
-          </CardHeader>
+      </CardHeader>
       
       <CardContent className="flex-1 flex flex-col">
         {/* Messages Area */}
