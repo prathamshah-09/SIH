@@ -205,29 +205,21 @@ const CommunityManagement = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
-            {t('communityManagement')}
-            <Shield className="w-8 h-8 ml-3 text-orange-500 animate-pulse" />
-          </h2>
-          <p className={`${theme.colors.muted} mt-2 text-lg`}>
-            {t('createManageCommunities')}
-          </p>
-          <div className="flex items-center mt-2">
-            <Badge className="bg-orange-100 text-orange-800 mr-2">{t('communityHub')}</Badge>
-            <Badge className="bg-green-100 text-green-800">{t('mentalHealthSupport')}</Badge>
-          </div>
-        </div>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+        <h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} flex items-center`}>
+          {t('communityManagement')}
+          <Shield className="w-6 h-6 ml-3 text-orange-500 animate-pulse" />
+        </h2>
 
         {/* Create Community Button */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className={`bg-gradient-to-r ${theme.colors.primary} hover:shadow-xl text-white transition-all duration-300 hover:scale-105`}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('createCommunity')}
-            </Button>
-          </DialogTrigger>
+        <div className="mt-4 lg:mt-0">
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className={`bg-gradient-to-r ${theme.colors.primary} hover:shadow-xl text-white transition-all duration-300 hover:scale-105 text-sm`}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('createCommunity')}
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle className="flex items-center">
@@ -281,55 +273,41 @@ const CommunityManagement = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
         <Card className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm font-semibold ${theme.colors.muted} mb-2`}>{t('totalCommunities')}</p>
-                <p className="text-3xl font-bold text-orange-600">{communities.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                <Shield className="w-6 h-6 text-orange-500" />
-              </div>
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div>
+              <p className={`text-xs sm:text-sm font-semibold ${theme.colors.muted} mb-1 sm:mb-2`}>{t('totalCommunities')}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-orange-600">{communities.length}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm font-semibold ${theme.colors.muted} mb-2`}>{t('totalMembers')}</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {communities.reduce((sum, community) => sum + community.member_count, 0)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-500" />
-              </div>
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div>
+              <p className={`text-xs sm:text-sm font-semibold ${theme.colors.muted} mb-1 sm:mb-2`}>{t('totalMembers')}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">
+                {communities.reduce((sum, community) => sum + community.member_count, 0)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
         <Card className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm font-semibold ${theme.colors.muted} mb-2`}>{t('avgMembers')}</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {communities.length > 0 
-                    ? Math.round(communities.reduce((sum, community) => sum + community.member_count, 0) / communities.length)
-                    : 0
-                  }
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <UserCheck className="w-6 h-6 text-green-500" />
-              </div>
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div>
+              <p className={`text-xs sm:text-sm font-semibold ${theme.colors.muted} mb-1 sm:mb-2`}>{t('avgMembers')}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">
+                {communities.length > 0 
+                  ? Math.round(communities.reduce((sum, community) => sum + community.member_count, 0) / communities.length)
+                  : 0
+                }
+              </p>
             </div>
           </CardContent>
         </Card>
