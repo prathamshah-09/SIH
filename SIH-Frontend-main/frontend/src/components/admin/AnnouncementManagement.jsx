@@ -160,13 +160,9 @@ const AnnouncementManagement = () => {
               <Megaphone className="w-6 h-6 text-white animate-pulse" />
             </div>
             <div>
-              <CardTitle className={`text-xl ${theme.colors.cardText} flex items-center`}>
-                {t('broadcastBrilliance')}
-                <span className="ml-2 text-2xl">📢</span>
+              <CardTitle className={`text-lg ${theme.colors.cardText}`}>
+                {t('createNewAnnouncement')}
               </CardTitle>
-              <CardDescription className={`${theme.colors.cardText} opacity-80`}>
-                {t('createAnnouncementDesc')}
-              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -217,30 +213,21 @@ const AnnouncementManagement = () => {
               {t('publishInspire')}
             </Button>
           </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-800 font-medium">
-              💡 {t('successTip')}
-            </p>
-          </div>
         </CardContent>
       </Card>
 
-      {/* Previous Announcements - Echoes of Past */}
-      <Card className={`${theme.colors.card} border-0 shadow-xl`}>
-        <CardHeader className={`bg-gradient-to-r ${theme.colors.secondary} rounded-t-lg`}>
+      {/* Previous Announcements - Full Width */}
+      <div className="w-full">
+        <Card className={`${theme.colors.card} border-0 shadow-xl w-full`}>
+          <CardHeader className={`bg-gradient-to-r ${theme.colors.secondary} rounded-t-lg`}>
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
               <Clock className="w-6 h-6 text-white" />
             </div>
             <div>
-              <CardTitle className={`text-xl ${theme.colors.cardText} flex items-center`}>
-                {t('echoesOfPast')}
-                <span className="ml-2 text-2xl">🔄</span>
+              <CardTitle className={`text-lg ${theme.colors.cardText}`}>
+                {t('previousAnnouncements')}
               </CardTitle>
-              <CardDescription className={`${theme.colors.cardText} opacity-80`}>
-                {t('managePreviousAnnouncements')}
-              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -319,7 +306,8 @@ const AnnouncementManagement = () => {
             )}
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
