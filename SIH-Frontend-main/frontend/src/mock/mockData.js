@@ -343,6 +343,229 @@ export const mockForms = [
         { label: 'Much more than usual', value: 3 }
       ]
     }))
+  },
+  {
+    id: 'bdi',
+    name: 'BDI-II',
+    title: 'Beck Depression Inventory II',
+    description: 'A 21-item self-report instrument for assessing the severity of depression in adolescents and adults.',
+    questions: [
+      { id: 'bdi_q1', text: 'Sadness', type: 'likert', options: [
+        { label: 'I do not feel sad', value: 0 },
+        { label: 'I feel sad much of the time', value: 1 },
+        { label: 'I am sad all the time', value: 2 },
+        { label: 'I am so sad or unhappy that I cannot stand it', value: 3 }
+      ]},
+      { id: 'bdi_q2', text: 'Pessimism', type: 'likert', options: [
+        { label: 'I am not discouraged about my future', value: 0 },
+        { label: 'I feel more discouraged about my future than I used to', value: 1 },
+        { label: 'I do not expect things to work out for me', value: 2 },
+        { label: 'I expect the worst and my future is hopeless', value: 3 }
+      ]},
+      { id: 'bdi_q3', text: 'Past Failure', type: 'likert', options: [
+        { label: 'I do not feel like a failure', value: 0 },
+        { label: 'I have failed more than I should have', value: 1 },
+        { label: 'As I look back, I see a lot of failures in my life', value: 2 },
+        { label: 'I feel I am a total failure as a person', value: 3 }
+      ]},
+      { id: 'bdi_q4', text: 'Loss of Pleasure', type: 'likert', options: [
+        { label: 'I get as much pleasure as I ever did', value: 0 },
+        { label: 'I do not enjoy things as much as I used to', value: 1 },
+        { label: 'I get very little pleasure from the things I used to enjoy', value: 2 },
+        { label: 'I cannot get any pleasure from the things I used to enjoy', value: 3 }
+      ]},
+      { id: 'bdi_q5', text: 'Guilty Feelings', type: 'likert', options: [
+        { label: 'I do not feel guilty', value: 0 },
+        { label: 'I feel guilty over many things I have done or should have done', value: 1 },
+        { label: 'I feel quite guilty most of the time', value: 2 },
+        { label: 'I feel guilty all of the time', value: 3 }
+      ]},
+      { id: 'bdi_q6', text: 'Punishment Feelings', type: 'likert', options: [
+        { label: 'I do not feel I am being punished', value: 0 },
+        { label: 'I feel I may be punished', value: 1 },
+        { label: 'I expect to be punished', value: 2 },
+        { label: 'I feel I am being punished', value: 3 }
+      ]},
+      { id: 'bdi_q7', text: 'Self-Dislike', type: 'likert', options: [
+        { label: 'I feel the same about myself as ever', value: 0 },
+        { label: 'I have lost confidence in myself', value: 1 },
+        { label: 'I am disappointed in myself', value: 2 },
+        { label: 'I dislike myself', value: 3 }
+      ]},
+      { id: 'bdi_q8', text: 'Self-Accusation', type: 'likert', options: [
+        { label: 'I do not blame myself', value: 0 },
+        { label: 'I am more self-critical than I used to be', value: 1 },
+        { label: 'I criticize myself for all my faults', value: 2 },
+        { label: 'I blame myself for everything bad that happens', value: 3 }
+      ]},
+      { id: 'bdi_q9', text: 'Suicidal Thoughts or Wishes', type: 'likert', options: [
+        { label: 'I do not have any thoughts of killing myself', value: 0 },
+        { label: 'I have thoughts of killing myself, but would not carry them out', value: 1 },
+        { label: 'I would like to kill myself', value: 2 },
+        { label: 'I would kill myself if I had the chance', value: 3 }
+      ]},
+      { id: 'bdi_q10', text: 'Crying', type: 'likert', options: [
+        { label: 'I do not cry more often than I used to', value: 0 },
+        { label: 'I cry more often than I used to', value: 1 },
+        { label: 'I cry much more often than I used to', value: 2 },
+        { label: 'I cry all the time now', value: 3 }
+      ]},
+      { id: 'bdi_q11', text: 'Agitation', type: 'likert', options: [
+        { label: 'I am no more irritated than usual', value: 0 },
+        { label: 'I am more irritated than usual', value: 1 },
+        { label: 'I am much more irritated than usual', value: 2 },
+        { label: 'I am irritated all the time', value: 3 }
+      ]},
+      { id: 'bdi_q12', text: 'Loss of Interest', type: 'likert', options: [
+        { label: 'I have not lost interest in other people or activities', value: 0 },
+        { label: 'I am less interested in other people or things than before', value: 1 },
+        { label: 'I have lost most of my interest in other people or things', value: 2 },
+        { label: 'It is hard to get interested in anything', value: 3 }
+      ]},
+      { id: 'bdi_q13', text: 'Indecisiveness', type: 'likert', options: [
+        { label: 'I make decisions about as well as I ever could', value: 0 },
+        { label: 'I find it more difficult to make decisions', value: 1 },
+        { label: 'I have much greater difficulty in making decisions', value: 2 },
+        { label: 'I have trouble making any decisions', value: 3 }
+      ]},
+      { id: 'bdi_q14', text: 'Worthlessness', type: 'likert', options: [
+        { label: 'I do not feel worthless', value: 0 },
+        { label: 'I do not consider myself as worthwhile and useful as I used to', value: 1 },
+        { label: 'I feel more worthless as compared to other people', value: 2 },
+        { label: 'I feel utterly worthless', value: 3 }
+      ]},
+      { id: 'bdi_q15', text: 'Loss of Energy', type: 'likert', options: [
+        { label: 'I have as much energy as ever', value: 0 },
+        { label: 'I have less energy than I used to', value: 1 },
+        { label: 'I have much less energy than I used to', value: 2 },
+        { label: 'I do not have enough energy to do anything', value: 3 }
+      ]},
+      { id: 'bdi_q16', text: 'Change in Sleep Pattern', type: 'likert', options: [
+        { label: 'I have not experienced any change in my sleeping', value: 0 },
+        { label: 'I sleep somewhat more or less', value: 1 },
+        { label: 'I sleep much more or much less', value: 2 },
+        { label: 'I sleep most of the day or wake up 1-2 hours early', value: 3 }
+      ]},
+      { id: 'bdi_q17', text: 'Irritability', type: 'likert', options: [
+        { label: 'I am no more irritable than usual', value: 0 },
+        { label: 'I am more irritable than usual', value: 1 },
+        { label: 'I am much more irritable than usual', value: 2 },
+        { label: 'I am irritable all the time', value: 3 }
+      ]},
+      { id: 'bdi_q18', text: 'Change in Appetite', type: 'likert', options: [
+        { label: 'I have not experienced any change in my appetite', value: 0 },
+        { label: 'My appetite is somewhat less or greater than usual', value: 1 },
+        { label: 'My appetite is much less or greater than usual', value: 2 },
+        { label: 'I have no appetite at all or I want to eat all the time', value: 3 }
+      ]},
+      { id: 'bdi_q19', text: 'Concentration Difficulty', type: 'likert', options: [
+        { label: 'I can concentrate as well as ever', value: 0 },
+        { label: 'I cannot concentrate as well as usual', value: 1 },
+        { label: 'It is hard to keep my mind on anything', value: 2 },
+        { label: 'I cannot concentrate on anything', value: 3 }
+      ]},
+      { id: 'bdi_q20', text: 'Tiredness or Fatigue', type: 'likert', options: [
+        { label: 'I am no more tired or fatigued than usual', value: 0 },
+        { label: 'I get more tired or fatigued more easily than usual', value: 1 },
+        { label: 'I am too tired or fatigued to do most things', value: 2 },
+        { label: 'I am too tired or fatigued to do anything', value: 3 }
+      ]},
+      { id: 'bdi_q21', text: 'Loss of Interest in Sex', type: 'likert', options: [
+        { label: 'I have not noticed any recent change in interest in sex', value: 0 },
+        { label: 'I am less interested in sex than I used to be', value: 1 },
+        { label: 'I am much less interested in sex now', value: 2 },
+        { label: 'I have lost interest in sex completely', value: 3 }
+      ]}
+    ]
+  },
+  {
+    id: 'phq2',
+    name: 'PHQ-2',
+    title: 'Patient Health Questionnaire-2',
+    description: 'A 2-item screening instrument for depression used in primary care settings.',
+    questions: [
+      { id: 'phq2_q1', text: 'Little interest or pleasure in doing things', type: 'likert', options: [
+        { label: 'Not at all', value: 0 },
+        { label: 'Several days', value: 1 },
+        { label: 'More than half the days', value: 2 },
+        { label: 'Nearly every day', value: 3 }
+      ]},
+      { id: 'phq2_q2', text: 'Feeling down, depressed, or hopeless', type: 'likert', options: [
+        { label: 'Not at all', value: 0 },
+        { label: 'Several days', value: 1 },
+        { label: 'More than half the days', value: 2 },
+        { label: 'Nearly every day', value: 3 }
+      ]}
+    ]
+  },
+  {
+    id: 'gad2',
+    name: 'GAD-2',
+    title: 'Generalized Anxiety Disorder-2',
+    description: 'A 2-item screening tool for generalized anxiety disorder in primary care.',
+    questions: [
+      { id: 'gad2_q1', text: 'Feeling nervous, anxious, or on edge', type: 'likert', options: [
+        { label: 'Not at all', value: 0 },
+        { label: 'Several days', value: 1 },
+        { label: 'More than half the days', value: 2 },
+        { label: 'Nearly every day', value: 3 }
+      ]},
+      { id: 'gad2_q2', text: 'Not being able to stop or control worrying', type: 'likert', options: [
+        { label: 'Not at all', value: 0 },
+        { label: 'Several days', value: 1 },
+        { label: 'More than half the days', value: 2 },
+        { label: 'Nearly every day', value: 3 }
+      ]}
+    ]
+  },
+  {
+    id: 'mmse',
+    name: 'MMSE',
+    title: 'Mini-Mental State Examination',
+    description: 'An 11-question screening test for cognitive impairment and dementia.',
+    questions: [
+      { id: 'mmse_q1', text: 'What is the year right now?', type: 'text', options: [] },
+      { id: 'mmse_q2', text: 'What is the season?', type: 'text', options: [] },
+      { id: 'mmse_q3', text: 'What is the date today?', type: 'text', options: [] },
+      { id: 'mmse_q4', text: 'What is the day of the week?', type: 'text', options: [] },
+      { id: 'mmse_q5', text: 'What is the month?', type: 'text', options: [] },
+      { id: 'mmse_q6', text: 'What state are we in?', type: 'text', options: [] },
+      { id: 'mmse_q7', text: 'What county are we in?', type: 'text', options: [] },
+      { id: 'mmse_q8', text: 'What town or city are we in?', type: 'text', options: [] },
+      { id: 'mmse_q9', text: 'What building are we in?', type: 'text', options: [] },
+      { id: 'mmse_q10', text: 'What floor are we on?', type: 'text', options: [] },
+      { id: 'mmse_q11', text: 'Attention and calculation: Spell WORLD backwards', type: 'text', options: [] }
+    ]
+  },
+  {
+    id: 'cssrs',
+    name: 'C-SSRS',
+    title: 'Columbia-Suicide Severity Rating Scale',
+    description: 'A screening and rating scale to assess suicidal ideation and behavior.',
+    questions: [
+      { id: 'cssrs_q1', text: 'Have you wished you were dead or wished you could go to sleep and not wake up?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 }
+      ]},
+      { id: 'cssrs_q2', text: 'Have you actually had any thoughts of killing yourself?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 }
+      ]},
+      { id: 'cssrs_q3', text: 'Have you been thinking about how you might do this?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 }
+      ]},
+      { id: 'cssrs_q4', text: 'Have you ever tried to kill yourself?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 }
+      ]},
+      { id: 'cssrs_q5', text: 'If yes, how many times have you actually tried to harm yourself?', type: 'likert', options: [
+        { label: 'None', value: 0 },
+        { label: '1 time', value: 1 },
+        { label: '2-3 times', value: 2 },
+        { label: '4 or more times', value: 3 }
+      ]}
+    ]
   }
 ];
 
