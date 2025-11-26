@@ -30,7 +30,7 @@ import {
   MoreVertical,
   Mic,
 } from 'lucide-react';
-import { mockCounsellors } from '@mock/mockData';
+import { mockCounsellors, mockUsers, mockStudents } from '@mock/mockData';
 
 // Ephemeral conversations (no persistence). TODO: Replace with backend chat service.
 let ephemeralConversations = [];
@@ -38,8 +38,7 @@ let ephemeralConversations = [];
 const getConversations = () => [...ephemeralConversations];
 const saveConversations = (conversations) => { ephemeralConversations = conversations; };
 
-// Mock current user (replace via auth context later)
-const getCurrentUser = () => ({ id: '1', name: 'Alex Johnson', role: 'student' });
+// NOTE: In real app this comes from auth; use mock users for now
 
 const DirectMessages = ({ userRole = 'student' }) => {
   const { theme } = useTheme();
@@ -53,7 +52,8 @@ const DirectMessages = ({ userRole = 'student' }) => {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = React.useRef(null);
   const streamRef = React.useRef(null);
-  const currentUser = getCurrentUser();
+  // derive current user from role (mock)
+  const currentUser = userRole === 'student' ? mockUsers.student : mockUsers.counsellor;
 
   // Load conversations on mount
   useEffect(() => {
@@ -190,6 +190,37 @@ const DirectMessages = ({ userRole = 'student' }) => {
       studentName: currentUser.name,
       counsellorId: counsellor.id,
       counsellorName: counsellor.name,
+      messages: [],
+      lastMessage: '',
+      lastMessageTime: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [...conversations, newConversation];
+    setConversations(updated);
+    saveConversations(updated);
+    setSelectedConversation(newConversation);
+    setIsNewChatOpen(false);
+  };
+
+  // For counsellors: start conversation with a student
+  const handleStartConversationWithStudent = (student) => {
+    const existingConv = conversations.find(
+      c => c.studentId === student.id && c.counsellorId === currentUser.id
+    );
+
+    if (existingConv) {
+      setSelectedConversation(existingConv);
+      setIsNewChatOpen(false);
+      return;
+    }
+
+    const newConversation = {
+      id: `conv_${Date.now()}`,
+      studentId: student.id,
+      studentName: student.name,
+      counsellorId: currentUser.id,
+      counsellorName: currentUser.name,
       messages: [],
       lastMessage: '',
       lastMessageTime: new Date().toISOString(),
@@ -376,32 +407,32 @@ const DirectMessages = ({ userRole = 'student' }) => {
           </p>
         </div>
 
-        {userRole === 'student' && (
-          <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105">
-                <Plus className="w-4 h-4 mr-2" />
-                New
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="flex items-center">
-                  <User className="w-5 h-5 mr-2 text-blue-500" />
-                  {t('selectCounsellor') || 'Select a Counsellor'}
-                </DialogTitle>
-                <DialogDescription>
-                  {t('selectCounsellorDesc') || 'Choose a counsellor to start a direct message conversation.'}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {mockCounsellors.map((counsellor) => (
+        <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105">
+              <Plus className="w-4 h-4 mr-2" />
+              New
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <User className="w-5 h-5 mr-2 text-blue-500" />
+                {userRole === 'student' ? (t('selectCounsellor') || 'Select a Counsellor') : (t('selectStudent') || 'Select a Student')}
+              </DialogTitle>
+              <DialogDescription>
+                {userRole === 'student'
+                  ? (t('selectCounsellorDesc') || 'Choose a counsellor to start a direct message conversation.')
+                  : (t('selectStudentDesc') || 'Choose a student to start a direct message conversation.')}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {userRole === 'student' ? (
+                mockCounsellors.map((counsellor) => (
                   <button
                     key={counsellor.id}
                     onClick={() => handleStartConversation(counsellor)}
-                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 ${
-                      `${theme.colors.card} border-gray-200 hover:border-blue-300`
-                    }`}
+                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 ${`${theme.colors.card} border-gray-200 hover:border-blue-300`}`}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
@@ -416,11 +447,29 @@ const DirectMessages = ({ userRole = 'student' }) => {
                       </div>
                     </div>
                   </button>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+                ))
+              ) : (
+                mockStudents.map((student) => (
+                  <button
+                    key={student.id}
+                    onClick={() => handleStartConversationWithStudent(student)}
+                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 ${`${theme.colors.card} border-gray-200 hover:border-blue-300`}`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                        {student.name.charAt(0)}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <h4 className={`font-semibold ${theme.colors.text}`}>{student.name}</h4>
+                        <p className={`text-sm ${theme.colors.muted}`}>{student.email}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Search */}
