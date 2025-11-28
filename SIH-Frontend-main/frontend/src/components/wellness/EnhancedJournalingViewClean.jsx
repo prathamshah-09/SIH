@@ -132,9 +132,19 @@ const EnhancedJournalingView = ({ onBack }) => {
 
   return (
     <div className="space-y-6">
-      {/* Mobile/Tablet Header with Calendar Dropdown */}
-      <div className="lg:hidden flex items-center justify-between mb-4">
-        <h2 className={`text-xl sm:text-2xl font-bold ${theme.colors.text}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <Button
+          onClick={onBack}
+          variant="outline"
+          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105`}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          {t('backToProblems')}
+        </Button>
+        
+        <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>
+          <BookOpen className="w-8 h-8 mr-3 text-blue-500" />
           {t('journaling')}
         </h2>
         <div className="relative">

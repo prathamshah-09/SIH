@@ -145,13 +145,14 @@ const EnhancedJournalingView = ({ onBack, initialMode }) => {
     <div className="space-y-6">
       {/* Header */}
       <div className="hidden lg:flex items-center justify-between mb-6">
-        <button
+        <Button
           onClick={onBack}
-          className={`p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110`}
-          title={t('backToProblems')}
+          variant="outline"
+          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105 p-2`}
+          aria-label={t('backToProblems')}
         >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
         
         <h2 className={`text-3xl font-bold ${theme.colors.text}`}>
           {t('journaling')}

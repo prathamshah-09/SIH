@@ -31,9 +31,19 @@ const WellnessTools = () => {
 
   const handleBackToProblems = () => {
     setSelectedProblem(null);
+    setShowJournaling(false);
+  };
+
+  const handleJournalingClick = () => {
+    setShowJournaling(true);
   };
 
   // using emoji icons from `wellnessProblems.[].icon` for cards
+
+  // Show journaling view
+  if (showJournaling) {
+    return <EnhancedJournalingView onBack={handleBackToProblems} />;
+  }
 
   // Show problem selection screen
   if (!selectedProblem) {
@@ -105,13 +115,13 @@ const WellnessTools = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <button
           onClick={handleBackToProblems}
-          className={`hidden sm:flex p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110`}
+          className={`p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110`}
           title={t('backToProblems')}
         >
-          <ArrowLeft className="w-6 h-6" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
         
         <div className="flex-1 flex items-center justify-center space-x-4">
