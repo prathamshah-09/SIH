@@ -343,6 +343,598 @@ export const mockForms = [
         { label: 'Much more than usual', value: 3 }
       ]
     }))
+  },
+  {
+    id: 'cssrs',
+    name: 'C-SSRS',
+    title: 'Columbia-Suicide Severity Rating Scale',
+    description: 'A screening and rating scale to assess suicidal ideation and behavior.',
+    questions: [
+      { id: 'cssrs_q1', text: 'Have you wished you were dead or wished you could go to sleep and not wake up?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 }
+      ]},
+      { id: 'cssrs_q2', text: 'Have you actually had any thoughts of killing yourself?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 }
+      ]},
+      { id: 'cssrs_q3', text: 'Have you been thinking about how you might do this?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 }
+      ]},
+      { id: 'cssrs_q4', text: 'Have you ever tried to kill yourself?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 }
+      ]},
+      { id: 'cssrs_q5', text: 'If yes, how many times have you actually tried to harm yourself?', type: 'likert', options: [
+        { label: 'None', value: 0 },
+        { label: '1 time', value: 1 },
+        { label: '2-3 times', value: 2 },
+        { label: '4 or more times', value: 3 }
+      ]}
+    ]
+  },
+  {
+    id: 'pss10',
+    name: 'PSS-10',
+    title: 'Perceived Stress Scale - 10',
+    description: 'A 10-item scale measuring perceived stress levels.',
+    questions: [
+      { id: 'pss10_q1', text: 'In the last month, how often have you been upset because of something that happened unexpectedly?', type: 'likert', options: [
+        { label: 'Never', value: 0 },
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 3 },
+        { label: 'Very Often', value: 4 }
+      ]},
+      { id: 'pss10_q2', text: 'In the last month, how often have you felt unable to control the important things in your life?', type: 'likert', options: [
+        { label: 'Never', value: 0 },
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 3 },
+        { label: 'Very Often', value: 4 }
+      ]},
+      { id: 'pss10_q3', text: 'In the last month, how often have you felt nervous and "stressed"?', type: 'likert', options: [
+        { label: 'Never', value: 0 },
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 3 },
+        { label: 'Very Often', value: 4 }
+      ]},
+      { id: 'pss10_q4', text: 'In the last month, how often have you felt confident about your ability to handle your personal problems?', type: 'likert', options: [
+        { label: 'Never', value: 4 },
+        { label: 'Almost Never', value: 3 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 1 },
+        { label: 'Very Often', value: 0 }
+      ]},
+      { id: 'pss10_q5', text: 'In the last month, how often have you felt that things were going your way?', type: 'likert', options: [
+        { label: 'Never', value: 4 },
+        { label: 'Almost Never', value: 3 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 1 },
+        { label: 'Very Often', value: 0 }
+      ]},
+      { id: 'pss10_q6', text: 'In the last month, how often have you found that you could not cope with all the things that you had to do?', type: 'likert', options: [
+        { label: 'Never', value: 0 },
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 3 },
+        { label: 'Very Often', value: 4 }
+      ]},
+      { id: 'pss10_q7', text: 'In the last month, how often have you been able to control irritations in your life?', type: 'likert', options: [
+        { label: 'Never', value: 4 },
+        { label: 'Almost Never', value: 3 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 1 },
+        { label: 'Very Often', value: 0 }
+      ]},
+      { id: 'pss10_q8', text: 'In the last month, how often have you felt that you were on top of things?', type: 'likert', options: [
+        { label: 'Never', value: 4 },
+        { label: 'Almost Never', value: 3 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 1 },
+        { label: 'Very Often', value: 0 }
+      ]},
+      { id: 'pss10_q9', text: 'In the last month, how often have you been angered because of things outside your control?', type: 'likert', options: [
+        { label: 'Never', value: 0 },
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 3 },
+        { label: 'Very Often', value: 4 }
+      ]},
+      { id: 'pss10_q10', text: 'In the last month, how often have you felt difficulties were piling up so that you could not overcome them?', type: 'likert', options: [
+        { label: 'Never', value: 0 },
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'Fairly Often', value: 3 },
+        { label: 'Very Often', value: 4 }
+      ]}
+    ]
+  },
+  {
+    id: 'who5',
+    name: 'WHO-5',
+    title: 'World Health Organization Well-Being Index',
+    description: 'A 5-item measure of psychological well-being.',
+    questions: [
+      { id: 'who5_q1', text: 'I have felt cheerful and in good spirits', type: 'likert', options: [
+        { label: 'At no time', value: 0 },
+        { label: 'Some of the time', value: 1 },
+        { label: 'Less than half the time', value: 2 },
+        { label: 'More than half the time', value: 3 },
+        { label: 'Most of the time', value: 4 },
+        { label: 'All of the time', value: 5 }
+      ]},
+      { id: 'who5_q2', text: 'I have felt calm and relaxed', type: 'likert', options: [
+        { label: 'At no time', value: 0 },
+        { label: 'Some of the time', value: 1 },
+        { label: 'Less than half the time', value: 2 },
+        { label: 'More than half the time', value: 3 },
+        { label: 'Most of the time', value: 4 },
+        { label: 'All of the time', value: 5 }
+      ]},
+      { id: 'who5_q3', text: 'I have felt active and vigorous', type: 'likert', options: [
+        { label: 'At no time', value: 0 },
+        { label: 'Some of the time', value: 1 },
+        { label: 'Less than half the time', value: 2 },
+        { label: 'More than half the time', value: 3 },
+        { label: 'Most of the time', value: 4 },
+        { label: 'All of the time', value: 5 }
+      ]},
+      { id: 'who5_q4', text: 'I woke up feeling fresh and rested', type: 'likert', options: [
+        { label: 'At no time', value: 0 },
+        { label: 'Some of the time', value: 1 },
+        { label: 'Less than half the time', value: 2 },
+        { label: 'More than half the time', value: 3 },
+        { label: 'Most of the time', value: 4 },
+        { label: 'All of the time', value: 5 }
+      ]},
+      { id: 'who5_q5', text: 'My daily life has been filled with things that interest me', type: 'likert', options: [
+        { label: 'At no time', value: 0 },
+        { label: 'Some of the time', value: 1 },
+        { label: 'Less than half the time', value: 2 },
+        { label: 'More than half the time', value: 3 },
+        { label: 'Most of the time', value: 4 },
+        { label: 'All of the time', value: 5 }
+      ]}
+    ]
+  },
+  {
+    id: 'iat',
+    name: 'IAT',
+    title: 'Internet Addiction Test',
+    description: 'A 20-item test to measure internet addiction severity.',
+    questions: [
+      { id: 'iat_q1', text: 'How often do you find that you stay online longer than intended?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q2', text: 'How often do you neglect household chores to spend more time online?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q3', text: 'How often do you neglect sleep due to late-night internet use?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q4', text: 'How often do you form new relationships with fellow online users?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q5', text: 'Do others complain about the amount of time you spend online?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q6', text: 'How often do your grades or work suffer because of your internet use?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q7', text: 'How often do you check your email before something else that you need to do?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q8', text: 'How often does your job performance or productivity suffer because of internet use?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q9', text: 'How often do you become defensive or secretive when anyone asks you what you do online?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q10', text: 'How often do you block out disturbing thoughts about your life with soothing thoughts of the internet?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q11', text: 'How often do you anticipate your next online session?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q12', text: 'How often do you fear that life without the internet would be boring, empty, or joyless?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q13', text: 'How often do you snap, yell, or act annoyed if someone bothers you while you are online?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q14', text: 'How often do you lose sleep due to late-night internet surfing?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q15', text: 'How often do you feel preoccupied with the internet when offline?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q16', text: 'How often do you find yourself saying "just a few more minutes" when online?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q17', text: 'How often do you try to hide how much time you spend online?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q18', text: 'How often do you choose to spend more time online rather than going out with others?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q19', text: 'How often do you feel depressed, moody, or nervous when you are offline?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]},
+      { id: 'iat_q20', text: 'How often do you stay online longer than you intended?', type: 'likert', options: [
+        { label: 'Not applicable', value: 0 },
+        { label: 'Rarely', value: 1 },
+        { label: 'Occasionally', value: 2 },
+        { label: 'Frequently', value: 3 },
+        { label: 'Very frequently', value: 4 },
+        { label: 'Always', value: 5 }
+      ]}
+    ]
+  },
+  {
+    id: 'psqi',
+    name: 'PSQI',
+    title: 'Pittsburgh Sleep Quality Index',
+    description: 'A 19-item measure of sleep quality.',
+    questions: [
+      { id: 'psqi_q1', text: 'During the past month, when have you usually gone to bed at night?', type: 'text', options: [] },
+      { id: 'psqi_q2', text: 'How long (in minutes) has it usually taken you to fall asleep each night?', type: 'text', options: [] },
+      { id: 'psqi_q3', text: 'During the past month, when have you usually gotten up in the morning?', type: 'text', options: [] },
+      { id: 'psqi_q4', text: 'How many hours of actual sleep did you get at night? (This may be different than the number of hours you spend in bed)', type: 'text', options: [] },
+      { id: 'psqi_q5', text: 'Cannot get to sleep within 30 minutes', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q6', text: 'Wake up in the middle of the night or early morning', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q7', text: 'Have to get up to use the bathroom', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q8', text: 'Cannot breathe comfortably', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q9', text: 'Cough or snore loudly', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q10', text: 'Feel too cold', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q11', text: 'Feel too hot', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q12', text: 'Have bad dreams', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q13', text: 'Have pain', type: 'likert', options: [
+        { label: 'Not during the past month', value: 0 },
+        { label: 'Less than once a week', value: 1 },
+        { label: 'Once or twice a week', value: 2 },
+        { label: 'Three or more times a week', value: 3 }
+      ]},
+      { id: 'psqi_q14', text: 'Other reason, please describe', type: 'text', options: [] }
+    ]
+  },
+  {
+    id: 'bhi10',
+    name: 'BHI-10',
+    title: 'Behavioral Health Integration - 10 Item Questionnaire',
+    description: 'A 10-item screening questionnaire for behavioral health issues.',
+    questions: [
+      { id: 'bhi10_q1', text: 'How would you describe your physical health?', type: 'likert', options: [
+        { label: 'Poor', value: 4 },
+        { label: 'Fair', value: 3 },
+        { label: 'Good', value: 2 },
+        { label: 'Very Good', value: 1 },
+        { label: 'Excellent', value: 0 }
+      ]},
+      { id: 'bhi10_q2', text: 'How would you describe your mental or emotional health?', type: 'likert', options: [
+        { label: 'Poor', value: 4 },
+        { label: 'Fair', value: 3 },
+        { label: 'Good', value: 2 },
+        { label: 'Very Good', value: 1 },
+        { label: 'Excellent', value: 0 }
+      ]},
+      { id: 'bhi10_q3', text: 'In the past 2 weeks, have you been bothered by feeling down, depressed, or hopeless?', type: 'likert', options: [
+        { label: 'Not at all', value: 0 },
+        { label: 'Several days', value: 1 },
+        { label: 'More than half the days', value: 2 },
+        { label: 'Nearly every day', value: 3 }
+      ]},
+      { id: 'bhi10_q4', text: 'In the past 2 weeks, have you been bothered by little interest or pleasure in doing things?', type: 'likert', options: [
+        { label: 'Not at all', value: 0 },
+        { label: 'Several days', value: 1 },
+        { label: 'More than half the days', value: 2 },
+        { label: 'Nearly every day', value: 3 }
+      ]},
+      { id: 'bhi10_q5', text: 'In the past 2 weeks, have you felt anxious or worried?', type: 'likert', options: [
+        { label: 'Not at all', value: 0 },
+        { label: 'Several days', value: 1 },
+        { label: 'More than half the days', value: 2 },
+        { label: 'Nearly every day', value: 3 }
+      ]},
+      { id: 'bhi10_q6', text: 'Do you currently drink alcohol more than 7 drinks per week (for women) or more than 14 drinks per week (for men)?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 3 }
+      ]},
+      { id: 'bhi10_q7', text: 'Do you currently use tobacco products?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes, occasionally', value: 1 },
+        { label: 'Yes, regularly', value: 2 }
+      ]},
+      { id: 'bhi10_q8', text: 'Have you experienced any significant life stressors in the past 6 months?', type: 'likert', options: [
+        { label: 'No', value: 0 },
+        { label: 'Yes, but manageable', value: 1 },
+        { label: 'Yes, quite stressful', value: 2 },
+        { label: 'Yes, extremely stressful', value: 3 }
+      ]},
+      { id: 'bhi10_q9', text: 'How satisfied are you with your current relationships?', type: 'likert', options: [
+        { label: 'Very Unsatisfied', value: 3 },
+        { label: 'Unsatisfied', value: 2 },
+        { label: 'Satisfied', value: 1 },
+        { label: 'Very Satisfied', value: 0 }
+      ]},
+      { id: 'bhi10_q10', text: 'How confident are you in your ability to manage your health?', type: 'likert', options: [
+        { label: 'Not Confident', value: 3 },
+        { label: 'Somewhat Confident', value: 2 },
+        { label: 'Confident', value: 1 },
+        { label: 'Very Confident', value: 0 }
+      ]}
+    ]
+  },
+  {
+    id: 'ders18',
+    name: 'DERS-18',
+    title: 'Difficulties in Emotion Regulation Scale - 18',
+    description: 'An 18-item measure of emotion regulation difficulties.',
+    questions: [
+      { id: 'ders18_q1', text: 'I am clear about my feelings', type: 'likert', options: [
+        { label: 'Almost Never', value: 5 },
+        { label: 'Sometimes', value: 4 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 2 },
+        { label: 'Almost Always', value: 1 }
+      ]},
+      { id: 'ders18_q2', text: 'I pay attention to how I feel', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q3', text: 'I experience my emotions as overwhelming', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q4', text: 'I have no idea how I am feeling', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q5', text: 'I have difficulty making sense of my feelings', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q6', text: 'I am attentive to my feelings', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q7', text: 'When I am upset, I acknowledge my emotions', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q8', text: 'When I am upset, I become embarrassed about it', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q9', text: 'When I am upset, I have difficulty controlling my behaviors', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q10', text: 'When I am upset, I believe I will remain that way for a long time', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q11', text: 'When I am upset, I become angry at myself', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q12', text: 'When I am upset, I believe that I am bad or worthless', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q13', text: 'When I am upset, I believe that wallowing in it is all I can do', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q14', text: 'When I am upset, I feel ashamed', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q15', text: 'When I am upset, I have difficulty focusing on other things', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q16', text: 'When I am upset, I feel out of control', type: 'likert', options: [
+        { label: 'Almost Never', value: 1 },
+        { label: 'Sometimes', value: 2 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 4 },
+        { label: 'Almost Always', value: 5 }
+      ]},
+      { id: 'ders18_q17', text: 'When I am upset, I can usually find a way to feel better', type: 'likert', options: [
+        { label: 'Almost Never', value: 5 },
+        { label: 'Sometimes', value: 4 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 2 },
+        { label: 'Almost Always', value: 1 }
+      ]},
+      { id: 'ders18_q18', text: 'When I am upset, I accept my emotions', type: 'likert', options: [
+        { label: 'Almost Never', value: 5 },
+        { label: 'Sometimes', value: 4 },
+        { label: 'About Half the Time', value: 3 },
+        { label: 'Most of the Time', value: 2 },
+        { label: 'Almost Always', value: 1 }
+      ]}
+    ]
   }
 ];
 

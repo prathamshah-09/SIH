@@ -36,7 +36,10 @@ import {
   MessageCircle,
   UserCheck,
   Crown,
-  Shield
+  Shield,
+  ArrowLeft,
+  RefreshCw,
+  Send
 } from 'lucide-react';
 // Backend integration placeholders removed localStorage fallback.
 // TODO: Replace with real API calls when backend is available.
@@ -49,16 +52,55 @@ let ephemeralCommunities = mockCommunityChats.map(c => ({
   id: c.id,
   title: c.name,
   description: c.description,
-  assigned_counsellor: null,
+  assigned_counsellor: 'Dr. Sarah Johnson',
   created_at: c.lastActive || new Date().toISOString(),
   member_count: c.members || 0
 }));
+
+// Ephemeral message storage per community
+let ephemeralMessages = {};
+
+// Demo counsellor names
+const counsellorNames = ['Dr. Sarah Johnson', 'Dr. Priya Sharma', 'Dr. Amit Patel', 'Dr. Emma Wilson'];
+
+// Generate demo messages for a community
+const generateDemoMessages = (communityId, currentUserName = 'Admin') => {
+  if (!ephemeralMessages[communityId]) {
+    const messages = [];
+    const now = new Date();
+    const demoUsers = ['Raj Kumar', 'Neha Singh', 'Arjun Verma', currentUserName];
+    const counsellor = counsellorNames[parseInt(communityId) % counsellorNames.length];
+    
+    // Generate 5 demo messages
+    for (let i = 5; i >= 1; i--) {
+      const timestamp = new Date(now.getTime() - i * 5 * 60000); // 5 mins apart
+      const isFromCounsellor = Math.random() > 0.7;
+      messages.push({
+        id: `msg_${communityId}_${i}`,
+        user_name: isFromCounsellor ? counsellor : demoUsers[i % demoUsers.length],
+        user_role: isFromCounsellor ? 'counsellor' : 'student',
+        content: isFromCounsellor 
+          ? `That's a great point! Let's discuss this further in our next session.`
+          : `Hi everyone, I've been feeling better with the techniques we discussed.`,
+        timestamp: timestamp.toISOString()
+      });
+    }
+    ephemeralMessages[communityId] = messages;
+  }
+  return ephemeralMessages[communityId];
+};
 
 const apiGet = async (path) => {
   await fakeApiDelay();
   if (path === '/communities') return [...ephemeralCommunities];
   if (path.startsWith('/users/')) return []; // membership not tracked locally
-  if (path.endsWith('/messages')) return []; // messages not stored
+  if (path.endsWith('/messages')) {
+    const match = path.match(/\/communities\/(.+)\/messages/);
+    if (match) {
+      const communityId = match[1];
+      return generateDemoMessages(communityId);
+    }
+  }
   return null;
 };
 
@@ -77,7 +119,24 @@ const apiPost = async (path, body) => {
     return newC;
   }
   if (path.endsWith('/join')) return { success: true }; // no-op
-  if (path.endsWith('/messages')) return { success: true }; // no-op
+  if (path.endsWith('/messages')) {
+    const match = path.match(/\/communities\/(.+)\/messages/);
+    if (match) {
+      const communityId = match[1];
+      const newMsg = {
+        id: `msg_${Date.now()}`,
+        user_name: body.user_name,
+        user_role: body.user_role,
+        content: body.content,
+        timestamp: new Date().toISOString()
+      };
+      if (!ephemeralMessages[communityId]) {
+        ephemeralMessages[communityId] = [];
+      }
+      ephemeralMessages[communityId].push(newMsg);
+    }
+    return { success: true }; // no-op
+  }
   return null;
 };
 
@@ -113,10 +172,13 @@ const CommunityManagement = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, communityId: "", communityTitle: "" });
   const [editingCommunity, setEditingCommunity] = useState(null);
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [messagesLoading, setMessagesLoading] = useState(false);
   const [newCommunity, setNewCommunity] = useState({
     title: "",
-    description: "",
-    assigned_counsellor: ""
+    description: ""
   });
 
   const { theme } = useTheme();
@@ -139,17 +201,51 @@ const CommunityManagement = () => {
     fetchCommunities();
   }, []);
 
+  // Fetch messages for a community
+  const fetchMessages = async (communityId) => {
+    try {
+      setMessagesLoading(true);
+      generateDemoMessages(communityId, 'Admin');
+      const data = await apiGet(`/communities/${communityId}/messages`);
+      setMessages(data || []);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  // Send a message
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedCommunity) return;
+
+    try {
+      await apiPost(`/communities/${selectedCommunity.id}/messages`, {
+        community_id: selectedCommunity.id,
+        user_id: 'admin_001',
+        user_name: 'Admin',
+        user_role: 'admin',
+        content: newMessage.trim()
+      });
+
+      setNewMessage('');
+      // Refresh messages
+      fetchMessages(selectedCommunity.id);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
   // Create community
   const handleCreateCommunity = async () => {
     if (newCommunity.title && newCommunity.description) {
       try {
         const created = await apiPost('/communities', {
           title: newCommunity.title,
-          description: newCommunity.description,
-          assigned_counsellor: newCommunity.assigned_counsellor || null
+          description: newCommunity.description
         });
         setCommunities([...communities, created]);
-        setNewCommunity({ title: "", description: "", assigned_counsellor: "" });
+        setNewCommunity({ title: "", description: "" });
         setIsCreateDialogOpen(false);
       } catch (error) {
         console.error('Error creating community:', error);
@@ -163,8 +259,7 @@ const CommunityManagement = () => {
       try {
         const updated = await apiPut(`/communities/${editingCommunity.id}`, {
           title: editingCommunity.title,
-          description: editingCommunity.description,
-          assigned_counsellor: editingCommunity.assigned_counsellor || null
+          description: editingCommunity.description
         });
         setCommunities(communities.map(c => 
           c.id === editingCommunity.id ? updated : c
@@ -198,6 +293,135 @@ const CommunityManagement = () => {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Community Chat View (for admins)
+  if (selectedCommunity) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => setSelectedCommunity(null)}
+              className="hover:scale-105 transition-transform"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Communities
+            </Button>
+            <div>
+              <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>
+                <MessageCircle className="w-8 h-8 mr-3 text-orange-500" />
+                {selectedCommunity.title}
+              </h2>
+              <p className={`${theme.colors.muted} mt-1`}>{selectedCommunity.description}</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => fetchMessages(selectedCommunity.id)}
+            className="hover:scale-105 transition-transform"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {t('refresh')}
+          </Button>
+        </div>
+
+        {/* Chat Area */}
+        <Card className={`${theme.colors.card} border-0 shadow-xl h-[600px] flex flex-col`}>
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center">
+                <Users className="w-5 h-5 mr-2 text-orange-500" />
+                {t('communityChat')}
+              </CardTitle>
+              <Badge className="bg-orange-100 text-orange-800">
+                {selectedCommunity.member_count} members
+              </Badge>
+            </div>
+          </CardHeader>
+          
+          {/* Messages */}
+          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messagesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center py-8">
+                <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-500">{t('noMessagesYet')}</p>
+              </div>
+            ) : (
+              messages.map((message) => {
+                const msgTime = new Date(message.timestamp).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  hour12: true 
+                });
+                return (
+                  <div key={message.id} className="flex items-start space-x-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
+                      message.user_role === 'admin' ? 'bg-red-500' :
+                      message.user_role === 'counsellor' ? 'bg-green-500' : 'bg-blue-500'
+                    }`}>
+                      {message.user_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="font-semibold text-gray-800">{message.user_name}</span>
+                        {message.user_role === 'counsellor' && (
+                          <Badge className="bg-green-100 text-green-800 text-xs">
+                            <Shield className="w-3 h-3 mr-1" />
+                            Counsellor
+                          </Badge>
+                        )}
+                        {message.user_role === 'admin' && (
+                          <Badge className="bg-red-100 text-red-800 text-xs">
+                            <Crown className="w-3 h-3 mr-1" />
+                            Admin
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-gray-700 bg-gray-50 rounded-lg p-3">{message.content}</p>
+                      <span className="text-xs text-gray-500 mt-1">
+                        {msgTime}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+
+          {/* Message Input */}
+          <div className="border-t p-4">
+            <div className="flex space-x-3">
+              <Textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder={t('typeMessagePlaceholder')}
+                className="flex-1 min-h-[60px] resize-none focus:ring-2 focus:ring-orange-500"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim()}
+                className="bg-orange-500 hover:bg-orange-600 self-end"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -252,16 +476,6 @@ const CommunityManagement = () => {
                   className="focus:ring-2 focus:ring-orange-500"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="counsellor">{t('assignedCounsellorLabel')}</Label>
-                <Input
-                  id="counsellor"
-                  value={newCommunity.assigned_counsellor}
-                  onChange={(e) => setNewCommunity({ ...newCommunity, assigned_counsellor: e.target.value })}
-                  placeholder={t('assignedCounsellorPlaceholder')}
-                  className="focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -313,66 +527,69 @@ const CommunityManagement = () => {
         </Card>
       </div>
 
-      {/* Communities Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Communities Mobile List */}
+      <div className="md:hidden space-y-3">
         {communities.map((community) => (
-          <Card key={community.id} className={`${theme.colors.card} border-0 shadow-sm transition-all duration-200`}>            
+          <div key={community.id} className={`w-full box-border flex items-start justify-between p-3 rounded-lg ${theme.colors.card} shadow-sm border`}>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm truncate">{community.title}</div>
+              <div className="text-[11px] text-gray-500 hidden md:block">{community.description}</div>
+              <div className="text-[11px] text-gray-600 mt-1">{community.member_count} members</div>
+            </div>
+            <div className="flex items-start ml-3 space-x-1">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="text-xs"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedCommunity(community);
+                  fetchMessages(community.id);
+                }}
+              >
+                <MessageCircle className="w-3 h-3" />
+              </Button>
+              <Button size="sm" variant="outline" className="text-xs">
+                <Edit className="w-3 h-3" />
+              </Button>
+              <Button size="sm" variant="outline" className="text-xs text-red-500">
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Communities Grid */}
+      <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {communities.map((community) => (
+          <Card key={community.id} className={`${theme.colors.card} border-0 shadow-sm transition-all duration-200 border-l-4 border-l-orange-500`}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-800 flex items-center">
-                <MessageCircle className="w-4 h-4 mr-2 text-orange-500" />
+              <CardTitle className="text-sm font-medium text-gray-800">
                 {community.title}
               </CardTitle>
-              <CardDescription className="text-xs text-gray-600">
+              <CardDescription className="text-xs text-gray-600 line-clamp-2">
                 {community.description}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+              <div className="flex flex-col gap-2">
+                <Badge className="bg-orange-100 text-orange-800 text-xs w-fit">
                   <Users className="w-3 h-3 mr-1" />
-                  {t('members', { count: community.member_count })}
+                  {community.member_count} members
                 </Badge>
-                <div className="flex items-center gap-1 text-sm text-gray-500">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(community.created_at).toLocaleDateString()}
-                </div>
               </div>
-              
-              {community.assigned_counsellor && (
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-blue-100 text-blue-800">
-                    <UserCheck className="w-3 h-3 mr-1" />
-                    {t('counsellorLabelInline', { name: community.assigned_counsellor })}
-                  </Badge>
-                </div>
-              )}
-              
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
-                  onClick={() => openEditDialog(community)}
-                >
-                  <Edit className="w-3 h-3 mr-1" />
-                  {t('edit')}
-                </Button>
-                <Button variant="outline" size="sm">
-                  <MessageCircle className="w-3 h-3 mr-1" />
-                  {t('chat')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeleteDialog({ 
-                    open: true, 
-                    communityId: community.id, 
-                    communityTitle: community.title 
-                  })}
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </div>
+              <Button
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm py-2"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedCommunity(community);
+                  fetchMessages(community.id);
+                }}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                {t('open')}
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -408,16 +625,6 @@ const CommunityManagement = () => {
                   value={editingCommunity.description}
                   onChange={(e) => setEditingCommunity({ ...editingCommunity, description: e.target.value })}
                   rows={3}
-                  className="focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-counsellor">Assigned Counsellor</Label>
-                <Input
-                  id="edit-counsellor"
-                  value={editingCommunity.assigned_counsellor || ""}
-                  onChange={(e) => setEditingCommunity({ ...editingCommunity, assigned_counsellor: e.target.value })}
-                  placeholder="Counsellor ID or name"
                   className="focus:ring-2 focus:ring-orange-500"
                 />
               </div>

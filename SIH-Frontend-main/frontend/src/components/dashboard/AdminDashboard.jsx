@@ -36,6 +36,7 @@ import AnnouncementManagement from '@components/admin/AnnouncementManagement';
 import FormManagement from '@components/admin/FormManagement';
 import CommunityManagement from '@components/community/CommunityManagement';
 import UserManagement from '@components/admin/UserManagement';
+import AnalyticsModule from '@components/admin/AnalyticsModule';
 import ErrorBoundary from '@components/shared/ErrorBoundary';
 import { generateHistoryTitle } from '@lib/utils';
 
@@ -612,55 +613,12 @@ const AdminDashboard = () => {
         return (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-                  <h2 className={`text-3xl font-bold ${theme.colors.text} whitespace-nowrap`}>{t('platformAnalytics')}</h2>
-                  <div />
-                </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <Card className={`${theme.colors.card} lg:col-span-2 border-0 shadow-xl`}>
-                <CardHeader>
-                  <CardTitle className={theme.colors.text}>{t('userGrowthTrends')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64 flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-dashed border-gray-300">
-                    <div className="text-center">
-                      <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-500 text-lg font-medium">Interactive Chart Visualization</p>
-                      <p className="text-gray-400 text-sm mt-2">Real-time analytics dashboard would be implemented here</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className={`${theme.colors.card} border-0 shadow-xl`}>
-                <CardHeader>
-                  <CardTitle className={theme.colors.text}>{t('riskAssessmentOverview')}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-                    <span className={`text-sm font-medium ${theme.colors.text}`}>{t('lowRisk')}</span>
-                    <Badge className="bg-green-500 text-white px-3 py-1">127 users</Badge>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-yellow-50 rounded-lg">
-                    <span className={`text-sm font-medium ${theme.colors.text}`}>{t('mediumRisk')}</span>
-                    <Badge className="bg-yellow-500 text-white px-3 py-1">43 users</Badge>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
-                    <span className={`text-sm font-medium ${theme.colors.text}`}>{t('highRisk')}</span>
-                    <Badge className="bg-red-500 text-white px-3 py-1">8 users</Badge>
-                  </div>
-                  
-                  <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
-                    <h4 className="font-semibold text-gray-800 mb-2">🎯 Key Insights</h4>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• 71.3% users in low-risk category</li>
-                      <li>• 24.2% showing improvement</li>
-                      <li>• 4.5% require immediate attention</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
+              <h2 className={`text-3xl font-bold ${theme.colors.text} whitespace-nowrap flex items-center`}>
+                <BarChart3 className="w-8 h-8 mr-3 text-green-500" />
+                {t('platformAnalytics')}
+              </h2>
             </div>
+            <AnalyticsModule />
           </div>
         );
       case 'community':

@@ -5,42 +5,36 @@ export const wellnessProblems = {
     id: 'anxiety',
     icon: '😰',
     color: 'text-blue-500',
-    bgColor: 'from-blue-100 to-blue-50',
     tools: [/*'audios',*/ 'videos', 'books', 'journaling']
   },
   depression: {
     id: 'depression',
     icon: '😔',
     color: 'text-purple-500',
-    bgColor: 'from-purple-100 to-purple-50',
     tools: [/*'audios',*/ 'videos', 'books', 'journaling']
   },
   burnout: {
     id: 'burnout',
     icon: '🔥',
     color: 'text-orange-500',
-    bgColor: 'from-orange-100 to-orange-50',
     tools: [/*'audios',*/ 'videos', 'books', 'pomodoroTimer', 'eisenhowerMatrix']
   },
   sleepDisorders: {
     id: 'sleepDisorders',
     icon: '😴',
     color: 'text-indigo-500',
-    bgColor: 'from-indigo-100 to-indigo-50',
     tools: [/*'audios',*/ 'videos', 'books']
   },
   academicStress: {
     id: 'academicStress',
     icon: '📚',
     color: 'text-green-500',
-    bgColor: 'from-green-100 to-green-50',
     tools: [/*'audios',*/ 'videos', 'books', 'pomodoroTimer', 'eisenhowerMatrix']
   },
   socialIsolation: {
     id: 'socialIsolation',
     icon: '😞',
     color: 'text-pink-500',
-    bgColor: 'from-pink-100 to-pink-50',
     tools: [/*'audios',*/ 'videos', 'books']
   }
 };

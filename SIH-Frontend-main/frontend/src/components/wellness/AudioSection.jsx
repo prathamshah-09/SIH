@@ -478,7 +478,7 @@ const AudioSection = () => {
       </div>
 
       {/* Audio Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
         {soothingAudios.map((audio) => {
           const Icon = audio.icon;
           const currentState = audioStates[audio.id] || {};
@@ -511,7 +511,7 @@ const AudioSection = () => {
                 )}
               </div> */}
 
-              <CardContent className="p-3">
+              <CardContent className="p-5">
                 {/* Single horizontal row per audio: title | slider | tiny play/pause */}
                 <div className="w-full flex items-center space-x-3">
                   <div className="flex-0 min-w-[40%]">

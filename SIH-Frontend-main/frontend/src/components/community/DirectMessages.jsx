@@ -154,14 +154,14 @@ const DirectMessages = ({ userRole = 'student' }) => {
               sender: currentUser.id,
               senderName: currentUser.name,
               senderRole: userRole,
-              content: 'Audio message',
+              content: t('audioMessage') || 'Audio message',
               audioUrl: audioUrl,
               type: 'audio',
               timestamp: new Date().toISOString(),
               read: false,
             }
           ],
-          lastMessage: 'Audio message',
+          lastMessage: t('audioMessage') || 'Audio message',
           lastMessageTime: new Date().toISOString(),
         };
       }
@@ -265,14 +265,13 @@ const DirectMessages = ({ userRole = 'student' }) => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => setSelectedConversation(null)}
+                  className="p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110"
+                  title={t('back')}
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
+                  <ArrowLeft className="w-6 h-6" />
+                </button>
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
                     {otherPartyInfo?.name.charAt(0)}
@@ -283,12 +282,12 @@ const DirectMessages = ({ userRole = 'student' }) => {
                       {otherPartyInfo?.isAvailable ? (
                         <>
                           <Circle className="w-2 h-2 fill-green-500 text-green-500" />
-                          <span className="text-xs text-green-600">Online</span>
+                          <span className="text-xs text-green-600">{t('online')}</span>
                         </>
                       ) : (
                         <>
                           <Circle className="w-2 h-2 text-gray-400" />
-                          <span className="text-xs text-gray-500">Offline</span>
+                          <span className="text-xs text-gray-500">{t('offline')}</span>
                         </>
                       )}
                     </div>
@@ -296,10 +295,13 @@ const DirectMessages = ({ userRole = 'student' }) => {
                 </div>
               </div>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm" disabled={!otherPartyInfo?.isAvailable}>
-                  <Phone className="w-4 h-4 mr-1" />
-                  Call
-                </Button>
+              <button 
+                className="p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed" 
+                disabled={!otherPartyInfo?.isAvailable}
+                title={t('call') || 'Call'}
+              >
+                <Phone className="w-6 h-6" />
+              </button>
               </div>
             </div>
           </CardContent>
@@ -370,7 +372,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
                 <Button
                   onClick={() => isRecording ? stopRecording() : startRecording()}
                   className={`${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-                  title={isRecording ? 'Stop recording' : 'Send voice message'}
+                  title={isRecording ? t('stopRecording') : t('sendVoiceMessage')}
                 >
                   <Mic className={`w-4 h-4 ${isRecording ? 'text-white' : 'text-gray-700'}`} />
                 </Button>
@@ -403,7 +405,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
             )}
           </h2>
           <p className={`${theme.colors.muted} mt-2 text-base`}>
-            {userRole === 'counsellor' ? '1-to-1 conversations with students' : t('directMessagesDesc')}
+            {userRole === 'counsellor' ? t('directMessagesCounsellorDesc') : t('directMessagesDesc')}
           </p>
         </div>
 
@@ -411,7 +413,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105">
               <Plus className="w-4 h-4 mr-2" />
-              New
+              {t('new')}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
@@ -442,7 +444,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
                         <h4 className={`font-semibold ${theme.colors.text}`}>{counsellor.name}</h4>
                         <p className={`text-sm ${theme.colors.muted}`}>{counsellor.specialization}</p>
                         {counsellor.isAvailable && (
-                          <Badge className="mt-1 bg-green-100 text-green-800 text-xs">Available</Badge>
+                          <Badge className="mt-1 bg-green-100 text-green-800 text-xs">{t('available')}</Badge>
                         )}
                       </div>
                     </div>
@@ -521,7 +523,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
                       <div className="flex-1 min-w-0">
                         <h4 className={`font-semibold ${theme.colors.text}`}>{otherParty?.name}</h4>
                         <p className={`text-sm ${theme.colors.muted} truncate`}>
-                          {conv.lastMessage || 'No messages yet'}
+                          {conv.lastMessage || t('noIncomingMessagesYet')}
                         </p>
                       </div>
                     </div>

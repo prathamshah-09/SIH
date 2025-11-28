@@ -104,19 +104,20 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
   const renderOverview = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
+          <h2 className={`text-2xl sm:text-3xl font-bold ${theme.colors.text} flex items-center whitespace-nowrap`}>
             {t('mentalHealthAssessments')}
-            <Brain className="w-8 h-8 ml-3 text-cyan-500" />
+            <Brain className="w-6 h-6 sm:w-8 sm:h-8 ml-2 sm:ml-3 text-cyan-500" />
           </h2>
-          <p className={`${theme.colors.muted} mt-2 text-lg`}>
+          <p className={`${theme.colors.muted} mt-1 text-xs sm:text-sm`}>
             {t('assessmentsDescription')}
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button 
-            className="bg-gradient-to-r from-orange-500 to-red-600 hover:shadow-lg text-white transition-all duration-300 hover:scale-105"
+            size="sm"
+            className="flex-1 sm:flex-none bg-gradient-to-r from-orange-500 to-red-600 hover:shadow-lg text-white transition-all duration-300 hover:scale-105"
             onClick={() => setActiveView('history')}
             title={t('viewHistory')}
           >
@@ -125,7 +126,8 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
           </Button>
           {userRole === 'admin' && (
             <Button 
-              className="bg-gradient-to-r from-purple-500 to-pink-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105"
+              size="sm"
+              className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105"
               onClick={() => setActiveView('admin')}
             >
               <Settings className="w-4 h-4 mr-2" />
@@ -156,8 +158,8 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
         {availableForms.map((form) => (
           <div key={form.id} className={`flex items-center justify-between p-3 rounded-lg ${theme.colors.card} border`}> 
             <div className="flex-1">
-              <div className="font-semibold">{form.title}</div>
-              <div className={`text-sm ${theme.colors.muted} hide-on-mobile`}>{form.description?.slice(0, 80)}</div>
+              <div className="font-semibold">{t(`${form.id}_title`) || form.title}</div>
+              <div className={`text-sm ${theme.colors.muted} hide-on-mobile`}>{t(`${form.id}_desc`)?.slice(0, 80) || form.description?.slice(0, 80)}</div>
             </div>
             <div className="ml-3">
               <button onClick={() => handleStartAssessment(form)} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-3 py-2 rounded-md text-sm">
@@ -178,23 +180,23 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className={`text-xl ${theme.colors.text} group-hover:text-cyan-600 transition-colors`}>
-                  {form.title}
+                  {t(`${form.id}_title`) || form.title}
                 </CardTitle>
                 <div className={`p-3 rounded-full ${getFormIconBackground(form.name)}`}>
                   {getFormIcon(form.name)}
                 </div>
               </div>
               <CardDescription className={`${theme.colors.muted} text-sm leading-relaxed`}>
-                {form.description}
+                {t(`${form.id}_desc`) || form.description}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="flex items-center justify-between mb-4">
                 <Badge variant="secondary" className="text-xs">
-                  {form.questions?.length || 0} questions
+                  {t(`${form.id}_questions`) || `${form.questions?.length || 0} questions`}
                 </Badge>
                 <span className={`text-xs ${theme.colors.muted}`}>
-                  ~{Math.ceil((form.questions?.length || 0) * 0.5)} min
+                  {t(`${form.id}_time`) || `~${Math.ceil((form.questions?.length || 0) * 0.5)} min`}
                 </span>
               </div>
                 <Button 
@@ -241,13 +243,13 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
           <CardContent>
             <div className="space-y-3 text-sm">
               <p className={theme.colors.muted}>
-                <strong>PHQ-9:</strong> Screens for depression and assesses its severity over the past 2 weeks.
+                {t('phq9_info')}
               </p>
               <p className={theme.colors.muted}>
-                <strong>GAD-7:</strong> Evaluates anxiety symptoms and their impact on daily functioning.
+                {t('gad7_info')}
               </p>
               <p className={theme.colors.muted}>
-                <strong>GHQ-28:</strong> Comprehensive screening for general mental health and psychological distress.
+                {t('ghq28_info')}
               </p>
             </div>
           </CardContent>

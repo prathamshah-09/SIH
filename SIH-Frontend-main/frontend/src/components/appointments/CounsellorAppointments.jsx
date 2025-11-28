@@ -167,9 +167,45 @@ const CounsellorAppointments = () => {
     const [newTimeSlot, setNewTimeSlot] = useState('');
     const [expanded, setExpanded] = useState({});
     const [newActionText, setNewActionText] = useState({});
+    const [editingActionItem, setEditingActionItem] = useState(null);
+    const [editingActionText, setEditingActionText] = useState('');
 
     const toggleExpanded = (id) => {
         setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const handleEditActionItem = (appointmentId, item) => {
+        setEditingActionItem({ appointmentId, itemId: item.id });
+        setEditingActionText(item.text);
+    };
+
+    const handleSaveEditedActionItem = (appointmentId, itemId) => {
+        if (!editingActionText.trim()) {
+            alert('Action item cannot be empty');
+            return;
+        }
+        setAppointments(prev => prev.map(a => 
+            a.id === appointmentId 
+                ? { 
+                    ...a, 
+                    actionItems: a.actionItems.map(item =>
+                        item.id === itemId ? { ...item, text: editingActionText } : item
+                    )
+                } 
+                : a
+        ));
+        setEditingActionItem(null);
+        setEditingActionText('');
+    };
+
+    const handleDeleteActionItem = (appointmentId, itemId) => {
+        if (confirm('Are you sure you want to delete this action item?')) {
+            setAppointments(prev => prev.map(a => 
+                a.id === appointmentId 
+                    ? { ...a, actionItems: a.actionItems.filter(item => item.id !== itemId) } 
+                    : a
+            ));
+        }
     };
 
     const handleAddActionItem = (appointmentId) => {
@@ -604,9 +640,66 @@ const CounsellorAppointments = () => {
                                                         </div>
                                                         <div className={`space-y-2 p-3 bg-gradient-to-r ${theme.colors.secondary} rounded-lg border h-40 overflow-y-auto`}>
                                                             {app.actionItems.length > 0 ? app.actionItems.map(item => (
-                                                                <div key={item.id} className="flex items-center">
-                                                                    <span className="text-cyan-500 mr-2">•</span>
-                                                                    <p className={`${theme.colors.text} text-sm`}>{item.text}</p>
+                                                                <div key={item.id} className="flex items-start justify-between group hover:bg-opacity-80 p-2 rounded transition-all">
+                                                                    <div className="flex items-start flex-1">
+                                                                        <span className="text-cyan-500 mr-2 mt-0.5">•</span>
+                                                                        {editingActionItem?.itemId === item.id && editingActionItem?.appointmentId === app.id ? (
+                                                                            <input
+                                                                                type="text"
+                                                                                value={editingActionText}
+                                                                                onChange={(e) => setEditingActionText(e.target.value)}
+                                                                                className={`flex-1 p-1 rounded border border-cyan-400 focus:ring-2 focus:ring-cyan-500 ${theme.colors.card}`}
+                                                                                autoFocus
+                                                                            />
+                                                                        ) : (
+                                                                            <p className={`${theme.colors.text} text-sm flex-1`}>{item.text}</p>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        {editingActionItem?.itemId === item.id && editingActionItem?.appointmentId === app.id ? (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={() => handleSaveEditedActionItem(app.id, item.id)}
+                                                                                    className="p-1 rounded hover:bg-green-200 text-green-600"
+                                                                                    title="Save"
+                                                                                >
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                                    </svg>
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => { setEditingActionItem(null); setEditingActionText(''); }}
+                                                                                    className="p-1 rounded hover:bg-red-200 text-red-600"
+                                                                                    title="Cancel"
+                                                                                >
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                                    </svg>
+                                                                                </button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={() => handleEditActionItem(app.id, item)}
+                                                                                    className="p-1 rounded hover:bg-blue-200 text-blue-600"
+                                                                                    title="Edit"
+                                                                                >
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                                    </svg>
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDeleteActionItem(app.id, item.id)}
+                                                                                    className="p-1 rounded hover:bg-red-200 text-red-600"
+                                                                                    title="Delete"
+                                                                                >
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                    </svg>
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             )) : (
                                                                 <p className={`${theme.colors.muted} text-sm text-center pt-12`}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@context/ThemeContext';
 import { useLanguage } from '@context/LanguageContext';
 import { useAnnouncements } from '@context/AnnouncementContext';
@@ -31,6 +31,27 @@ const AnnouncementManagement = () => {
   const { t, isRTL } = useLanguage();
   const { announcements, addAnnouncement, updateAnnouncement, deleteAnnouncement } = useAnnouncements();
   const { toast } = useToast();
+
+  // Persist sheet state to localStorage
+  useEffect(() => {
+    try {
+      const savedSheetState = localStorage.getItem('announcement_sheet_open');
+      if (savedSheetState !== null) {
+        setSheetOpen(JSON.parse(savedSheetState));
+      }
+    } catch (e) {
+      console.warn('Failed to restore announcement sheet state', e);
+    }
+  }, []);
+
+  // Save sheet state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('announcement_sheet_open', JSON.stringify(sheetOpen));
+    } catch (e) {
+      console.warn('Failed to save announcement sheet state', e);
+    }
+  }, [sheetOpen]);
 
   const handlePublish = () => {
     if (!title.trim() || !content.trim()) {
