@@ -39,12 +39,12 @@ const VideoSection = ({ videos = [] }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className={`text-2xl font-bold ${theme.colors.text} flex items-center`}>
-          <Play className="w-7 h-7 mr-3 text-red-500" />
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className={`text-xl sm:text-2xl font-bold ${theme.colors.text} flex items-center whitespace-nowrap`}>
+          <Play className="w-5 sm:w-7 h-5 sm:h-7 mr-2 text-red-500" />
           {t('videos')}
         </h3>
-        <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white">
+        <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-base">
           {Math.min(videos.length, 6)} videos
         </Badge>
       </div>
