@@ -96,25 +96,7 @@ const DashboardLayout = ({ children, sidebarContent }) => {
             <div className="space-y-2">
               {sidebarContent}
             </div>
-            
-            {/* Sidebar Footer */}
-            <div className="absolute bottom-6 left-6 right-6">
-              <div className={`p-4 rounded-xl bg-gradient-to-r ${theme.colors.secondary} border border-gray-200/50`}>
-                <div className="text-center">
-                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mx-auto mb-2 flex items-center justify-center">
-                    <Settings className="w-4 h-4 text-white" />
-                  </div>
-                  <p className={`text-xs ${theme.colors.muted} mb-2`}>Need help?</p>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="w-full text-xs hover:scale-105 transition-transform"
-                  >
-                    Support Center
-                  </Button>
-                </div>
-              </div>
-            </div>
+
           </aside>
         )}
 

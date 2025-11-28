@@ -34,23 +34,80 @@ const fakeApiDelay = (ms = 150) => new Promise(res => setTimeout(res, ms));
 let ephemeralCommunities = mockCommunityChats.map(c => ({
   id: c.id,
   title: c.name,
+  description: c.description,
   member_count: c.members,
   created_at: c.lastActive || new Date().toISOString(),
-  assigned_counsellor: null
+  assigned_counsellor: 'Dr. Sarah Johnson' // Default counsellor for all communities
 }));
+
+// Ephemeral message storage per community
+let ephemeralMessages = {};
+
+// Demo counsellor names
+const counsellorNames = ['Dr. Sarah Johnson', 'Dr. Priya Sharma', 'Dr. Amit Patel', 'Dr. Emma Wilson'];
+
+// Generate demo messages for a community
+const generateDemoMessages = (communityId) => {
+  if (!ephemeralMessages[communityId]) {
+    const messages = [];
+    const now = new Date();
+    const demoUsers = ['Raj Kumar', 'Neha Singh', 'Arjun Verma', currentUser?.username || 'Student123'];
+    const counsellor = counsellorNames[parseInt(communityId) % counsellorNames.length];
+    
+    // Generate 5 demo messages
+    for (let i = 5; i >= 1; i--) {
+      const timestamp = new Date(now.getTime() - i * 5 * 60000); // 5 mins apart
+      const isFromCounsellor = Math.random() > 0.7;
+      messages.push({
+        id: `msg_${communityId}_${i}`,
+        user_name: isFromCounsellor ? counsellor : demoUsers[i % demoUsers.length],
+        user_role: isFromCounsellor ? 'counsellor' : 'student',
+        content: isFromCounsellor 
+          ? `That's a great point! Let's discuss this further in our next session.`
+          : `Hi everyone, I've been feeling better with the techniques we discussed.`,
+        timestamp: timestamp.toISOString()
+      });
+    }
+    ephemeralMessages[communityId] = messages;
+  }
+  return ephemeralMessages[communityId];
+};
 
 const apiGet = async (path) => {
   await fakeApiDelay();
   if (path === '/communities') return [...ephemeralCommunities];
   if (path.startsWith('/users/')) return []; // membership not tracked
-  if (path.endsWith('/messages')) return []; // messages ephemeral empty
+  if (path.endsWith('/messages')) {
+    const match = path.match(/\/communities\/(.+)\/messages/);
+    if (match) {
+      const communityId = match[1];
+      return generateDemoMessages(communityId);
+    }
+  }
   return null;
 };
 
 const apiPost = async (path, body) => {
   await fakeApiDelay();
   if (path.endsWith('/join')) return { success: true }; // no-op
-  if (path.endsWith('/messages')) return { success: true }; // no-op
+  if (path.endsWith('/messages')) {
+    const match = path.match(/\/communities\/(.+)\/messages/);
+    if (match) {
+      const communityId = match[1];
+      const newMsg = {
+        id: `msg_${Date.now()}`,
+        user_name: body.user_name,
+        user_role: body.user_role,
+        content: body.content,
+        timestamp: new Date().toISOString()
+      };
+      if (!ephemeralMessages[communityId]) {
+        ephemeralMessages[communityId] = [];
+      }
+      ephemeralMessages[communityId].push(newMsg);
+    }
+    return { success: true };
+  }
   return null;
 };
 
@@ -104,6 +161,9 @@ const CommunityView = ({ userRole = 'student' }) => {
   const fetchMessages = async (communityId) => {
     try {
       setMessagesLoading(true);
+      // Generate demo messages with current user's username
+      const userDisplayName = currentUser.username || currentUser.name || 'Student';
+      generateDemoMessages(communityId, userDisplayName);
       const data = await apiGet(`/communities/${communityId}/messages`);
       setMessages(data || []);
     } catch (error) {
@@ -255,36 +315,38 @@ const CommunityView = ({ userRole = 'student' }) => {
                 <p className="text-gray-500">{t('noMessagesYet')}</p>
               </div>
             ) : (
-              messages.map((message) => (
-                <div key={message.id} className="flex items-start space-x-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
-                    message.user_role === 'admin' ? 'bg-red-500' :
-                    message.user_role === 'counsellor' ? 'bg-green-500' : 'bg-blue-500'
-                  }`}>
-                    {message.user_name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-semibold text-gray-800">{message.user_name}</span>
-                      <Badge 
-                        className={`text-xs ${
-                          message.user_role === 'admin' ? 'bg-red-100 text-red-800' :
-                          message.user_role === 'counsellor' ? 'bg-green-100 text-green-800' : 
-                          'bg-blue-100 text-blue-800'
-                        }`}
-                      >
-                        {message.user_role === 'admin' && <Crown className="w-3 h-3 mr-1" />}
-                        {message.user_role === 'counsellor' && <Shield className="w-3 h-3 mr-1" />}
-                        {message.user_role.charAt(0).toUpperCase() + message.user_role.slice(1)}
-                      </Badge>
+              messages.map((message) => {
+                const msgTime = new Date(message.timestamp).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  hour12: true 
+                });
+                return (
+                  <div key={message.id} className="flex items-start space-x-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
+                      message.user_role === 'admin' ? 'bg-red-500' :
+                      message.user_role === 'counsellor' ? 'bg-green-500' : 'bg-blue-500'
+                    }`}>
+                      {message.user_name.charAt(0).toUpperCase()}
                     </div>
-                    <p className="text-gray-700 bg-gray-50 rounded-lg p-3">{message.content}</p>
-                    <span className="text-xs text-gray-500 mt-1">
-                      {new Date(message.timestamp).toLocaleString()}
-                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="font-semibold text-gray-800">{message.user_name}</span>
+                        {message.user_role === 'counsellor' && (
+                          <Badge className="bg-green-100 text-green-800 text-xs">
+                            <Shield className="w-3 h-3 mr-1" />
+                            Counsellor
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-gray-700 bg-gray-50 rounded-lg p-3">{message.content}</p>
+                      <span className="text-xs text-gray-500 mt-1">
+                        {msgTime}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </CardContent>
 
@@ -342,7 +404,109 @@ const CommunityView = ({ userRole = 'student' }) => {
         {t('connectWithOthersDesc')}
       </p>
 
-      {/* My Communities */}
+      {/* Joined Communities Section */}
+      <div className="space-y-4">
+        <h3 className={`text-xl font-semibold ${theme.colors.text} flex items-center`}>
+          <Users className="w-5 h-5 mr-2 text-blue-500" />
+          {t('joinedCommunities') || 'Joined Communities'}
+        </h3>
+        <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Dummy Joined Community 1 */}
+          <Card className={`${theme.colors.card} border-0 shadow-md hover:shadow-lg transition-all duration-200`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-800 flex items-center">
+                <MessageCircle className="w-4 h-4 mr-2 text-green-500" />
+                Mental Health Awareness
+              </CardTitle>
+              <CardDescription className="text-xs text-gray-600">
+                A supportive community for mental health awareness and peer support
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-green-100 text-green-800 text-xs">
+                  <Users className="w-3 h-3 mr-1" />
+                  245 members
+                </Badge>
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <Calendar className="w-3 h-3" />
+                  {t('joined')}
+                </div>
+              </div>
+              <Button 
+                className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                {t('openChat') || 'Open Chat'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Dummy Joined Community 2 */}
+          <Card className={`${theme.colors.card} border-0 shadow-md hover:shadow-lg transition-all duration-200`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-800 flex items-center">
+                <MessageCircle className="w-4 h-4 mr-2 text-green-500" />
+                Stress Management Support
+              </CardTitle>
+              <CardDescription className="text-xs text-gray-600">
+                Practical techniques and strategies for managing stress and building resilience
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-green-100 text-green-800 text-xs">
+                  <Users className="w-3 h-3 mr-1" />
+                  156 members
+                </Badge>
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <Calendar className="w-3 h-3" />
+                  {t('joined')}
+                </div>
+              </div>
+              <Button 
+                className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                {t('openChat') || 'Open Chat'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Mobile view for Joined Communities */}
+        <div className="md:hidden space-y-3">
+          <div className={`w-full box-border flex items-center justify-between p-3 rounded-lg ${theme.colors.card} shadow-sm border border-l-4 border-l-green-500`}>                
+            <div className="min-w-0">
+              <div className="font-medium text-sm truncate">Mental Health Awareness</div>
+              <div className="text-[11px] text-gray-500 hidden md:block">A safe space for mental health discussions</div>
+              <div className="text-[11px] text-gray-500">245 members</div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button className="bg-green-500 text-white px-3 py-1 text-sm">
+                {t('openChat') || 'Chat'}
+              </Button>
+            </div>
+          </div>
+          <div className={`w-full box-border flex items-center justify-between p-3 rounded-lg ${theme.colors.card} shadow-sm border border-l-4 border-l-green-500`}>                
+            <div className="min-w-0">
+              <div className="font-medium text-sm truncate">Stress Management Support</div>
+              <div className="text-[11px] text-gray-500 hidden md:block">Practical tips for managing stress effectively</div>
+              <div className="text-[11px] text-gray-500">156 members</div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button className="bg-green-500 text-white px-3 py-1 text-sm">
+                {t('openChat') || 'Chat'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-gray-200 pt-8"></div>
+
+      {/* Communities Header */}
       {userCommunities.length > 0 && (
         <div className="space-y-4">
           <h3 className={`text-xl font-semibold ${theme.colors.text} flex items-center`}>
@@ -358,8 +522,8 @@ const CommunityView = ({ userRole = 'student' }) => {
                   <div className="text-[11px] text-gray-500">{community.member_count} members</div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }} className="bg-blue-500 text-white px-3 py-1 text-sm">
-                    {t('openChat')}
+                  <Button onClick={(e) => { e.preventDefault(); setSelectedCommunity(community); fetchMessages(community.id); }} className="bg-blue-500 text-white px-3 py-1 text-sm">
+                    {t('open')}
                   </Button>
                 </div>
               </div>
@@ -370,35 +534,31 @@ const CommunityView = ({ userRole = 'student' }) => {
           <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {userCommunities.map((community) => (
               <Card key={community.id} className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer border-l-4 border-l-green-500`}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-800 flex items-center">
-                      <MessageCircle className="w-4 h-4 mr-2 text-green-500" />
-                      {community.title}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-gray-600">
-                      {community.description}
-                    </CardDescription>
-                  </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Badge className="bg-green-100 text-green-800 text-xs">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-800">
+                    {community.title}
+                  </CardTitle>
+                  <CardDescription className="text-xs text-gray-600 line-clamp-2">
+                    {community.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-col gap-2">
+                    <Badge className="bg-green-100 text-green-800 text-xs w-fit">
                       <Users className="w-3 h-3 mr-1" />
                       {community.member_count} members
                     </Badge>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Calendar className="w-3 h-3" />
-                      {t('joined')}
-                    </div>
                   </div>
                   <Button 
                     className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       setSelectedCommunity(community);
                       fetchMessages(community.id);
                     }}
                   >
                     <MessageCircle className="w-4 h-4 mr-2" />
-                    {t('openChat')}
+                    {t('open')}
                   </Button>
                 </CardContent>
               </Card>
@@ -423,12 +583,12 @@ const CommunityView = ({ userRole = 'student' }) => {
                     <div className="font-medium text-sm truncate">{community.title}</div>
                     <div className="text-[11px] text-gray-400">{new Date(community.created_at).toLocaleDateString()}</div>
                   </div>
+                  <div className="text-[11px] text-gray-500 hidden md:block mt-1">{community.description}</div>
                   <div className="text-[11px] text-gray-600 mt-1">{community.member_count} members</div>
-                  {/* keep description hidden on mobile to keep compact view */}
                 </div>
                 <div className="flex items-start ml-3">
                   {isUserMember ? (
-                    <Button onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }} className="bg-blue-500 text-white px-3 py-1 text-sm">{t('openChat')}</Button>
+                    <Button onClick={(e) => { e.preventDefault(); setSelectedCommunity(community); fetchMessages(community.id); }} className="bg-blue-500 text-white px-3 py-1 text-sm">{t('openChat')}</Button>
                   ) : (
                     <Button onClick={() => { setCommunityToJoin(community); setIsJoinDialogOpen(true); }} className="bg-green-500 text-white px-3 py-1 text-sm">{t('joinCommunity')}</Button>
                   )}
@@ -442,61 +602,46 @@ const CommunityView = ({ userRole = 'student' }) => {
           {communities.map((community) => {
             const isUserMember = isMember(community.id);
             return (
-              <Card key={community.id} className={`${theme.colors.card} border-0 shadow-sm transition-all duration-200 ${isUserMember ? 'opacity-80' : ''}`}>
+              <Card key={community.id} className={`${theme.colors.card} border-0 shadow-sm transition-all duration-200 border-l-4 ${isUserMember ? 'border-l-green-500' : 'border-l-blue-500'}`}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-800 flex items-center">
-                    <MessageCircle className="w-4 h-4 mr-2 text-blue-500" />
+                  <CardTitle className="text-sm font-medium text-gray-800">
                     {community.title}
-                    {isUserMember && <UserCheck className="w-4 h-4 ml-2 text-green-500" />}
                   </CardTitle>
-                  <CardDescription className="text-xs text-gray-600">
+                  <CardDescription className="text-xs text-gray-600 line-clamp-2">
                     {community.description}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                  <div className="flex flex-col gap-2">
+                    <Badge className={`text-xs w-fit ${isUserMember ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                       <Users className="w-3 h-3 mr-1" />
                       {community.member_count} members
                     </Badge>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(community.created_at).toLocaleDateString()}
-                    </div>
                   </div>
-
-                  {community.assigned_counsellor && (
-                    <Badge className="bg-green-100 text-green-800 text-xs">
-                      <Shield className="w-3 h-3 mr-1" />
-                      Counsellor: {community.assigned_counsellor}
-                    </Badge>
+                  {isUserMember ? (
+                    <Button 
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white text-sm py-2"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedCommunity(community);
+                        fetchMessages(community.id);
+                      }}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      {t('open')}
+                    </Button>
+                  ) : (
+                    <Button 
+                      className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2"
+                      onClick={() => {
+                        setCommunityToJoin(community);
+                        setIsJoinDialogOpen(true);
+                      }}
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      {t('joinCommunity')}
+                    </Button>
                   )}
-
-                  <div className="flex gap-2">
-                    {isUserMember ? (
-                      <Button 
-                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-2"
-                        onClick={() => {
-                          setSelectedCommunity(community);
-                          fetchMessages(community.id);
-                        }}
-                      >
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        <span className="text-sm">{t('openChat')}</span>
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-2"
-                        onClick={() => {
-                          setCommunityToJoin(community);
-                          setIsJoinDialogOpen(true);
-                        }}
-                      >
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        <span className="text-sm">{t('joinCommunity')}</span>
-                      </Button>
-                    )}
-                  </div>
                 </CardContent>
               </Card>
             );
@@ -506,34 +651,34 @@ const CommunityView = ({ userRole = 'student' }) => {
 
       {/* Join Confirmation Dialog */}
       <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <UserPlus className="w-5 h-5 mr-2 text-green-500" />
+            <DialogTitle className="flex items-center text-lg sm:text-xl">
+              <UserPlus className="w-5 h-5 mr-2 text-green-500 flex-shrink-0" />
               {t('joinCommunity')}
             </DialogTitle>
             <DialogDescription>
               {communityToJoin && (
-                <div className="space-y-2">
-                  <div className="font-semibold text-md">{communityToJoin.title}</div>
+                <div className="space-y-3 mt-4">
+                  <div className="font-semibold text-base sm:text-lg break-words">{communityToJoin.title}</div>
                   {communityToJoin.description ? (
-                    <div className="text-sm text-gray-600">{communityToJoin.description}</div>
+                    <div className="text-sm text-gray-600 break-words line-clamp-3">{communityToJoin.description}</div>
                   ) : (
                     <div className="text-sm text-gray-500">{t('noCommunitiesAvailable')}</div>
                   )}
-                  <div className="text-xs text-gray-400">{communityToJoin.member_count} members • {new Date(communityToJoin.created_at).toLocaleDateString()}</div>
-                  <div className="text-sm text-gray-700 mt-2">{t('joinCommunityConfirmDesc', { title: communityToJoin.title })}</div>
+                  <div className="text-xs sm:text-sm text-gray-400 break-words">{communityToJoin.member_count} members • {new Date(communityToJoin.created_at).toLocaleDateString()}</div>
+                  <div className="text-sm text-gray-700 mt-3 break-words">{t('joinCommunityConfirmDesc', { title: communityToJoin.title })}</div>
                 </div>
               )}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsJoinDialogOpen(false)}>
+          <DialogFooter className="flex gap-3 mt-6">
+            <Button variant="outline" onClick={() => setIsJoinDialogOpen(false)} className="flex-1 sm:flex-none">
               {t('cancel')}
             </Button>
             <Button 
               onClick={() => communityToJoin && handleJoinCommunity(communityToJoin)}
-              className="bg-green-500 hover:bg-green-600"
+              className="flex-1 sm:flex-none bg-green-500 hover:bg-green-600"
             >
               {t('joinCommunity')}
             </Button>

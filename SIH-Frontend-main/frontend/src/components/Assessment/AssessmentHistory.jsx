@@ -126,8 +126,8 @@ const AssessmentHistory = ({ sessionId, onBack }) => {
 
   const getMaxScore = (formName) => {
     const scores = {
-      'PHQ-9': 27, 'GAD-7': 21, 'GHQ-12': 36, 'PHQ-2': 6,
-      'GAD-2': 6, 'BDI-II': 63, 'MMSE': 30, 'C-SSRS': 20, 'GHQ-28': 28
+      'PHQ-9': 27, 'GAD-7': 21, 'GHQ-12': 36, 'C-SSRS': 20, 'GHQ-28': 28,
+      'PSS-10': 40, 'WHO-5': 25, 'IAT': 100, 'PSQI': 21, 'BHI-10': 30, 'DERS-18': 90
     };
     return scores[formName] || 100;
   };
