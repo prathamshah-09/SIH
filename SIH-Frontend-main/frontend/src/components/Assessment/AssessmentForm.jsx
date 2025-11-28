@@ -128,12 +128,6 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
             if (score >= 3) return 'Moderate';
             return 'Minimal';
           }
-          if (formName === 'MMSE') {
-            if (score <= 16) return 'Severe Cognitive Impairment';
-            if (score <= 20) return 'Moderate Cognitive Impairment';
-            if (score <= 24) return 'Mild Cognitive Impairment';
-            return 'Normal';
-          }
           if (formName === 'C-SSRS') {
             if (score >= 12) return 'High Risk';
             if (score >= 7) return 'Moderate Risk';

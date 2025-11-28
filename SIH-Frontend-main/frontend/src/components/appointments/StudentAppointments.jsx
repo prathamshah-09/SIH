@@ -332,7 +332,7 @@ const StudentAppointments = () => {
     // Navigation Tabs with uniform SensEase colors
     const renderTabs = () => (
         <div className="flex justify-center mb-8">
-            <div className="flex space-x-2 bg-gray-200 p-1 rounded-full md:hidden lg:blockcd s ">
+            <div className="flex space-x-2 bg-gray-200 p-1 rounded-full">
                 <Button 
                     onClick={() => setView('schedule')} 
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
@@ -419,7 +419,7 @@ const StudentAppointments = () => {
                         </div>
                     </div>
 
-                    <div className="hidden md:block">{renderTabs()}</div>
+                    <div className="hidden lg:block">{renderTabs()}</div>
 
                     {view === 'schedule' && step === 1 && (
                         <div className="space-y-8">

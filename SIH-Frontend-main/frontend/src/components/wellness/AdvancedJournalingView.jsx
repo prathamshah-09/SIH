@@ -62,11 +62,13 @@ const AdvancedJournalingView = ({ onBack }) => {
   const [positiveReframe, setPositiveReframe] = useState('');
 
   const moodEmojis = {
-    'very-sad': { emoji: '😢', label: 'Very Sad', color: 'text-blue-600' },
-    'sad': { emoji: '😔', label: 'Sad', color: 'text-blue-400' },
-    'neutral': { emoji: '😐', label: 'Neutral', color: 'text-gray-500' },
-    'happy': { emoji: '😊', label: 'Happy', color: 'text-green-400' },
-    'very-happy': { emoji: '😄', label: 'Very Happy', color: 'text-green-600' }
+    'happy': { emoji: '😊', label: 'Happy', color: 'text-yellow-500' },
+    'calm': { emoji: '😌', label: 'Calm', color: 'text-blue-500' },
+    'sad': { emoji: '😢', label: 'Sad', color: 'text-blue-600' },
+    'stressed': { emoji: '😰', label: 'Stressed', color: 'text-orange-600' },
+    'anxious': { emoji: '😟', label: 'Anxious', color: 'text-red-500' },
+    'overwhelmed': { emoji: '😵', label: 'Overwhelmed', color: 'text-purple-600' },
+    'exhausted': { emoji: '😴', label: 'Exhausted', color: 'text-gray-600' }
   };
 
   // Removed localStorage persistence; all journaling data is ephemeral.
@@ -237,12 +239,12 @@ const AdvancedJournalingView = ({ onBack }) => {
       calendarDays.push(
         <div
           key={day}
-          className="w-10 h-14 flex flex-col items-center justify-start relative cursor-pointer transition-all duration-300"
+          className="flex flex-col items-center justify-start relative cursor-pointer transition-all duration-300 aspect-square"
           onClick={() => !isFuture && handleDateClick(date)}
         >
           {/* Number circle */}
           <div
-            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all
+            className={`w-8 h-8 flex items-center justify-center rounded-full transition-all
               ${isSelected
                 ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold shadow-lg scale-105'
                 : isTodayDate
@@ -252,7 +254,7 @@ const AdvancedJournalingView = ({ onBack }) => {
               ${isFuture && !isSelected ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700'}
             `}
           >
-            <span className="text-sm font-medium">{day}</span>
+            <span className="text-xs font-medium">{day}</span>
           </div>
 
           {/* Entry dots below the circle */}
@@ -694,11 +696,16 @@ const AdvancedJournalingView = ({ onBack }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-start">
+      <div className="flex items-center justify-between">
         <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>
           <BookOpen className="w-8 h-8 mr-3 text-blue-500" />
           {t('journal')}
         </h2>
+        <div className="lg:hidden">
+          <button onClick={() => setShowCalendarModal(true)} className="p-3 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200 hover:scale-110" title="Calendar">
+            <Calendar className="w-6 h-6 text-cyan-600" />
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -716,11 +723,6 @@ const AdvancedJournalingView = ({ onBack }) => {
                 </button>
                 <button onClick={() => { setActiveTab('today'); setTodayInnerTab('negative-positive'); }} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
                   {t('worriesJournal')}
-                </button>
-              </div>
-              <div className="flex justify-center mt-3">
-                <button onClick={() => setShowCalendarModal(true)} className="p-3 rounded-full bg-gray-100">
-                  <Calendar className="w-6 h-6 text-cyan-600" />
                 </button>
               </div>
             </div>
@@ -762,13 +764,13 @@ const AdvancedJournalingView = ({ onBack }) => {
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center font-medium text-gray-500 mb-2 text-xs">
+            <div className="grid grid-cols-7 gap-2 text-center font-medium text-gray-500 mb-2 text-xs">
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                <div key={day} className="p-2">{day}</div>
+                <div key={day} className="p-1">{day}</div>
               ))}
             </div>
             
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-2">
               {renderCalendar()}
             </div>
 

@@ -265,14 +265,13 @@ const DirectMessages = ({ userRole = 'student' }) => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => setSelectedConversation(null)}
+                  className="p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110"
+                  title={t('back')}
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  {t('back')}
-                </Button>
+                  <ArrowLeft className="w-6 h-6" />
+                </button>
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
                     {otherPartyInfo?.name.charAt(0)}
@@ -296,10 +295,13 @@ const DirectMessages = ({ userRole = 'student' }) => {
                 </div>
               </div>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm" disabled={!otherPartyInfo?.isAvailable}>
-                  <Phone className="w-4 h-4 mr-1" />
-                  Call
-                </Button>
+              <button 
+                className="p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed" 
+                disabled={!otherPartyInfo?.isAvailable}
+                title={t('call') || 'Call'}
+              >
+                <Phone className="w-6 h-6" />
+              </button>
               </div>
             </div>
           </CardContent>

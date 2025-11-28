@@ -97,12 +97,14 @@ const buildPrompt = (formName, score, severityLevel) => {
   const assessmentInfo = {
     'PHQ-9': { max: 27, type: 'depression' },
     'GAD-7': { max: 21, type: 'anxiety' },
-    'PHQ-2': { max: 6, type: 'depression screening' },
-    'GAD-2': { max: 6, type: 'anxiety screening' },
-    'BDI-II': { max: 63, type: 'depression' },
-    'MMSE': { max: 30, type: 'cognitive' },
     'C-SSRS': { max: 20, type: 'suicide risk' },
-    'GHQ-12': { max: 36, type: 'general health' }
+    'GHQ-12': { max: 36, type: 'general health' },
+    'PSS-10': { max: 40, type: 'stress' },
+    'WHO-5': { max: 25, type: 'well-being' },
+    'IAT': { max: 100, type: 'internet addiction' },
+    'PSQI': { max: 21, type: 'sleep quality' },
+    'BHI-10': { max: 30, type: 'behavioral health' },
+    'DERS-18': { max: 90, type: 'emotion regulation' }
   };
 
   const info = assessmentInfo[formName] || { max: 100, type: 'mental health' };

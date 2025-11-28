@@ -144,25 +144,23 @@ const EnhancedJournalingView = ({ onBack, initialMode }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button
+      <div className="hidden lg:flex items-center justify-between mb-6">
+        <button
           onClick={onBack}
-          variant="outline"
-          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105`}
+          className={`p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110`}
+          title={t('backToProblems')}
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('backToProblems')}
-        </Button>
+          <ArrowLeft className="w-6 h-6" />
+        </button>
         
-        <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>
-          <BookOpen className="w-8 h-8 mr-3 text-blue-500" />
+        <h2 className={`text-3xl font-bold ${theme.colors.text}`}>
           {t('journaling')}
         </h2>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar Section */}
-        <Card className={`lg:col-span-1 ${theme.colors.card} border-0 shadow-xl`}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:grid-rows-2">
+        {/* Calendar Section - positioned on left, row 1 */}
+        <Card className={`lg:col-span-1 lg:row-start-1 ${theme.colors.card} border-0 shadow-xl`}>
           <CardHeader>
             <CardTitle className={`${theme.colors.text} flex items-center justify-between`}>
               <span className="flex items-center">
@@ -229,8 +227,8 @@ const EnhancedJournalingView = ({ onBack, initialMode }) => {
           </CardContent>
         </Card>
 
-        {/* Journal Entry Section */}
-        <Card className={`lg:col-span-2 ${theme.colors.card} border-0 shadow-xl`}>
+        {/* Journal Entry Section - positioned to right on laptop, row 1 */}
+        <Card className={`lg:col-span-2 lg:row-start-1 ${theme.colors.card} border-0 shadow-xl`}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className={`${theme.colors.text} text-xl`}>
