@@ -1,12 +1,8 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
-import EnhancedJournalingView from './EnhancedJournalingView';
+import JournalWithTheme from './JournalWithThemeNew';
 
 const JournalingPage = () => {
-  const { mode } = useParams();
-  const initialMode = mode || 'current';
-
-  return <EnhancedJournalingView initialMode={initialMode} />;
+  return <JournalWithTheme />;
 };
 
 export default JournalingPage;

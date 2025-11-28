@@ -29,7 +29,7 @@ import { mockAnnouncements, mockCommunityChats, mockAppointments } from '@mock/m
 import { useAnnouncements } from '@context/AnnouncementContext';
 import { generateHistoryTitle } from '@lib/utils';
 import WellnessTools from '@components/wellness/WellnessTools';
-import AdvancedJournalingView from '@components/wellness/AdvancedJournalingView';
+import JournalWithTheme from '@components/wellness/JournalWithThemeNew';
 import StudentAppointments from '@components/appointments/StudentAppointments';
 import CommunityView from '@components/community/CommunityView';
 import AudioSection from '@components/wellness/AudioSection';
@@ -690,7 +690,7 @@ const StudentDashboard = () => {
       case 'community':
         return <CommunityView userRole="student" />;
       case 'journaling':
-        return <AdvancedJournalingView onBack={() => setActiveTab('overview')} />;
+        return <JournalWithTheme />;
       case 'resources':
         return <WellnessTools />;
       case 'audios' :

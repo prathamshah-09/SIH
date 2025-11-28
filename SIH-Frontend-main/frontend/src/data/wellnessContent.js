@@ -3,37 +3,37 @@
 export const wellnessProblems = {
   anxiety: {
     id: 'anxiety',
-    icon: '😰',
+    icon: '',
     color: 'text-blue-500',
     tools: [/*'audios',*/ 'videos', 'books', 'journaling']
   },
   depression: {
     id: 'depression',
-    icon: '😔',
+    icon: '',
     color: 'text-purple-500',
     tools: [/*'audios',*/ 'videos', 'books', 'journaling']
   },
   burnout: {
     id: 'burnout',
-    icon: '🔥',
+    icon: '',
     color: 'text-orange-500',
     tools: [/*'audios',*/ 'videos', 'books', 'pomodoroTimer', 'eisenhowerMatrix']
   },
   sleepDisorders: {
     id: 'sleepDisorders',
-    icon: '😴',
+    icon: '',
     color: 'text-indigo-500',
     tools: [/*'audios',*/ 'videos', 'books']
   },
   academicStress: {
     id: 'academicStress',
-    icon: '📚',
+    icon: '',
     color: 'text-green-500',
     tools: [/*'audios',*/ 'videos', 'books', 'pomodoroTimer', 'eisenhowerMatrix']
   },
   socialIsolation: {
     id: 'socialIsolation',
-    icon: '😞',
+    icon: '',
     color: 'text-pink-500',
     tools: [/*'audios',*/ 'videos', 'books']
   }

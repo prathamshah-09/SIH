@@ -38,12 +38,12 @@ const BookSection = ({ books = [] }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className={`text-2xl font-bold ${theme.colors.text} flex items-center`}>
-          <BookOpen className="w-7 h-7 mr-3 text-blue-500" />
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className={`text-xl sm:text-2xl font-bold ${theme.colors.text} flex items-center whitespace-nowrap`}>
+          <BookOpen className="w-5 sm:w-7 h-5 sm:h-7 mr-2 text-blue-500" />
           {t('books')}
         </h3>
-        <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-base">
           {Math.min(books.length, 6)} books
         </Badge>
       </div>
