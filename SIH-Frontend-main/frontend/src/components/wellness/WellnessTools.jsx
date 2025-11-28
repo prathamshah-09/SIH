@@ -35,6 +35,11 @@ const WellnessTools = () => {
     setShowJournaling(false);
   };
 
+  // Close journaling view and return to the problem's tools (keep selectedProblem)
+  const handleBackFromJournaling = () => {
+    setShowJournaling(false);
+  };
+
   const handleJournalingClick = () => {
     setShowJournaling(true);
   };
@@ -43,7 +48,7 @@ const WellnessTools = () => {
 
   // Show journaling view
   if (showJournaling) {
-    return <EnhancedJournalingView onBack={handleBackToProblems} />;
+    return <EnhancedJournalingView onBack={handleBackFromJournaling} />;
   }
 
   // Show problem selection screen
@@ -121,10 +126,10 @@ const WellnessTools = () => {
         <Button
           onClick={handleBackToProblems}
           variant="outline"
-          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105`}
+          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105 p-2`}
+          aria-label={t('backToProblems')}
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('backToProblems')}
+          <ArrowLeft className="w-5 h-5" />
         </Button>
         
         <div className="flex items-center space-x-4">

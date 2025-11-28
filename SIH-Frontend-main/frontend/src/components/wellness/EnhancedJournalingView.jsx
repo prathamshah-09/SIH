@@ -148,10 +148,10 @@ const EnhancedJournalingView = ({ onBack, initialMode }) => {
         <Button
           onClick={onBack}
           variant="outline"
-          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105`}
+          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105 p-2`}
+          aria-label={t('backToProblems')}
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('backToProblems')}
+          <ArrowLeft className="w-5 h-5" />
         </Button>
         
         <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>

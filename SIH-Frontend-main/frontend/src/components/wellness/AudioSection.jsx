@@ -172,13 +172,16 @@ import {
   Edit3
 } from 'lucide-react';
 
+// Persistent audio elements across mounts so playback continues and UI can sync
+const persistentAudioElements = {};
+
 const AudioSection = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
 
   // Audio state management
   const [audioStates, setAudioStates] = useState({});
-  const [audioRefs, setAudioRefs] = useState({});
+  const audioRefs = useRef({});
   const [isEditing, setIsEditing] = useState(false);
   const [audioUrls] = useState({
   'beach-waves': '/audios/beach-waves-and-birds.mp3',
@@ -261,64 +264,99 @@ const AudioSection = () => {
     }
   ];
 
-  // Initialize audio refs and states
+  // Initialize audio states (and reuse persistent elements if present)
   useEffect(() => {
-    const refs = {};
     const states = {};
-    
+
     soothingAudios.forEach(audio => {
-      refs[audio.id] = React.createRef();
+      const existing = persistentAudioElements[audio.id];
       states[audio.id] = {
-        isPlaying: false,
-        volume: 50,
-        currentTime: 0,
-        duration: 0,
+        isPlaying: existing ? !existing.paused : false,
+        volume: existing ? Math.round((existing.volume || 0) * 100) : 50,
+        currentTime: existing ? existing.currentTime : 0,
+        duration: existing ? existing.duration || 0 : 0,
         isLooping: true
       };
+      if (existing) audioRefs.current[audio.id] = existing;
     });
-    
-    setAudioRefs(refs);
+
     setAudioStates(states);
   }, []);
 
-  // Create audio elements dynamically
+  // Create audio elements dynamically and attach listeners. Reuse persistent elements.
   useEffect(() => {
-    const newRefs = {};
     soothingAudios.forEach(audio => {
-      if (audioUrls[audio.id]) {
-        const audioElement = new Audio(audioUrls[audio.id]);
+      if (!audioUrls[audio.id]) return;
+
+      // Reuse existing persistent element if present
+      let audioElement = persistentAudioElements[audio.id];
+      if (!audioElement) {
+        audioElement = new Audio(audioUrls[audio.id]);
         audioElement.loop = true;
         audioElement.preload = 'metadata';
-        
-        audioElement.addEventListener('loadedmetadata', () => {
-          setAudioStates(prev => ({
-            ...prev,
-            [audio.id]: {
-              ...prev[audio.id],
-              duration: audioElement.duration
-            }
-          }));
-        });
 
-        audioElement.addEventListener('timeupdate', () => {
-          setAudioStates(prev => ({
-            ...prev,
-            [audio.id]: {
-              ...prev[audio.id],
-              currentTime: audioElement.currentTime
-            }
-          }));
-        });
-
-        newRefs[audio.id] = audioElement;
+        // store persistently
+        persistentAudioElements[audio.id] = audioElement;
       }
+
+      // keep a local ref mapping for easy access inside component
+      audioRefs.current[audio.id] = audioElement;
+
+      // If we created the element now, attach listeners once. If element already existed
+      // from a previous mount we rely on its existing listeners and just sync state.
+      if (!persistentAudioElements[audio.id]._listenersAttached) {
+        const onLoaded = () => {
+          setAudioStates(prev => ({
+            ...prev,
+            [audio.id]: { ...prev[audio.id], duration: audioElement.duration }
+          }));
+        };
+
+        const onTime = () => {
+          setAudioStates(prev => ({
+            ...prev,
+            [audio.id]: { ...prev[audio.id], currentTime: audioElement.currentTime }
+          }));
+        };
+
+        const onPlay = () => {
+          setAudioStates(prev => ({ ...prev, [audio.id]: { ...prev[audio.id], isPlaying: true } }));
+        };
+
+        const onPause = () => {
+          setAudioStates(prev => ({ ...prev, [audio.id]: { ...prev[audio.id], isPlaying: false } }));
+        };
+
+        const onVolume = () => {
+          setAudioStates(prev => ({ ...prev, [audio.id]: { ...prev[audio.id], volume: Math.round((audioElement.volume || 0) * 100) } }));
+        };
+
+        audioElement.addEventListener('loadedmetadata', onLoaded);
+        audioElement.addEventListener('timeupdate', onTime);
+        audioElement.addEventListener('play', onPlay);
+        audioElement.addEventListener('pause', onPause);
+        audioElement.addEventListener('volumechange', onVolume);
+
+        // mark that listeners are attached so we don't add duplicates across mounts
+        persistentAudioElements[audio.id]._listenersAttached = true;
+      }
+
+      // Immediately sync state from the actual audio element
+      setAudioStates(prev => ({
+        ...prev,
+        [audio.id]: {
+          ...prev[audio.id],
+          isPlaying: !audioElement.paused,
+          volume: Math.round((audioElement.volume || 0) * 100),
+          currentTime: audioElement.currentTime,
+          duration: audioElement.duration || prev[audio.id]?.duration || 0
+        }
+      }));
     });
-    
-    setAudioRefs(newRefs);
   }, [audioUrls]);
 
   const togglePlay = (audioId) => {
-    const audioElement = audioRefs[audioId];
+    const audioElement = audioRefs.current[audioId];
     if (!audioElement || !audioUrls[audioId]) return;
 
     const currentState = audioStates[audioId];
@@ -329,17 +367,15 @@ const AudioSection = () => {
       audioElement.play().catch(console.error);
     }
 
+    // state will be updated by audio element event listeners (play/pause)
     setAudioStates(prev => ({
       ...prev,
-      [audioId]: {
-        ...prev[audioId],
-        isPlaying: !currentState?.isPlaying
-      }
+      [audioId]: { ...prev[audioId], isPlaying: !currentState?.isPlaying }
     }));
   };
 
   const adjustVolume = (audioId, volume) => {
-    const audioElement = audioRefs[audioId];
+    const audioElement = audioRefs.current[audioId];
     if (audioElement) {
       audioElement.volume = volume / 100;
     }
@@ -354,7 +390,7 @@ const AudioSection = () => {
   };
 
   const toggleMute = (audioId) => {
-    const audioElement = audioRefs[audioId];
+    const audioElement = audioRefs.current[audio.id] || audioRefs.current[audioId];
     const currentState = audioStates[audioId];
     
     if (audioElement) {
@@ -376,8 +412,8 @@ const AudioSection = () => {
   };
 
   const stopAll = () => {
-    Object.keys(audioRefs).forEach(audioId => {
-      const audioElement = audioRefs[audioId];
+    Object.keys(audioRefs.current).forEach(audioId => {
+      const audioElement = audioRefs.current[audioId];
       if (audioElement && audioStates[audioId]?.isPlaying) {
         audioElement.pause();
         audioElement.currentTime = 0;
