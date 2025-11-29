@@ -118,10 +118,10 @@ const WellnessTools = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={handleBackToProblems}
-          className={`p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110`}
+          className={`hidden sm:flex p-2 rounded-lg hover:bg-gray-200 transition-all duration-200 hover:scale-110`}
           title={t('backToProblems')}
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-6 h-6" />
         </button>
         
         <div className="flex-1 flex items-center justify-center space-x-4">

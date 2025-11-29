@@ -87,6 +87,171 @@ export const generateAssessmentResponse = async (formName, score, severityLevel)
 };
 
 /**
+ * Generates AI positive perspective for worry/negative thoughts
+ * @param {string} negativeThought - The negative thought or worry
+ * @returns {Promise<string>} - AI-generated positive perspective
+ */
+export const generateWorryPerspective = async (negativeThought) => {
+  try {
+    if (!GEMINI_API_KEY) {
+      console.warn('Gemini API key not configured. Using fallback response.');
+      return getFallbackWorryResponse();
+    }
+
+    if (!negativeThought || !negativeThought.trim()) {
+      return 'Please provide a negative thought or worry first.';
+    }
+
+    const prompt = `You are a compassionate mental health support assistant. Someone is dealing with a negative or worrying thought and needs a positive, realistic reframe.
+
+Negative thought/worry: "${negativeThought}"
+
+Please provide a supportive response that:
+1. Validates and acknowledges their feelings
+2. Provides a balanced, realistic perspective
+3. Offers practical emotional support
+4. Encourages self-compassion and resilience
+5. Is 2-3 sentences maximum
+
+Be warm, genuine, and avoid being dismissive of their concerns.`;
+
+    const response = await fetch(GEMINI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 150,
+          topK: 40,
+          topP: 0.95,
+        },
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+        ],
+      }),
+      params: {
+        key: GEMINI_API_KEY
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`Gemini API error: ${response.status}`);
+      return getFallbackWorryResponse();
+    }
+
+    const data = await response.json();
+    const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (content) {
+      return content.trim();
+    }
+
+    return getFallbackWorryResponse();
+  } catch (error) {
+    console.error('Error calling Gemini API for worry perspective:', error);
+    return getFallbackWorryResponse();
+  }
+};
+
+/**
+ * Call Gemini API - generic wrapper
+ * @param {string} prompt - The prompt to send to Gemini
+ * @returns {Promise<string>} - AI-generated response
+ */
+export const callGeminiAPI = async (prompt) => {
+  try {
+    if (!GEMINI_API_KEY) {
+      console.warn('Gemini API key not configured.');
+      return null;
+    }
+
+    const response = await fetch(GEMINI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 200,
+          topK: 40,
+          topP: 0.95,
+        },
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+        ],
+      }),
+      params: {
+        key: GEMINI_API_KEY
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`Gemini API error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    return content ? content.trim() : null;
+  } catch (error) {
+    console.error('Error calling Gemini API:', error);
+    return null;
+  }
+};
+
+/**
  * Builds the prompt for Gemini based on assessment details
  * @param {string} formName - Name of the assessment
  * @param {number} score - Total score
@@ -143,6 +308,21 @@ const getFallbackResponse = (formName, score, severityLevel) => {
 
   const levelKey = severityLevel.toLowerCase().replace(/\s+/g, '-');
   return responses[levelKey] || responses['mild'];
+};
+
+/**
+ * Fallback response for worry/negative thought perspective
+ * @returns {string} - Fallback response
+ */
+const getFallbackWorryResponse = () => {
+  const fallbacks = [
+    'This feeling is temporary and you have overcome challenges before. Focus on what you can control right now and practice self-compassion.',
+    'Your feelings are valid. Remember that thoughts are not facts, and this difficult moment does not define your whole story.',
+    'It\'s okay to feel worried. Take a moment to breathe and remind yourself of your inner strength. You are more resilient than you think.',
+    'Acknowledge your worry without judgment. Sometimes the best thing we can do is accept our feelings and gently redirect our focus.',
+    'This challenging moment is an opportunity for growth. You have the strength and wisdom to navigate through this.',
+  ];
+  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
 };
 
 export default {
