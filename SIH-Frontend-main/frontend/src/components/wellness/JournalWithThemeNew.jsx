@@ -14,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@components/ui/dialog';
+import { generateWorryPerspective } from '../../lib/geminiAPI';
+import { Slider } from '@components/ui/slider';
 import {
   Sun,
   Calendar,
@@ -42,6 +44,8 @@ const JournalWithTheme = () => {
   const [showMobileCalendar, setShowMobileCalendar] = useState(false);
   const [dailyBullets, setDailyBullets] = useState({ liked: [''], disliked: [''], reflection: [''], goals: [''], mood: [''] });
   const [weeklyBullets, setWeeklyBullets] = useState({ nextGoals: [''] });
+  const [isEditingDaily, setIsEditingDaily] = useState(false);
+  const [isEditingWeekly, setIsEditingWeekly] = useState(false);
 
   // Load mock data on component mount
   useEffect(() => {
@@ -255,23 +259,22 @@ const JournalWithTheme = () => {
   const callGeminiAPI = async (fieldType) => {
     setLoadingGemini(true);
     try {
-      await new Promise(res => setTimeout(res, 1500));
-
       // For AI Perspective, generate based on negative thought
       if (fieldType === 'aiPerspective') {
-        const mockReframes = [
-          'This challenge is an opportunity for growth. Every difficulty teaches us something valuable.',
-          'While this feels difficult now, remember your past resilience. You have overcome challenges before.',
-          'This situation is temporary. Focus on what you can control and let go of what you cannot.',
-          'Your feelings are valid, but they don\'t define your reality. Look for the silver lining.',
-          'This is a chance to practice self-compassion. Treat yourself as you would a dear friend.',
-        ];
+        const negativeThought = tempEntries.worry_negative?.trim();
         
-        const randomReframe = mockReframes[Math.floor(Math.random() * mockReframes.length)];
-        setTempEntries({ ...tempEntries, worry_ai: randomReframe });
+        if (!negativeThought) {
+          alert('Please write a negative thought first');
+          setLoadingGemini(false);
+          return;
+        }
+
+        // Call the Gemini API to get real-time response
+        const aiResponse = await generateWorryPerspective(negativeThought);
+        setTempEntries({ ...tempEntries, worry_ai: aiResponse });
       }
     } catch (error) {
-      console.error('Error calling Gemini API:', error);
+      console.error('Error in callGeminiAPI:', error);
     } finally {
       setLoadingGemini(false);
     }
@@ -486,7 +489,7 @@ const JournalWithTheme = () => {
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Heart className="w-5 h-5 mr-2 text-pink-500" />
-                          Things I Liked
+                          Positive Moments of Today
                         </label>
                         <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
                           <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').liked}</p>
@@ -497,7 +500,7 @@ const JournalWithTheme = () => {
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Frown className="w-5 h-5 mr-2 text-orange-500" />
-                          Things I Didn't Like
+                          Challenges I Faced Today
                         </label>
                         <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
                           <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').disliked}</p>
@@ -519,7 +522,7 @@ const JournalWithTheme = () => {
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Plus className="w-5 h-5 mr-2 text-blue-500" />
-                          Tomorrow's Goals
+                          Intentions for Tomorrow
                         </label>
                         <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                           <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').goals}</p>
@@ -530,7 +533,7 @@ const JournalWithTheme = () => {
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Frown className="w-5 h-5 mr-2 text-red-500" />
-                          Mood Dump Zone
+                          Feelings Space
                         </label>
                         <div className="p-3 bg-red-50 rounded-lg border border-red-200">
                           <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').mood}</p>
@@ -538,15 +541,90 @@ const JournalWithTheme = () => {
                       </div>
                     )}
                   </>
+                ) : !isEditingDaily && (getEntry('daily').liked || getEntry('daily').disliked || getEntry('daily').reflection || getEntry('daily').goals || getEntry('daily').mood) ? (
+                  // View mode for today with saved entries and Edit button - show ALL fields
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Heart className="w-5 h-5 mr-2 text-pink-500" />
+                        Positive Moments of Today
+                      </label>
+                      <div className="p-3 bg-pink-50 rounded-lg border border-pink-200 min-h-[60px]">
+                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').liked || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Frown className="w-5 h-5 mr-2 text-orange-500" />
+                        Challenges I Faced Today
+                      </label>
+                      <div className="p-3 bg-orange-50 rounded-lg border border-orange-200 min-h-[60px]">
+                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').disliked || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
+                        Today's Reflection
+                      </label>
+                      <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 min-h-[60px]">
+                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').reflection || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Plus className="w-5 h-5 mr-2 text-blue-500" />
+                        Intentions for Tomorrow
+                      </label>
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 min-h-[60px]">
+                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').goals || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Frown className="w-5 h-5 mr-2 text-red-500" />
+                        Feelings Space
+                      </label>
+                      <div className="p-3 bg-red-50 rounded-lg border border-red-200 min-h-[60px]">
+                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').mood || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => {
+                        setIsEditingDaily(true);
+                        // Load saved data into edit fields
+                        const entry = getEntry('daily');
+                        setDailyBullets({
+                          liked: entry.liked ? entry.liked.split('\n').filter(x => x) : [''],
+                          disliked: entry.disliked ? entry.disliked.split('\n').filter(x => x) : [''],
+                          reflection: [''],
+                          goals: entry.goals ? entry.goals.split('\n').filter(x => x) : [''],
+                          mood: ['']
+                        });
+                        setTempEntries({
+                          daily_reflection: entry.reflection || '',
+                          daily_mood: entry.mood || ''
+                        });
+                      }}
+                      className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-base py-3 mt-4"
+                    >
+                      Edit
+                    </Button>
+                  </>
                 ) : (
                   // Edit mode for today
                   <>
-                    {/* Things I Liked Today */}
+                    {/* Positive Moments of Today */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Heart className="w-5 h-5 mr-2 text-pink-500" />
-                          Things I Liked Today
+                          Positive Moments of Today
                         </label>
                         <button
                           onClick={() => addDailyBullet('liked')}
@@ -571,12 +649,12 @@ const JournalWithTheme = () => {
                       </div>
                     </div>
 
-                    {/* Things I Didn't Like Today */}
+                    {/* Challenges I Faced Today */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Frown className="w-5 h-5 mr-2 text-orange-500" />
-                          Things I Didn't Like Today
+                          Challenges I Faced Today
                         </label>
                         <button
                           onClick={() => addDailyBullet('disliked')}
@@ -603,40 +681,24 @@ const JournalWithTheme = () => {
 
                     {/* Today's Reflection */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
-                          Today's Reflection
-                        </label>
-                        <button
-                          onClick={() => addDailyBullet('reflection')}
-                          className="text-purple-500 hover:text-purple-700 text-xl font-bold hover:scale-125 transition-transform"
-                          title="Add item"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        {dailyBullets.reflection.map((item, index) => (
-                          <div key={index} className="flex items-start gap-2">
-                            <input
-                              type="text"
-                              value={item}
-                              onChange={(e) => handleDailyBulletChange('reflection', index, e.target.value)}
-                              placeholder="Write one reflection..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base"
-                            />
-                          </div>
-                        ))}
-                      </div>
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
+                        Today's Reflection
+                      </label>
+                      <Textarea
+                        value={tempEntries.daily_reflection || dailyBullets.reflection.join('\n') || ''}
+                        onChange={(e) => setTempEntries({ ...tempEntries, daily_reflection: e.target.value })}
+                        placeholder="Write your reflections about today..."
+                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base"
+                      />
                     </div>
 
-                    {/* Tomorrow's Goals */}
+                    {/* Intentions for Tomorrow */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Plus className="w-5 h-5 mr-2 text-blue-500" />
-                          Tomorrow's Goals
+                          Intentions for Tomorrow
                         </label>
                         <button
                           onClick={() => addDailyBullet('goals')}
@@ -661,34 +723,18 @@ const JournalWithTheme = () => {
                       </div>
                     </div>
 
-                    {/* Mood Dump Zone */}
+                    {/* Feelings Space */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Frown className="w-5 h-5 mr-2 text-red-500" />
-                          Mood Dump Zone
-                        </label>
-                        <button
-                          onClick={() => addDailyBullet('mood')}
-                          className="text-red-500 hover:text-red-700 text-xl font-bold hover:scale-125 transition-transform"
-                          title="Add item"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        {dailyBullets.mood.map((item, index) => (
-                          <div key={index} className="flex items-start gap-2">
-                            <input
-                              type="text"
-                              value={item}
-                              onChange={(e) => handleDailyBulletChange('mood', index, e.target.value)}
-                              placeholder="Share your feelings..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-base"
-                            />
-                          </div>
-                        ))}
-                      </div>
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Frown className="w-5 h-5 mr-2 text-red-500" />
+                        Feelings Space
+                      </label>
+                      <Textarea
+                        value={tempEntries.daily_mood || dailyBullets.mood.join('\n') || ''}
+                        onChange={(e) => setTempEntries({ ...tempEntries, daily_mood: e.target.value })}
+                        placeholder="Share your feelings and emotions..."
+                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-base"
+                      />
                     </div>
 
                     {/* Single Save Button */}
@@ -697,16 +743,17 @@ const JournalWithTheme = () => {
                         onClick={() => {
                           handleSaveEntry('daily', 'liked', dailyBullets.liked.join('\n'));
                           handleSaveEntry('daily', 'disliked', dailyBullets.disliked.join('\n'));
-                          handleSaveEntry('daily', 'reflection', dailyBullets.reflection.join('\n'));
+                          handleSaveEntry('daily', 'reflection', tempEntries.daily_reflection || dailyBullets.reflection.join('\n'));
                           handleSaveEntry('daily', 'goals', dailyBullets.goals.join('\n'));
-                          handleSaveEntry('daily', 'mood', dailyBullets.mood.join('\n'));
+                          handleSaveEntry('daily', 'mood', tempEntries.daily_mood || dailyBullets.mood.join('\n'));
                           setTempEntries({});
                           setDailyBullets({ liked: [''], disliked: [''], reflection: [''], goals: [''], mood: [''] });
+                          setIsEditingDaily(false);
                         }}
                         className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-base py-3"
                       >
                         <Send className="w-5 h-5 mr-2" />
-                        Save All
+                        Save
                       </Button>
                     </div>
                   </>
@@ -739,7 +786,7 @@ const JournalWithTheme = () => {
 
             {expandedJournal === 'weekly' && (
               <CardContent className="space-y-4 border-t pt-5">
-                {isPastDate() && !getEntry('weekly').review && !getEntry('weekly').nextGoals ? (
+                {isPastDate() && !getEntry('weekly').review && !getEntry('weekly').nextGoals && !getEntry('weekly').selfCareScore && !getEntry('weekly').selfCareReflection ? (
                   <div className="p-4 bg-gray-50 rounded-lg text-center">
                     <p className="text-gray-600">No weekly entries recorded for this date</p>
                   </div>
@@ -768,6 +815,90 @@ const JournalWithTheme = () => {
                         </div>
                       </div>
                     )}
+                    {getEntry('weekly').selfCareScore !== undefined && (
+                      <div className="space-y-2">
+                        <label className="text-base font-semibold text-gray-800 flex items-center">
+                          <Heart className="w-5 h-5 mr-2 text-pink-500" />
+                          Self-Care Score
+                        </label>
+                        <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
+                          <p className="text-lg font-bold text-gray-800">{getEntry('weekly').selfCareScore}/10</p>
+                        </div>
+                      </div>
+                    )}
+                    {getEntry('weekly').selfCareReflection && (
+                      <div className="space-y-2">
+                        <label className="text-base font-semibold text-gray-800 flex items-center">
+                          <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
+                          Self-Care Reflection
+                        </label>
+                        <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').selfCareReflection}</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : !isEditingWeekly && (getEntry('weekly').review || getEntry('weekly').nextGoals || getEntry('weekly').selfCareScore !== undefined || getEntry('weekly').selfCareReflection) ? (
+                  // View mode for today with saved entries and Edit button - show ALL fields
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Calendar className="w-5 h-5 mr-2 text-green-500" />
+                        How was your week?
+                      </label>
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200 min-h-[80px]">
+                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').review || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Plus className="w-5 h-5 mr-2 text-teal-500" />
+                        Next Week Goals
+                      </label>
+                      <div className="p-3 bg-teal-50 rounded-lg border border-teal-200 min-h-[80px]">
+                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').nextGoals || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Heart className="w-5 h-5 mr-2 text-pink-500" />
+                        Self-Care Score
+                      </label>
+                      <div className="p-3 bg-pink-50 rounded-lg border border-pink-200 min-h-[60px] flex items-center">
+                        <p className="text-lg font-bold text-gray-800">{getEntry('weekly').selfCareScore !== undefined ? getEntry('weekly').selfCareScore + '/10' : '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
+                        Self-Care Reflection
+                      </label>
+                      <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 min-h-[80px]">
+                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').selfCareReflection || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => {
+                        setIsEditingWeekly(true);
+                        // Load saved data into edit fields
+                        const entry = getEntry('weekly');
+                        setWeeklyBullets({
+                          nextGoals: entry.nextGoals ? entry.nextGoals.split('\n').filter(x => x) : ['']
+                        });
+                        setTempEntries({
+                          weekly_review: entry.review || '',
+                          weekly_selfCareScore: entry.selfCareScore !== undefined ? entry.selfCareScore : 0,
+                          weekly_selfCareReflection: entry.selfCareReflection || ''
+                        });
+                      }}
+                      className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-base py-3 mt-4"
+                    >
+                      Edit
+                    </Button>
                   </>
                 ) : (
                   // Edit mode for today
@@ -816,19 +947,55 @@ const JournalWithTheme = () => {
                       </div>
                     </div>
 
+                    {/* Self-Care Score */}
+                    <div className="space-y-3">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Heart className="w-5 h-5 mr-2 text-pink-500" />
+                        Self-Care Score: {tempEntries.weekly_selfCareScore !== undefined ? tempEntries.weekly_selfCareScore : (getEntry('weekly').selfCareScore || 0)}/10
+                      </label>
+                      <Slider
+                        value={[tempEntries.weekly_selfCareScore !== undefined ? tempEntries.weekly_selfCareScore : (getEntry('weekly').selfCareScore || 0)]}
+                        onValueChange={(value) => setTempEntries({ ...tempEntries, weekly_selfCareScore: value[0] })}
+                        min={0}
+                        max={10}
+                        step={1}
+                        className="w-full"
+                      />
+                      <div className="text-sm text-gray-600 text-center">
+                        Rate how well you took care of yourself this week
+                      </div>
+                    </div>
+
+                    {/* Self-Care Reflection */}
+                    <div className="space-y-3">
+                      <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
+                        Self-Care Reflection
+                      </label>
+                      <Textarea
+                        value={tempEntries.weekly_selfCareReflection || getEntry('weekly').selfCareReflection || ''}
+                        onChange={(e) => setTempEntries({ ...tempEntries, weekly_selfCareReflection: e.target.value })}
+                        placeholder="What self-care activities did you do? How did they make you feel?"
+                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 text-base"
+                      />
+                    </div>
+
                     {/* Single Save Button */}
                     <div className="border-t pt-5">
                       <Button
                         onClick={() => {
                           handleSaveEntry('weekly', 'review', tempEntries.weekly_review);
                           handleSaveEntry('weekly', 'nextGoals', weeklyBullets.nextGoals.join('\n'));
+                          handleSaveEntry('weekly', 'selfCareScore', tempEntries.weekly_selfCareScore !== undefined ? tempEntries.weekly_selfCareScore : 0);
+                          handleSaveEntry('weekly', 'selfCareReflection', tempEntries.weekly_selfCareReflection);
                           setTempEntries({});
                           setWeeklyBullets({ nextGoals: [''] });
+                          setIsEditingWeekly(false);
                         }}
                         className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-base py-3"
                       >
                         <Send className="w-5 h-5 mr-2" />
-                        Save All
+                        Save
                       </Button>
                     </div>
                   </>
@@ -861,43 +1028,43 @@ const JournalWithTheme = () => {
 
             {expandedJournal === 'worry' && (
               <CardContent className="space-y-4 border-t pt-5">
-                {isPastDate() && !currentEntry.negativeThought && !currentEntry.positiveReframe && !currentEntry.geminiReframe ? (
+                {isPastDate() && !getEntry('worry').negativeThought && !getEntry('worry').positiveReframe && !getEntry('worry').geminiReframe ? (
                   <div className="p-4 bg-gray-50 rounded-lg text-center">
                     <p className="text-gray-600">No worry entries recorded for this date</p>
                   </div>
                 ) : isPastDate() ? (
                   // Read-only view for past dates
                   <>
-                    {currentEntry.negativeThought && (
+                    {getEntry('worry').negativeThought && (
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Frown className="w-5 h-5 mr-2 text-red-500" />
                           Negative Thought
                         </label>
                         <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{currentEntry.negativeThought}</p>
+                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('worry').negativeThought}</p>
                         </div>
                       </div>
                     )}
-                    {currentEntry.positiveReframe && (
+                    {getEntry('worry').positiveReframe && (
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Heart className="w-5 h-5 mr-2 text-green-500" />
                           Your Positive Reframe
                         </label>
                         <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{currentEntry.positiveReframe}</p>
+                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('worry').positiveReframe}</p>
                         </div>
                       </div>
                     )}
-                    {currentEntry.geminiReframe && (
+                    {getEntry('worry').geminiReframe && (
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
                           <Sparkles className="w-5 h-5 mr-2 text-blue-500" />
                           AI's Positive Perspective
                         </label>
                         <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{currentEntry.geminiReframe}</p>
+                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('worry').geminiReframe}</p>
                         </div>
                       </div>
                     )}
@@ -912,7 +1079,7 @@ const JournalWithTheme = () => {
                         Negative Thought
                       </label>
                       <Textarea
-                        value={tempEntries.worry_negative || currentEntry.negativeThought || ''}
+                        value={tempEntries.worry_negative || getEntry('worry').negativeThought || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, worry_negative: e.target.value })}
                         placeholder="Write your worry or negative thought..."
                         className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-base"
@@ -926,7 +1093,7 @@ const JournalWithTheme = () => {
                         Your Positive Reframe
                       </label>
                       <Textarea
-                        value={tempEntries.worry_reframe || currentEntry.positiveReframe || ''}
+                        value={tempEntries.worry_reframe || getEntry('worry').positiveReframe || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, worry_reframe: e.target.value })}
                         placeholder="Reframe this thought in a positive way..."
                         className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-base"

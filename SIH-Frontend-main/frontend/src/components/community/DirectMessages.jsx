@@ -106,6 +106,8 @@ const DirectMessages = ({ userRole = 'student' }) => {
 
     setConversations(updated);
     saveConversations(updated);
+    // Update selected conversation to reflect the new message immediately
+    setSelectedConversation(updated.find(conv => conv.id === selectedConversation.id));
     setMessageText('');
   };
 
