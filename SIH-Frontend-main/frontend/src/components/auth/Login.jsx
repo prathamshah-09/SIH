@@ -32,7 +32,8 @@ const Login = () => {
       const result = await login(email, password);
       if (result.success) {
         // Navigate based on user role
-        switch (result.user.role) {
+        const role = (result.user?.role || '').toLowerCase();
+        switch (role) {
           case 'student':
             navigate('/student-dashboard');
             break;
@@ -40,13 +41,14 @@ const Login = () => {
             navigate('/counsellor-dashboard');
             break;
           case 'admin':
+          case 'superadmin':
             navigate('/admin-dashboard');
             break;
           default:
-            navigate('/');
+            setError('Unknown role. Please contact support.');
         }
       } else {
-        setError(result.error);
+        setError(result.error || 'Invalid email or password');
       }
     } catch (err) {
       setError('An error occurred during login');
@@ -56,14 +58,17 @@ const Login = () => {
   };
 
   const handleDemoLogin = (role) => {
+    // Prefill with seeded test credentials from backend
     const demoCredentials = {
-      student: { email: 'student@example.com', password: 'password' },
-      counsellor: { email: 'counsellor@example.com', password: 'password' },
-      admin: { email: 'admin@example.com', password: 'password' }
+      student: { email: 'john.student@greenvalley.edu', password: 'Test@12345' },
+      counsellor: { email: 'dr.sarah@greenvalley.edu', password: 'Test@12345' },
+      admin: { email: 'admin@greenvalley.edu', password: 'Test@12345' }
     };
-    
-    setEmail(demoCredentials[role].email);
-    setPassword(demoCredentials[role].password);
+    const creds = demoCredentials[role];
+    if (creds) {
+      setEmail(creds.email);
+      setPassword(creds.password);
+    }
   };
 
   return (

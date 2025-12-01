@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -23,13 +24,22 @@ import { generateRandomUsername } from '../../utils/usernameGenerator';
 
 const ProfileDropdown = () => {
   const { theme } = useTheme();
+  const { user: authUser, logout } = useAuth();
   // Frontend-only profile: read/write user from localStorage (no backend/auth calls)
-  const [user, setUser] = React.useState(null);
+  const [user, setUser] = React.useState(authUser || null);
 
   useEffect(() => {
+    // Sync from context first; fallback to localStorage for extra fields (like username)
     try {
       const raw = localStorage.getItem('user');
-      if (raw) setUser(JSON.parse(raw));
+      const stored = raw ? JSON.parse(raw) : null;
+      if (authUser && stored) {
+        setUser({ ...stored, ...authUser });
+      } else if (authUser) {
+        setUser(authUser);
+      } else if (stored) {
+        setUser(stored);
+      }
     } catch (e) {
       console.warn('Failed to load user from localStorage', e);
     }
@@ -202,7 +212,14 @@ const ProfileDropdown = () => {
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem className="cursor-pointer text-red-600 hover:text-red-700" onClick={() => { localStorage.removeItem('user'); window.location.reload(); }}>
+          <DropdownMenuItem
+            className="cursor-pointer text-red-600 hover:text-red-700"
+            onClick={async () => {
+              try { await logout(); } catch {}
+              try { localStorage.removeItem('user'); } catch {}
+              window.location.href = '/login';
+            }}
+          >
             <LogOut className="mr-2 h-4 w-4" />
             Log out
           </DropdownMenuItem>

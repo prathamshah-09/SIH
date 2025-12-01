@@ -31,7 +31,7 @@ import { useLanguage } from '@context/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Badge } from '@components/ui/badge';
-import { mockAnalytics } from '@mock/mockData';
+import { mockAnalytics } from '@data/mocks/analytics';
 import AnnouncementManagement from '@components/admin/AnnouncementManagement';
 import FormManagement from '@components/admin/FormManagement';
 import CommunityManagement from '@components/community/CommunityManagement';

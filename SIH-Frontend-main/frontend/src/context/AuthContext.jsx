@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockUsers } from '../mock/mockData';
+import { login as apiLogin, logout as apiLogout, getMe } from '@services/authService';
 
 const AuthContext = createContext();
 
@@ -16,30 +16,44 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in (simulate checking localStorage/sessionStorage)
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    // Try fetching current user from backend session cookies
+    (async () => {
+      try {
+        const me = await getMe();
+        if (me) {
+          const normalized = { ...me, role: (me?.role || '').toLowerCase() };
+          setUser(normalized);
+          try { localStorage.setItem('user', JSON.stringify(normalized)); } catch {}
+        }
+      } catch (e) {
+        // Not logged in or endpoint unavailable; fall back to localStorage
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          const normalized = { ...parsed, role: (parsed?.role || '').toLowerCase() };
+          setUser(normalized);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const login = async (email, password) => {
-    // Mock login logic
-    const foundUser = Object.values(mockUsers).find(
-      u => u.email === email && u.password === password
-    );
-    
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem('user', JSON.stringify(foundUser));
-      return { success: true, user: foundUser };
-    } else {
-      return { success: false, error: 'Invalid email or password' };
+    try {
+      const loggedInUser = await apiLogin(email, password);
+      const normalized = { ...loggedInUser, role: (loggedInUser?.role || '').toLowerCase() };
+      setUser(normalized);
+      try { localStorage.setItem('user', JSON.stringify(normalized)); } catch {}
+      return { success: true, user: normalized };
+    } catch (error) {
+      const message = error?.data?.message || error?.message || 'Login failed';
+      return { success: false, error: message };
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try { await apiLogout(); } catch {}
     setUser(null);
     localStorage.removeItem('user');
   };
