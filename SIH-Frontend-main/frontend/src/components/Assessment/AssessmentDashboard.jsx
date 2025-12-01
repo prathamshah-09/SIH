@@ -23,7 +23,7 @@ import AssessmentForm from './AssessmentForm';
 import AssessmentResults from './AssessmentResults';
 import AssessmentHistory from './AssessmentHistory';
 import AdminFormManagement from './AdminFormManagement';
-import { mockForms } from '../../mock/mockData';
+import { mockForms } from '@data/mocks/forms';
 import { BACKEND_ENABLED, API_BASE } from '../../lib/backendConfig';
 
 const AssessmentDashboard = ({ userRole = 'student' }) => {
