@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { useAnnouncements } from "@context/AnnouncementContext";
 import WellnessTools from "@components/wellness/WellnessTools";
-import AdvancedJournalingView from "@components/wellness/AdvancedJournalingView";
+import JournalWithThemeNew from "@components/wellness/JournalWithThemeNew";
 import StudentAppointments from "@components/appointments/StudentAppointments";
 import CommunityView from "@components/community/CommunityView";
 import AudioSection from "@components/wellness/AudioSection";
@@ -560,7 +560,7 @@ const StudentDashboard = () => {
       {activeTab === "community" && <CommunityView userRole="student" />}
       {activeTab === "appointments" && <StudentAppointments />}
       {activeTab === "journaling" && (
-        <AdvancedJournalingView onBack={() => setActiveTab("overview")} />
+        <JournalWithThemeNew onBack={() => setActiveTab("overview")} />
       )}
       {activeTab === "resources" && <WellnessTools />}
       {activeTab === "audios" && <AudioSection />}

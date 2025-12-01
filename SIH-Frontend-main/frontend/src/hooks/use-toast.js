@@ -3,7 +3,9 @@
 import * as React from "react"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+// How long to keep a toast in memory after it is closed by the provider
+// Keep slightly longer than provider duration to avoid race conditions
+const TOAST_REMOVE_DELAY = 4000
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
