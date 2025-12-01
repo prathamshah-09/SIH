@@ -4,98 +4,72 @@ import { useLanguage } from '../../context/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { BACKEND_ENABLED, API_BASE } from '../../lib/backendConfig';
+import { getAssessmentHistory, getAssessmentById } from '@services/assessmentService';
 import { 
   ArrowLeft, 
-  X
+  X,
+  Loader
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const AssessmentHistory = ({ sessionId, onBack }) => {
   const { theme } = useTheme();
   const [submissions, setSubmissions] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-
-  // Dummy data with AI responses
-  const dummySubmissions = [
-    {
-      id: 'sub_001',
-      form_name: 'PHQ-9',
-      total_score: 8,
-      severity_level: 'Mild',
-      submitted_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      ai_response: 'Your recent PHQ-9 assessment shows mild depressive symptoms. This is a positive sign of awareness. Consider engaging in regular physical activity, maintaining social connections, and ensuring adequate sleep. If symptoms persist for more than 2 weeks, consider consulting a mental health professional.',
-      responses: { q1: 1, q2: 1, q3: 2, q4: 1, q5: 1, q6: 1, q7: 0, q8: 0, q9: 0 }
-    },
-    {
-      id: 'sub_002',
-      form_name: 'GAD-7',
-      total_score: 5,
-      severity_level: 'Mild',
-      submitted_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      ai_response: 'Your GAD-7 score indicates mild anxiety symptoms. This level of anxiety is manageable with self-care strategies. Try deep breathing exercises, progressive muscle relaxation, or mindfulness meditation. Limiting caffeine intake and maintaining a regular sleep schedule can also help reduce anxiety.',
-      responses: { q1: 1, q2: 1, q3: 1, q4: 1, q5: 1, q6: 0, q7: 0 }
-    },
-    {
-      id: 'sub_003',
-      form_name: 'PHQ-9',
-      total_score: 5,
-      severity_level: 'Minimal',
-      submitted_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      ai_response: 'Excellent progress! Your PHQ-9 score has improved significantly. You are showing resilience and effective coping strategies. Continue with the activities that have been helping you. Regular exercise, social engagement, and adequate sleep remain important for maintaining your mental wellbeing.',
-      responses: { q1: 0, q2: 1, q3: 1, q4: 1, q5: 0, q6: 0, q7: 1, q8: 0, q9: 0 }
-    },
-    {
-      id: 'sub_004',
-      form_name: 'GAD-7',
-      total_score: 12,
-      severity_level: 'Moderate',
-      submitted_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      ai_response: 'Your GAD-7 assessment indicates moderate anxiety levels. This suggests it might be beneficial to seek support from a mental health professional who can provide evidence-based treatments like cognitive-behavioral therapy (CBT). In the meantime, practice relaxation techniques, maintain regular exercise, and avoid excessive stress triggers when possible.',
-      responses: { q1: 2, q2: 2, q3: 2, q4: 2, q5: 1, q6: 2, q7: 1 }
-    },
-    {
-      id: 'sub_005',
-      form_name: 'PHQ-9',
-      total_score: 15,
-      severity_level: 'Moderate',
-      submitted_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-      ai_response: 'Your PHQ-9 score indicates moderate depression. This is an important time to take action. Consider reaching out to a mental health professional for personalized guidance. Professional support, combined with lifestyle changes like exercise, social connection, and addressing sleep issues, can significantly improve your wellbeing.',
-      responses: { q1: 2, q2: 2, q3: 2, q4: 2, q5: 1, q6: 2, q7: 1, q8: 1, q9: 0 }
-    },
-    {
-      id: 'sub_006',
-      form_name: 'BDI-II',
-      total_score: 18,
-      severity_level: 'Mild',
-      submitted_at: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-      ai_response: 'Your BDI-II assessment shows mild depressive symptoms. This indicates you may be experiencing some difficulty, but it is manageable. Focus on maintaining social connections, engaging in activities you enjoy, and ensuring proper rest. Consider speaking with a counselor if you feel the need for additional support.',
-      responses: { q1: 1, q2: 1, q3: 1, q4: 0, q5: 1, q6: 0, q7: 1, q8: 0, q9: 0 }
-    }
-  ];
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (sessionId) {
-      loadSubmissions();
-    }
-  }, [sessionId]);
+    loadSubmissions();
+  }, []);
 
   const loadSubmissions = async () => {
     try {
-      if (!BACKEND_ENABLED) {
-        // Use dummy data for frontend-only mode
-        setSubmissions(dummySubmissions);
-        return;
-      }
-
-      const response = await fetch(
-        `${API_BASE}/api/assessment/submissions/${sessionId}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setSubmissions(data);
-      }
+      setLoading(true);
+      const result = await getAssessmentHistory();
+      
+      // Transform backend response to match frontend format
+      const transformedAssessments = result.assessments.map(assessment => ({
+        id: assessment.id,
+        form_name: assessment.assessmentName,
+        total_score: assessment.score,
+        severity_level: assessment.severity,
+        submitted_at: new Date(assessment.date + ' ' + assessment.time).toISOString(),
+        responses: assessment.responses || {},
+        guidance: assessment.guidance,
+        recommendations: assessment.recommendedActions
+      }));
+      
+      setSubmissions(transformedAssessments);
     } catch (error) {
       console.error('Error loading submissions:', error);
+      toast.error('Failed to load assessment history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open a submission and fetch full details (guidance, recommendations)
+  const openSubmission = async (submission) => {
+    setSelectedSubmission(submission);
+    setDetailsLoading(true);
+    try {
+      const full = await getAssessmentById(submission.id);
+      // full has shape: { id, formType, score, severityLevel, guidance, recommendedActions, createdAt }
+      setSelectedSubmission(prev => ({
+        ...prev,
+        form_name: full.formType || prev.form_name,
+        total_score: typeof full.score === 'number' ? full.score : prev.total_score,
+        severity_level: full.severityLevel || prev.severity_level,
+        submitted_at: full.createdAt || prev.submitted_at,
+        guidance: full.guidance,
+        recommendations: full.recommendedActions
+      }));
+    } catch (err) {
+      console.error('Error loading assessment details:', err);
+      toast.error('Could not load guidance for this assessment');
+    } finally {
+      setDetailsLoading(false);
     }
   };
 
@@ -131,6 +105,17 @@ const AssessmentHistory = ({ sessionId, onBack }) => {
     };
     return scores[formName] || 100;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader className="w-12 h-12 animate-spin text-cyan-500" />
+          <p className={theme.colors.muted}>Loading assessment history...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (submissions.length === 0) {
     return (
@@ -180,7 +165,7 @@ const AssessmentHistory = ({ sessionId, onBack }) => {
           <Card
             key={submission.id}
             className={`${theme.colors.card} cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105`}
-            onClick={() => setSelectedSubmission(submission)}
+            onClick={() => openSubmission(submission)}
           >
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -246,6 +231,12 @@ const AssessmentHistory = ({ sessionId, onBack }) => {
             </CardHeader>
 
             <CardContent className="p-6 space-y-6">
+              {detailsLoading && (
+                <div className="flex items-center justify-center py-6">
+                  <Loader className="w-6 h-6 animate-spin text-cyan-500" />
+                  <span className={`ml-3 text-sm ${theme.colors.muted}`}>Loading insights...</span>
+                </div>
+              )}
               {/* Assessment Details */}
               <div className={`p-4 rounded-lg ${theme.colors.secondary}`}>
                 <h3 className={`font-semibold mb-4 ${theme.colors.text}`}>Assessment Details</h3>
@@ -282,19 +273,29 @@ const AssessmentHistory = ({ sessionId, onBack }) => {
                 </div>
               </div>
 
-              {/* AI Generated Response */}
-              {selectedSubmission.ai_response && (
+              {/* Guidance */}
+              {selectedSubmission.guidance && !detailsLoading && (
                 <div>
-                  <div className="flex items-center space-x-3 mb-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-bold">AI</span>
-                    </div>
-                    <h3 className={`font-semibold text-lg ${theme.colors.text}`}>Personalized Insights</h3>
-                  </div>
+                  <h3 className={`font-semibold mb-3 ${theme.colors.text}`}>Guidance</h3>
                   <div className={`p-4 rounded-lg ${theme.colors.secondary} border-l-4 border-cyan-500`}>
                     <p className={`leading-relaxed ${theme.colors.text}`}>
-                      {selectedSubmission.ai_response}
+                      {selectedSubmission.guidance}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Recommended Actions */}
+              {selectedSubmission.recommendations && selectedSubmission.recommendations.length > 0 && !detailsLoading && (
+                <div>
+                  <h3 className={`font-semibold mb-3 ${theme.colors.text}`}>Recommended Actions</h3>
+                  <div className="space-y-2">
+                    {selectedSubmission.recommendations.map((action, index) => (
+                      <div key={index} className="flex items-start space-x-2">
+                        <div className="w-2 h-2 bg-cyan-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <p className={`text-sm ${theme.colors.muted}`}>{action}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
