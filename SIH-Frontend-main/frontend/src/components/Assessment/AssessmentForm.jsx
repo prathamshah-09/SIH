@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { BACKEND_ENABLED, API_BASE } from '../../lib/backendConfig';
 import { generateAssessmentResponse } from '../../lib/geminiAPI';
+import { submitAssessment } from '@services/assessmentService';
 
 const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
   const { theme } = useTheme();
@@ -78,125 +79,83 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
 
     setIsSubmitting(true);
     try {
-      // use central backend toggle
-      if (!BACKEND_ENABLED) {
-        // frontend-only: calculate score, severity, guidance (ephemeral – no localStorage persistence)
-        const totalScore = Object.values(responses).reduce((s, v) => s + Number(v), 0);
-        const submitted_at = new Date().toISOString();
-        const submission = {
-          id: `sub_${Date.now()}`,
-          session_id: sessionId,
-          form_id: form.id,
-          form_name: form.name,
-          responses,
-          total_score: totalScore,
-          submitted_at,
-        };
+      // Convert responses to backend format (q1, q2, etc. with numeric values)
+      const formattedResponses = {};
+      form.questions.forEach((question) => {
+        formattedResponses[question.id] = responses[question.id];
+      });
 
-        // compute severity and recommendation
-        const computeSeverity = (formName, score) => {
-          if (formName === 'PHQ-9') {
-            if (score >= 20) return 'Severe';
-            if (score >= 15) return 'Moderately Severe';
-            if (score >= 10) return 'Moderate';
-            if (score >= 5) return 'Mild';
-            return 'Minimal';
-          }
-          if (formName === 'GAD-7') {
-            if (score >= 15) return 'Severe';
-            if (score >= 10) return 'Moderate';
-            if (score >= 5) return 'Mild';
-            return 'Minimal';
-          }
-          if (formName === 'GHQ-12') {
-            if (score >= 24) return 'Severe Distress';
-            if (score >= 18) return 'Moderate Distress';
-            if (score >= 12) return 'Mild Distress';
-            return 'Normal';
-          }
-          if (formName === 'BDI-II') {
-            if (score >= 29) return 'Severe';
-            if (score >= 20) return 'Moderate';
-            if (score >= 14) return 'Mild';
-            return 'Minimal';
-          }
-          if (formName === 'PHQ-2') {
-            if (score >= 3) return 'Moderate';
-            return 'Minimal';
-          }
-          if (formName === 'GAD-2') {
-            if (score >= 3) return 'Moderate';
-            return 'Minimal';
-          }
-          if (formName === 'C-SSRS') {
-            if (score >= 12) return 'High Risk';
-            if (score >= 7) return 'Moderate Risk';
-            if (score >= 1) return 'Low Risk';
-            return 'No Risk';
-          }
-          return 'Unknown';
-        };
-
-        const getRecommendations = (formName, severity) => {
-          const common = [];
-          if (severity.toLowerCase().includes('severe') || severity.toLowerCase().includes('moderate')) {
-            common.push('Consider reaching out to a qualified mental health professional.');
-            common.push('If you are in crisis or have thoughts of self-harm, seek immediate help or emergency services.');
-          } else if (severity.toLowerCase().includes('mild')) {
-            common.push('Try daily self-care strategies: exercise, sleep hygiene, and mindful breathing.');
-            common.push('Consider speaking to a counselor for brief support.');
-          } else {
-            common.push('Maintain current self-care routine and check in periodically.');
-          }
-          // specific tips
-          if (formName === 'PHQ-9') common.push('Consider behavioral activation: plan small rewarding activities each day.');
-          if (formName === 'GAD-7') common.push('Practice worry-time scheduling and grounding techniques.');
-          return common;
-        };
-
-        const severity_level = computeSeverity(form.name, totalScore);
-        submission.severity_level = severity_level;
-        submission.recommendations = getRecommendations(form.name, severity_level);
-
-        // Generate AI response using Gemini API
-        try {
-          toast.loading('Generating personalized insights...');
-          const aiResponse = await generateAssessmentResponse(form.name, totalScore, severity_level);
-          submission.ai_response = aiResponse;
-          toast.dismiss();
-        } catch (error) {
-          console.error('Error generating AI response:', error);
-          submission.ai_response = 'Thank you for completing this assessment. Please review your results with a mental health professional for personalized guidance.';
+      // Calculate score immediately for instant feedback
+      const totalScore = Object.values(formattedResponses).reduce((sum, val) => sum + Number(val), 0);
+      
+      // Calculate severity based on form type and score
+      const calculateSeverity = (formName, score) => {
+        if (formName === 'PHQ-9') {
+          if (score <= 4) return 'Minimal';
+          if (score <= 9) return 'Mild';
+          if (score <= 14) return 'Moderate';
+          if (score <= 19) return 'Moderately Severe';
+          return 'Severe';
         }
+        if (formName === 'GAD-7') {
+          if (score <= 4) return 'Minimal';
+          if (score <= 9) return 'Mild';
+          if (score <= 14) return 'Moderate';
+          return 'Severe';
+        }
+        if (formName === 'GHQ-12') {
+          if (score <= 11) return 'Minimal';
+          if (score <= 15) return 'Mild';
+          if (score <= 20) return 'Moderate';
+          return 'Severe';
+        }
+        return 'Normal';
+      };
 
-        // NOTE: Removed localStorage persistence; pass submission upward only.
+      const severityLevel = calculateSeverity(form.name, totalScore);
+      
+      // Create immediate submission with calculated values
+      const immediateSubmission = {
+        id: `temp_${Date.now()}`,
+        form_id: form.id,
+        form_name: form.name,
+        total_score: totalScore,
+        severity_level: severityLevel,
+        submitted_at: new Date().toISOString(),
+        responses: formattedResponses,
+        isLoading: true // Flag to indicate guidance is still loading
+      };
 
-        toast.success('Assessment completed successfully!');
-        onSubmission(submission);
-      } else {
-        const response = await fetch(`${API_BASE}/api/assessment/submit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            session_id: sessionId,
+      // Show results immediately
+      toast.success('Assessment submitted! Generating guidance...');
+      onSubmission(immediateSubmission);
+
+      // Submit to backend in background and update with full data
+      submitAssessment(form.name, formattedResponses)
+        .then(result => {
+          // Update with full backend response including guidance
+          const fullSubmission = {
+            id: result.id,
             form_id: form.id,
-            responses: responses
-          }),
+            form_name: form.name,
+            total_score: result.score,
+            severity_level: result.severityLevel,
+            submitted_at: result.createdAt,
+            responses: formattedResponses,
+            guidance: result.guidance,
+            recommendations: result.recommendedActions,
+            isLoading: false
+          };
+          onSubmission(fullSubmission);
+        })
+        .catch(error => {
+          console.error('Error fetching guidance:', error);
+          // Keep showing basic results even if guidance fails
         });
-
-        if (response.ok) {
-          const submission = await response.json();
-          toast.success('Assessment completed successfully!');
-          onSubmission(submission);
-        } else {
-          throw new Error('Failed to submit assessment');
-        }
-      }
     } catch (error) {
       console.error('Error submitting assessment:', error);
-      toast.error('Failed to submit assessment. Please try again.');
+      const errorMessage = error.message || 'Failed to submit assessment. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -332,32 +291,80 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
 
           {/* Answer Options */}
           <div className="space-y-3">
-            {currentQuestionData.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => handleResponse(currentQuestionData.id, option.value)}
-                className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
-                  responses[currentQuestionData.id] === option.value
-                    ? 'border-cyan-500 bg-gradient-to-r from-cyan-50 to-blue-50 shadow-lg'
-                    : `border-gray-200 hover:border-cyan-300 hover:bg-gradient-to-r hover:from-cyan-25 hover:to-blue-25 ${theme.colors.card}`
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`font-medium ${theme.colors.text}`}>
-                    {option.label}
-                  </span>
-                  <div className={`w-5 h-5 rounded-full border-2 ${
+            {currentQuestionData.type === 'likert' && (
+              currentQuestionData.options.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleResponse(currentQuestionData.id, option.value)}
+                  className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
                     responses[currentQuestionData.id] === option.value
-                      ? 'border-cyan-500 bg-cyan-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {responses[currentQuestionData.id] === option.value && (
-                      <CheckCircle className="w-3 h-3 text-white m-0.5" />
-                    )}
+                      ? 'border-cyan-500 bg-gradient-to-r from-cyan-50 to-blue-50 shadow-lg'
+                      : `border-gray-200 hover:border-cyan-300 hover:bg-gradient-to-r hover:from-cyan-25 hover:to-blue-25 ${theme.colors.card}`
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`font-medium ${theme.colors.text}`}>
+                      {option.label}
+                    </span>
+                    <div className={`w-5 h-5 rounded-full border-2 ${
+                      responses[currentQuestionData.id] === option.value
+                        ? 'border-cyan-500 bg-cyan-500'
+                        : 'border-gray-300'
+                    }`}>
+                      {responses[currentQuestionData.id] === option.value && (
+                        <CheckCircle className="w-3 h-3 text-white m-0.5" />
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))
+            )}
+
+            {currentQuestionData.type === 'text' && (
+              <div>
+                <label className={`block text-sm mb-2 ${theme.colors.muted}`}>Your Answer</label>
+                {(() => {
+                  const text = currentQuestionData.text.toLowerCase();
+                  const isTime = text.includes('when have you usually gone to bed') || text.includes('when have you usually gotten up');
+                  const isMinutes = text.includes('how long') && text.includes('minutes');
+                  const isHours = text.includes('how many hours');
+                  const inputClass = 'w-full p-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-cyan-500';
+                  if (isTime) {
+                    return (
+                      <input
+                        type="time"
+                        className={inputClass}
+                        value={responses[currentQuestionData.id] || ''}
+                        onChange={(e) => handleResponse(currentQuestionData.id, e.target.value)}
+                      />
+                    );
+                  }
+                  if (isMinutes || isHours) {
+                    return (
+                      <input
+                        type="number"
+                        min={0}
+                        max={isHours ? 24 : 600}
+                        placeholder={isHours ? 'Hours' : 'Minutes'}
+                        className={inputClass}
+                        value={responses[currentQuestionData.id] ?? ''}
+                        onChange={(e) => handleResponse(currentQuestionData.id, e.target.value === '' ? undefined : Number(e.target.value))}
+                      />
+                    );
+                  }
+                  return (
+                    <input
+                      type="text"
+                      className={inputClass}
+                      placeholder="Type your answer"
+                      value={responses[currentQuestionData.id] || ''}
+                      onChange={(e) => handleResponse(currentQuestionData.id, e.target.value)}
+                    />
+                  );
+                })()}
+                <p className="text-xs text-gray-400 mt-2">Press Enter to continue</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -17,71 +17,23 @@ import {
   Clock,
   TrendingUp,
   AlertCircle,
-  Shield
+  Shield,
+  Loader
 } from 'lucide-react';
-
-import { BACKEND_ENABLED, API_BASE } from '../../lib/backendConfig';
 
 const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const [guidance, setGuidance] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [currentSubmission, setCurrentSubmission] = useState(submission);
 
+  // Update when submission changes (guidance loaded)
   useEffect(() => {
     if (submission) {
-      loadGuidance();
+      setCurrentSubmission(submission);
     }
   }, [submission]);
 
-  const loadGuidance = async () => {
-    try {
-      if (!BACKEND_ENABLED) {
-        // compute guidance locally
-        const createGuidance = (formName, severity) => {
-          const title = `${formName} Guidance`;
-          const description = severity.toLowerCase().includes('severe')
-            ? 'Your score suggests higher severity; consider reaching out for professional support and urgent help if needed.'
-            : severity.toLowerCase().includes('moderate')
-              ? 'Your score indicates moderate symptoms. Consider counseling and self-help strategies.'
-              : 'Your score is in the lower range. Maintain self-care and monitor changes.';
-
-          const recommendations = [];
-          if (severity.toLowerCase().includes('severe') || severity.toLowerCase().includes('moderately severe')) {
-            recommendations.push('Seek professional mental health support (counselor, therapist).');
-            recommendations.push('If you have thoughts of self-harm, contact emergency services or a crisis hotline immediately.');
-          } else if (severity.toLowerCase().includes('moderate')) {
-            recommendations.push('Consider brief therapy or speaking with a counselor.');
-            recommendations.push('Practice stress-management techniques and monitor symptoms.');
-          } else if (severity.toLowerCase().includes('mild')) {
-            recommendations.push('Self-help strategies: sleep, exercise, mindfulness, and routine.');
-          } else {
-            recommendations.push('Keep up healthy habits and reassess if symptoms change.');
-          }
-
-          return { guidance: { title, description, recommendations } };
-        };
-
-        const data = createGuidance(submission.form_name, submission.severity_level || 'normal');
-        setGuidance(data);
-        return;
-      }
-
-      const response = await fetch(
-        `${API_BASE}/api/assessment/guidance/${submission.form_id}/${submission.total_score}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setGuidance(data);
-      }
-    } catch (error) {
-      console.error('Error loading guidance:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!submission) {
+  if (!currentSubmission) {
     return (
       <div className="text-center py-12">
         <p className={theme.colors.muted}>No results to display.</p>
@@ -90,15 +42,8 @@ const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
-      </div>
-    );
-  }
-
   const getScoreColor = (severity) => {
+    if (!severity) return 'text-gray-600 bg-gray-100';
     switch (severity.toLowerCase()) {
       case 'none-minimal':
       case 'minimal':
@@ -120,6 +65,7 @@ const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
   };
 
   const getProgressColor = (severity) => {
+    if (!severity) return 'bg-gray-500';
     switch (severity.toLowerCase()) {
       case 'none-minimal':
       case 'minimal':
@@ -141,16 +87,26 @@ const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
   };
 
   const getMaxScore = (formName) => {
-    switch (formName) {
-      case 'PHQ-9': return 27;
-      case 'GAD-7': return 21;
-      case 'GHQ-28': return 28;
-      default: return 100;
-    }
+    const scores = {
+      'PHQ-9': 27,
+      'GAD-7': 21,
+      'GHQ-12': 36,
+      'C-SSRS': 20,
+      'CSSRS': 20,
+      'PSS-10': 40,
+      'WHO-5': 25,
+      'IAT': 100,
+      'PSQI': 21,
+      'BHI-10': 30,
+      'DERS-18': 90
+    };
+    return scores[formName] || 100;
   };
 
-  const maxScore = getMaxScore(submission.form_name);
-  const scorePercentage = (submission.total_score / maxScore) * 100;
+  // Ensure severity_level has a default value
+  const severityLevel = currentSubmission.severity_level || 'Normal';
+  const maxScore = getMaxScore(currentSubmission.form_name);
+  const scorePercentage = (currentSubmission.total_score / maxScore) * 100;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -165,12 +121,12 @@ const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
               <div>
                 <CardTitle className={`text-2xl ${theme.colors.text}`}>Assessment Complete</CardTitle>
                 <CardDescription className={theme.colors.muted}>
-                  {submission.form_name} • Completed on {new Date(submission.submitted_at).toLocaleDateString()}
+                  {currentSubmission.form_name} • Completed on {new Date(currentSubmission.submitted_at).toLocaleDateString()}
                 </CardDescription>
               </div>
             </div>
-            <Badge className={`px-3 py-1 ${getScoreColor(submission.severity_level)}`}>
-              {submission.severity_level}
+            <Badge className={`px-3 py-1 ${getScoreColor(severityLevel)}`}>
+              {severityLevel}
             </Badge>
           </div>
         </CardHeader>
@@ -183,7 +139,7 @@ const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
             <div>
               <h3 className={`text-lg font-semibold mb-4 ${theme.colors.text}`}>Your Score</h3>
               <div className="flex items-end space-x-2 mb-4">
-                <span className={`text-4xl font-bold ${theme.colors.text}`}>{submission.total_score}</span>
+                <span className={`text-4xl font-bold ${theme.colors.text}`}>{currentSubmission.total_score}</span>
                 <span className={`text-xl ${theme.colors.muted} pb-1`}>/ {maxScore}</span>
               </div>
               <Progress 
@@ -197,15 +153,15 @@ const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
             
             <div className="flex items-center justify-center">
               <div className="text-center">
-                <div className={`w-24 h-24 rounded-full ${getScoreColor(submission.severity_level)} flex items-center justify-center mb-3 mx-auto`}>
-                  {submission.form_name === 'PHQ-9' ? (
+                <div className={`w-24 h-24 rounded-full ${getScoreColor(severityLevel)} flex items-center justify-center mb-3 mx-auto`}>
+                  {currentSubmission.form_name === 'PHQ-9' ? (
                     <Heart className="w-8 h-8" />
                   ) : (
                     <Brain className="w-8 h-8" />
                   )}
                 </div>
                 <p className={`font-semibold ${theme.colors.text}`}>Severity Level</p>
-                <p className={`text-sm ${theme.colors.muted} capitalize`}>{submission.severity_level}</p>
+                <p className={`text-sm ${theme.colors.muted} capitalize`}>{severityLevel}</p>
               </div>
             </div>
           </div>
@@ -213,40 +169,55 @@ const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
       </Card>
 
       {/* Guidance */}
-      {guidance && (
-        <Card className={`${theme.colors.card} shadow-xl`}>
-          <CardHeader>
-            <CardTitle className={`flex items-center ${theme.colors.text}`}>
-              <AlertTriangle className="w-5 h-5 mr-2 text-amber-500" />
-              {guidance.guidance.title}
-            </CardTitle>
-            <CardDescription className={theme.colors.muted}>
-              Personalized guidance based on your assessment results
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Description */}
-            <div className={`p-4 rounded-lg ${theme.colors.secondary}`}>
-              <p className={theme.colors.text}>{guidance.guidance.description}</p>
+      <Card className={`${theme.colors.card} shadow-xl`}>
+        <CardHeader>
+          <CardTitle className={`flex items-center ${theme.colors.text}`}>
+            <AlertTriangle className="w-5 h-5 mr-2 text-amber-500" />
+            Assessment Guidance
+          </CardTitle>
+          <CardDescription className={theme.colors.muted}>
+            Personalized guidance based on your assessment results
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {currentSubmission.isLoading ? (
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <Loader className="w-8 h-8 animate-spin text-cyan-500" />
+              <p className={`text-sm ${theme.colors.muted}`}>Generating personalized guidance...</p>
+              <p className={`text-xs ${theme.colors.muted}`}>This may take a few moments</p>
             </div>
-
-            {/* Recommendations */}
-            <div>
-              <h4 className={`font-semibold mb-3 ${theme.colors.text}`}>Recommended Actions:</h4>
-              <div className="space-y-3">
-                {guidance.guidance.recommendations.map((recommendation, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-cyan-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <p className={`text-sm ${theme.colors.muted}`}>{recommendation}</p>
-                  </div>
-                ))}
+          ) : currentSubmission.guidance ? (
+            <>
+              {/* Description */}
+              <div className={`p-4 rounded-lg ${theme.colors.secondary}`}>
+                <p className={theme.colors.text}>{currentSubmission.guidance}</p>
               </div>
-            </div>
 
-            {/* Crisis Support Notice for Severe Results */}
-            {(submission.severity_level.toLowerCase().includes('severe') || 
-              submission.severity_level.toLowerCase().includes('moderately severe')) && (
-              <div className="border-l-4 border-l-red-500 bg-red-50 p-4 rounded-r-lg">
+              {/* Recommendations */}
+              {currentSubmission.recommendations && currentSubmission.recommendations.length > 0 && (
+                <div>
+                  <h4 className={`font-semibold mb-3 ${theme.colors.text}`}>Recommended Actions:</h4>
+                  <div className="space-y-3">
+                    {currentSubmission.recommendations.map((recommendation, index) => (
+                      <div key={index} className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-cyan-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <p className={`text-sm ${theme.colors.muted}`}>{recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className={`p-4 rounded-lg ${theme.colors.secondary}`}>
+              <p className={`text-sm ${theme.colors.muted}`}>Guidance will appear here once generated.</p>
+            </div>
+          )}
+
+          {/* Crisis Support Notice for Severe Results */}
+          {(severityLevel.toLowerCase().includes('severe') || 
+            severityLevel.toLowerCase().includes('moderately severe')) && (
+            <div className="border-l-4 border-l-red-500 bg-red-50 p-4 rounded-r-lg">
                 <div className="flex items-start space-x-3">
                   <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
                   <div>
@@ -264,13 +235,12 @@ const AssessmentResults = ({ submission, onBack, onViewHistory }) => {
                         <ExternalLink className="w-4 h-4 ml-2" />
                       </Button>
                     </div>
-                  </div>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Privacy & Next Steps */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
