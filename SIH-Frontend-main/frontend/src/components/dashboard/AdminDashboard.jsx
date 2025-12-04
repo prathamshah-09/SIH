@@ -22,7 +22,8 @@ import {
   ChevronDown,
   Plus,
   Mic,
-  Trash2
+  Trash2,
+  FileText
 } from 'lucide-react';
 
 import DashboardLayout from '@components/layout/DashboardLayout';
@@ -317,6 +318,7 @@ const AdminDashboard = () => {
         { key: 'users', icon: Users, label: t('userManagement'), color: 'text-indigo-500' },
         { key: 'community', icon: Shield, label: t('communityManagement'), color: 'text-orange-500' },
         { key: 'announcements', icon: Bell, label: t('announcements'), color: 'text-pink-500' },
+        { key: 'forms', icon: FileText, label: 'Form Creation', color: 'text-cyan-500' },
         // { key: 'settings', icon: Settings, label: t('settings'), color: 'text-gray-500' }
       ].map(({ key, icon: Icon, label, color }) => (
         <Button
@@ -636,7 +638,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 lg:gap-12 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 gap-8 lg:gap-12 max-w-7xl mx-auto">
               {/* Announcement Management Section */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-3 mb-6">
@@ -647,18 +649,21 @@ const AdminDashboard = () => {
                 </div>
                 <AnnouncementManagement />
               </div>
-
-              {/* Form Management Section */}
-              <div className="space-y-6">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-cyan-700 rounded-lg flex items-center justify-center">
-                    <div className="text-lg">📝</div>
-                  </div>
-                  <h2 className={`text-2xl font-semibold ${theme.colors.text}`}>Form Creation</h2>
-                </div>
-                <FormManagement />
+            </div>
+          </div>
+        );
+      case 'forms':
+        return (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
+                  Form Creation Hub
+                  <FileText className="w-8 h-8 ml-3 text-cyan-500 animate-pulse" />
+                </h2>
               </div>
             </div>
+            <FormManagement />
           </div>
         );
       case 'users':
