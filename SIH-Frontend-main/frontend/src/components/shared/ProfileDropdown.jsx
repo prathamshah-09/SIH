@@ -48,7 +48,7 @@ const ProfileDropdown = () => {
   const [newUsername, setNewUsername] = useState('');
   const [regenerationCount, setRegenerationCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
@@ -191,7 +191,7 @@ const ProfileDropdown = () => {
                 </div>
               </DropdownMenuItem>
 
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem className="cursor-pointer" onClick={() => setIsProfileDialogOpen(true)}>
                 <Settings className="mr-2 h-4 w-4" />
                 Profile Settings
               </DropdownMenuItem>
@@ -199,7 +199,7 @@ const ProfileDropdown = () => {
           ) : (
             // counsellor / admin: simple view profile + change password
             <>
-              <DropdownMenuItem className="cursor-pointer" onClick={() => setIsViewDialogOpen(true)}>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => setIsProfileDialogOpen(true)}>
                 <User className="mr-2 h-4 w-4" />
                 View Profile
               </DropdownMenuItem>
@@ -295,22 +295,55 @@ const ProfileDropdown = () => {
         </DialogContent>
       </Dialog>
 
-      {/* View Profile Dialog (read-only) */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* Profile Dialog */}
+      <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+        <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle>Profile</DialogTitle>
-            <DialogDescription>View your profile details.</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-blue-500" />
+              Profile Settings
+            </DialogTitle>
+            <DialogDescription>Review your personal details and manage your password.</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
-              <p className="text-xs text-muted-foreground">Role: {user?.role}</p>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 gap-3">
+              <div className="p-3 rounded-lg border bg-gray-50">
+                <p className="text-xs text-gray-500">Full Name</p>
+                <p className="text-sm font-semibold text-gray-800">{user?.name || 'Not provided'}</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-gray-50">
+                <p className="text-xs text-gray-500">Username</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {user?.username ? `@${user.username}` : 'Not set'}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg border bg-gray-50">
+                <p className="text-xs text-gray-500">Mobile Number</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {user?.phone || user?.mobile || 'Not provided'}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg border bg-gray-50">
+                <p className="text-xs text-gray-500">Email Address</p>
+                <p className="text-sm font-semibold text-gray-800 break-all">{user?.email || 'Not provided'}</p>
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+
+          <DialogFooter className="flex flex-col sm:flex-row w-full gap-3">
+            <Button
+              onClick={() => {
+                setIsProfileDialogOpen(false);
+                setIsPasswordDialogOpen(true);
+              }}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              Change Password
+            </Button>
+            <Button variant="outline" className="flex-1" onClick={() => setIsProfileDialogOpen(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
