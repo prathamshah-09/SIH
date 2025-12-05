@@ -173,15 +173,42 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
       </Card>
 
       {/* Tabs for Standard and Admin Assessments */}
+      
+      {/* Mobile Toggle for Tabs */}
+      <div className="md:hidden flex gap-2 w-full mb-6">
+        <Button
+          onClick={() => setAssessmentTab('standard')}
+          className={`flex-1 gap-2 transition-all ${
+            assessmentTab === 'standard'
+              ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-lg'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          <Brain className="w-4 h-4" />
+          <span>Standard</span>
+        </Button>
+        <Button
+          onClick={() => setAssessmentTab('admin')}
+          className={`flex-1 gap-2 transition-all ${
+            assessmentTab === 'admin'
+              ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Admin</span>
+        </Button>
+      </div>
+
       <Tabs value={assessmentTab} onValueChange={setAssessmentTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6 h-auto">
-          <TabsTrigger value="standard" className="text-xs sm:text-sm md:text-base py-2 sm:py-3">
-            <Brain className="w-4 h-4 mr-1 sm:mr-2 flex-shrink-0" />
-            <span className="truncate">Standard</span>
+        <TabsList className="hidden md:grid w-full grid-cols-2 mb-6 h-auto gap-1 sm:gap-2 p-1 sm:p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <TabsTrigger value="standard" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
+            <Brain className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+            <span className="truncate font-medium">Standard</span>
           </TabsTrigger>
-          <TabsTrigger value="admin" className="text-xs sm:text-sm md:text-base py-2 sm:py-3">
-            <FileText className="w-4 h-4 mr-1 sm:mr-2 flex-shrink-0" />
-            <span className="truncate">Admin Forms</span>
+          <TabsTrigger value="admin" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+            <span className="truncate font-medium">Admin Forms</span>
           </TabsTrigger>
         </TabsList>
 

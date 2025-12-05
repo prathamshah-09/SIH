@@ -43,6 +43,8 @@ const UserManagement = () => {
   const [counsellors, setCounsellors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showAddCounsellor, setShowAddCounsellor] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -56,6 +58,7 @@ const UserManagement = () => {
     password: '',
     phoneNumber: '',
     studentId: '',
+    passingYear: '',
   });
   
   const [counsellorForm, setCounsellorForm] = useState({
@@ -115,7 +118,7 @@ const UserManagement = () => {
   // Add student
   const handleAddStudent = () => {
     if (!studentForm.name || !studentForm.email || !studentForm.password) {
-      alert('Please fill all fields');
+      alert('Please fill all required fields');
       return;
     }
     const newStudent = {
@@ -125,6 +128,7 @@ const UserManagement = () => {
       password: studentForm.password,
       phoneNumber: studentForm.phoneNumber || '',
       studentId: studentForm.studentId || '',
+      passingYear: studentForm.passingYear || '',
       role: 'student',
       createdAt: new Date().toISOString(),
       status: 'active'
@@ -132,7 +136,7 @@ const UserManagement = () => {
     const updatedStudents = [...students, newStudent];
     setStudents(updatedStudents);
     setUsers([...updatedStudents, ...counsellors]);
-    setStudentForm({ name: '', email: '', password: '', phoneNumber: '', studentId: '' });
+    setStudentForm({ name: '', email: '', password: '', phoneNumber: '', studentId: '', passingYear: '' });
     setShowAddStudent(false);
   };
 
@@ -286,6 +290,17 @@ const UserManagement = () => {
                   />
                 </div>
                 <div>
+                  <label className="text-sm font-medium mb-2 block">Passing Year</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 2024"
+                    min="2020"
+                    max="2030"
+                    value={studentForm.passingYear}
+                    onChange={(e) => setStudentForm({ ...studentForm, passingYear: e.target.value })}
+                  />
+                </div>
+                <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium">Initial Password</label>
                     <Button
@@ -391,28 +406,73 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Search and Filter */}
+      {/* Summary Stats - Moved to Top */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
+          <CardContent className="p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Users</p>
+                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>{users.length}</p>
+              </div>
+              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
+          <CardContent className="p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Students</p>
+                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>{users.filter(u => u.role === 'student').length}</p>
+              </div>
+              <User className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-500 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
+          <CardContent className="p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Counsellors</p>
+                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>{users.filter(u => u.role === 'counsellor').length}</p>
+              </div>
+              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-purple-500 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filter - Moved Below Counts */}
       <Card className={`${theme.colors.card} border-0 shadow-lg`}>
         <CardContent className="p-3 sm:p-4 md:p-6">
-          <div className="flex flex-row gap-2 sm:gap-4 items-stretch sm:items-center">
-            <div className="flex-[7] relative min-w-0">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-stretch sm:items-center">
+            <div className="flex-1 relative min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder={t('search') || 'Search'}
+                placeholder={t('search') || 'Search by name or email...'}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="pl-10 text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <select
               value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className={`flex-[3] px-1 py-0 border rounded text-[10px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.colors.card}`}
+              onChange={(e) => {
+                setFilterRole(e.target.value);
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-2 border rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.colors.card}`}
             >
-              <option value="all">{t('allUsers')}</option>
-              <option value="student">{t('studentLabel')}</option>
-              <option value="counsellor">{t('counsellorLabel')}</option>
+              <option value="all">{t('allUsers') || 'All Users'}</option>
+              <option value="student">{t('studentLabel') || 'Students'}</option>
+              <option value="counsellor">{t('counsellorLabel') || 'Counsellors'}</option>
             </select>
           </div>
         </CardContent>
@@ -439,10 +499,16 @@ const UserManagement = () => {
                 <Input value={editForm.phoneNumber || ''} onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })} />
               </div>
               {editForm.role === 'student' && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Student ID</label>
-                  <Input value={editForm.studentId || ''} onChange={(e) => setEditForm({ ...editForm, studentId: e.target.value })} />
-                </div>
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Student ID</label>
+                    <Input value={editForm.studentId || ''} onChange={(e) => setEditForm({ ...editForm, studentId: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Passing Year</label>
+                    <Input type="number" value={editForm.passingYear || ''} onChange={(e) => setEditForm({ ...editForm, passingYear: e.target.value })} />
+                  </div>
+                </>
               )}
               {editForm.role === 'counsellor' && (
                 <div>
@@ -502,7 +568,7 @@ const UserManagement = () => {
           </DialogContent>
         </Dialog>
 
-      {/* Users Table */}
+      {/* Users Table with Pagination */}
       <Card className={`${theme.colors.card} border-0 shadow-lg overflow-hidden`}>
         <CardContent className="p-0">
           {filteredUsers.length === 0 ? (
@@ -511,79 +577,90 @@ const UserManagement = () => {
               <p className={`${theme.colors.muted} text-sm sm:text-base md:text-lg`}>{t('noUsersFound')}</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm sm:text-base">
-                <thead>
-                  <tr className="border-b bg-gray-50 dark:bg-gray-800">
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">{t('nameHeader')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => {
-                    const isStudent = user.role === 'student';
-                    const avatarGradient = isStudent 
-                      ? 'bg-gradient-to-br from-blue-500 to-cyan-500' 
-                      : 'bg-gradient-to-br from-purple-500 to-pink-500';
-                    return (
-                    <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" onClick={() => handleOpenEdit(user)}>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className={`w-8 sm:w-10 h-8 sm:h-10 rounded-full ${avatarGradient} flex items-center justify-center text-white text-xs sm:text-sm font-semibold flex-shrink-0`}>
-                            {user.name.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
-                              {user.name}
-                            </p>
-                            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">ID: {user.studentId || user.id}</span>
-                          </div>
-                        </div>
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs sm:text-sm">
+                  <thead>
+                    <tr className="border-b bg-gray-50 dark:bg-gray-800">
+                      <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                      <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">ID</th>
+                      <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Role</th>
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredUsers
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .map((user) => {
+                        const isStudent = user.role === 'student';
+                        const avatarGradient = isStudent 
+                          ? 'bg-gradient-to-br from-blue-500 to-cyan-500' 
+                          : 'bg-gradient-to-br from-purple-500 to-pink-500';
+                        return (
+                          <tr 
+                            key={user.id} 
+                            className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" 
+                            onClick={() => handleOpenEdit(user)}
+                          >
+                            <td className="px-3 sm:px-6 py-3 sm:py-4">
+                              <div className="flex items-center gap-2 sm:gap-3">
+                                <div className={`w-8 sm:w-10 h-8 sm:h-10 rounded-full ${avatarGradient} flex items-center justify-center text-white text-xs sm:text-sm font-semibold flex-shrink-0`}>
+                                  {user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                    {user.name}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-600 dark:text-gray-400 truncate">
+                              {user.studentId || user.id.substring(0, 8)}
+                            </td>
+                            <td className="px-3 sm:px-6 py-3 sm:py-4">
+                              <Badge className={isStudent ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}>
+                                {isStudent ? 'Student' : 'Counsellor'}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              <div className="px-3 sm:px-6 py-4 border-t bg-gray-50 dark:bg-gray-800 flex items-center justify-between">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  Showing {filteredUsers.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} results
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="text-xs sm:text-sm"
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-2 px-2">
+                    <span className="text-xs sm:text-sm font-medium">{currentPage}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredUsers.length / itemsPerPage), prev + 1))}
+                    disabled={currentPage >= Math.ceil(filteredUsers.length / itemsPerPage)}
+                    className="text-xs sm:text-sm"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
-        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
-          <CardContent className="p-3 sm:p-5 md:p-6">
-            <div className="flex items-start">
-              <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs font-medium`}>Users</p>
-                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
-          <CardContent className="p-3 sm:p-5 md:p-6">
-            <div className="flex items-start">
-              <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs font-medium`}>Students</p>
-                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.filter(u => u.role === 'student').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
-          <CardContent className="p-3 sm:p-5 md:p-6">
-            <div className="flex items-start">
-              <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs font-medium`}>Counsellors</p>
-                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.filter(u => u.role === 'counsellor').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };
