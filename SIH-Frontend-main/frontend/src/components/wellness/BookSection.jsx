@@ -38,78 +38,73 @@ const BookSection = ({ books = [] }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className={`text-2xl font-bold ${theme.colors.text} flex items-center`}>
-          <BookOpen className="w-7 h-7 mr-3 text-blue-500" />
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className={`text-xl sm:text-2xl font-bold ${theme.colors.text} flex items-center whitespace-nowrap`}>
+          <BookOpen className="w-5 sm:w-7 h-5 sm:h-7 mr-2 text-blue-500" />
           {t('books')}
         </h3>
-        <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-base">
           {Math.min(books.length, 6)} books
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-5">
         {books.slice(0, 6).map((book) => (
-          <Card key={book.id} className={`${theme.colors.card} hover:shadow-2xl transition-all duration-300 hover:scale-105 border-0 group overflow-hidden`}>
+          <Card key={book.id} className={`${theme.colors.card} hover:shadow-lg transition-all duration-300 hover:scale-105 border-0 group overflow-hidden`}>
             <CardContent className="p-0">
               {/* Book Cover */}
-              <div className="aspect-[3/4] relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+              <div className="relative h-48 sm:h-56 lg:h-64 overflow-hidden rounded-lg bg-gradient-to-br from-gray-100 to-gray-200">
                 <img 
                   src={book.coverUrl} 
                   alt={book.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
                     e.target.src = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop';
                   }}
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110">
-                    <BookOpen className="w-16 h-16 text-white drop-shadow-2xl" />
+                    <BookOpen className="w-8 sm:w-10 lg:w-12 h-8 sm:h-10 lg:h-12 text-white drop-shadow-2xl" />
                   </div>
                 </div>
               </div>
               
               {/* Book Details */}
-              <div className="p-4 space-y-3">
+              <div className="p-2 sm:p-3 lg:p-4 space-y-2 lg:space-y-3">
                 <div>
-                  <h4 className={`font-bold text-lg ${theme.colors.text} group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight`}>
+                  <h4 className={`font-bold text-xs sm:text-sm lg:text-base ${theme.colors.text} group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight`}>
                     {book.title}
                   </h4>
-                  <p className={`${theme.colors.muted} text-sm font-medium`}>
+                  <p className={`${theme.colors.muted} text-xs lg:text-sm font-medium line-clamp-1`}>
                     by {book.author}
                   </p>
                 </div>
                 
-                {/* Rating */}
-                <div className="flex items-center space-x-2">
+                {/* Rating & Page count on same line */}
+                <div className="flex items-center gap-2 justify-between text-xs lg:text-sm">
                   <div className="flex items-center space-x-1">
-                    {renderStars(book.rating)}
+                    <div className="flex items-center space-x-0.5">
+                      {renderStars(book.rating).slice(0, 3)}
+                    </div>
+                    <span className={`${theme.colors.muted} font-medium`}>
+                      {book.rating}
+                    </span>
                   </div>
-                  <span className={`${theme.colors.muted} text-sm font-medium`}>
-                    {book.rating}
-                  </span>
-                </div>
-                
-                {/* Description */}
-                <p className={`${theme.colors.muted} text-sm line-clamp-3`}>
-                  {book.description}
-                </p>
-                
-                {/* Book Info */}
-                <div className="flex items-center justify-between pt-2">
-                  <Badge variant="outline" className="text-xs">
-                    {book.pages} pages
+                  <Badge variant="outline" className="text-xs lg:text-sm whitespace-nowrap">
+                    {book.pages}p
                   </Badge>
-                  
-                  <Button
-                    onClick={() => handleReadBook(book)}
-                    size="sm"
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                  >
-                    <FileDown className="w-4 h-4 mr-2" />
-                    {t('readBook')}
-                  </Button>
                 </div>
+                
+                {/* Read Button */}
+                <Button
+                  onClick={() => handleReadBook(book)}
+                  size="sm"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-2 sm:px-3 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg w-full"
+                >
+                  <FileDown className="w-3 h-3 lg:w-4 lg:h-4 mr-1" />
+                  <span className="hidden sm:inline">{t('readBook')}</span>
+                  <span className="sm:hidden">Read</span>
+                </Button>
               </div>
             </CardContent>
           </Card>

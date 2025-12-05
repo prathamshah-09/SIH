@@ -30,7 +30,8 @@ import {
   Plus
 } from 'lucide-react';
 import CounsellorAppointments from '@components/appointments/CounsellorAppointments';
-import { mockAnnouncements, mockCommunityChats, mockAppointments, mockCounsellorResources } from '@mock/mockData';
+import { mockAnnouncements } from '@data/mocks/announcements';
+import { mockCommunityChats, mockAppointments, mockCounsellorResources } from '@mock/mockData';
 import { useAnnouncements } from '@context/AnnouncementContext';
 import CommunityView from '@components/community/CommunityView';
 import DirectMessages from '@components/community/DirectMessages';

@@ -17,13 +17,15 @@ import {
   BarChart3,
   Users,
   Settings,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 import AssessmentForm from './AssessmentForm';
 import AssessmentResults from './AssessmentResults';
 import AssessmentHistory from './AssessmentHistory';
 import AdminFormManagement from './AdminFormManagement';
-import { mockForms } from '../../mock/mockData';
+import AdminFormResponse from './AdminFormResponse';
+import { mockForms } from '@data/mocks/forms';
 import { BACKEND_ENABLED, API_BASE } from '../../lib/backendConfig';
 
 const AssessmentDashboard = ({ userRole = 'student' }) => {
@@ -31,15 +33,19 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
   const { t } = useLanguage();
   const [activeView, setActiveView] = useState('overview');
   const [availableForms, setAvailableForms] = useState([]);
+  const [adminForms, setAdminForms] = useState([]);
+  const [assessmentTab, setAssessmentTab] = useState('standard');
   const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedForm, setSelectedForm] = useState(null);
+  const [selectedFormType, setSelectedFormType] = useState(null); // 'standard' or 'admin'
   const [lastSubmission, setLastSubmission] = useState(null);
 
   // Initialize session and load forms
   useEffect(() => {
     initializeSession();
     loadAvailableForms();
+    loadAdminForms();
   }, []);
 
   const initializeSession = async () => {
@@ -91,18 +97,32 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
     }
   };
 
+  const loadAdminForms = () => {
+    try {
+      const saved = localStorage.getItem('saved_forms');
+      if (saved) {
+        const forms = JSON.parse(saved);
+        setAdminForms(forms);
+      }
+    } catch (error) {
+      console.error('Error loading admin forms:', error);
+    }
+  };
+
   const handleFormSubmission = (submission) => {
     setLastSubmission(submission);
     setActiveView('results');
   };
 
-  const handleStartAssessment = (form) => {
+  const handleStartAssessment = (form, formType = 'standard') => {
     setSelectedForm(form);
+    setSelectedFormType(formType);
     setActiveView('form');
   };
 
   const renderOverview = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full flex justify-center">
+      <div className="w-full lg:w-[95%] space-y-6 lg:space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -152,64 +172,198 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
         </CardContent>
       </Card>
 
-      {/* Available Forms */}
-      {/* Mobile: compact horizontal rows (only on small phones) */}
-      <div className="md:hidden space-y-3">
-        {availableForms.map((form) => (
-          <div key={form.id} className={`flex items-center justify-between p-3 rounded-lg ${theme.colors.card} border`}> 
-            <div className="flex-1">
-              <div className="font-semibold">{t(`${form.id}_title`) || form.title}</div>
-              <div className={`text-sm ${theme.colors.muted} hide-on-mobile`}>{t(`${form.id}_desc`)?.slice(0, 80) || form.description?.slice(0, 80)}</div>
-            </div>
-            <div className="ml-3">
-              <button onClick={() => handleStartAssessment(form)} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-3 py-2 rounded-md text-sm">
-                {t('startAssessment')}
-              </button>
-            </div>
-          </div>
-        ))}
+      {/* Tabs for Standard and Admin Assessments */}
+      
+      {/* Mobile Toggle for Tabs */}
+      <div className="md:hidden flex gap-2 w-full mb-6">
+        <Button
+          onClick={() => setAssessmentTab('standard')}
+          className={`flex-1 gap-2 transition-all ${
+            assessmentTab === 'standard'
+              ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-lg'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          <Brain className="w-4 h-4" />
+          <span>Standard</span>
+        </Button>
+        <Button
+          onClick={() => setAssessmentTab('admin')}
+          className={`flex-1 gap-2 transition-all ${
+            assessmentTab === 'admin'
+              ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Admin</span>
+        </Button>
       </div>
 
-      {/* Desktop / tablet cards */}
-      <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {availableForms.map((form) => (
-          <Card 
-            key={form.id}
-            className={`${theme.colors.card} hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 border-0 group`}
-          >
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className={`text-xl ${theme.colors.text} group-hover:text-cyan-600 transition-colors`}>
-                  {t(`${form.id}_title`) || form.title}
-                </CardTitle>
-                <div className={`p-3 rounded-full ${getFormIconBackground(form.name)}`}>
-                  {getFormIcon(form.name)}
+      <Tabs value={assessmentTab} onValueChange={setAssessmentTab} className="w-full">
+        <TabsList className="hidden md:grid w-full grid-cols-2 mb-6 h-auto gap-1 sm:gap-2 p-1 sm:p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <TabsTrigger value="standard" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
+            <Brain className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+            <span className="truncate font-medium">Standard</span>
+          </TabsTrigger>
+          <TabsTrigger value="admin" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+            <span className="truncate font-medium">Admin Forms</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Standard Assessments Tab */}
+        <TabsContent value="standard" className="space-y-6">
+          {/* Mobile: compact horizontal rows */}
+          <div className="md:hidden space-y-3">
+            {availableForms.map((form) => (
+              <div key={form.id} className={`flex items-center justify-between p-3 rounded-lg ${theme.colors.card} border`}> 
+                <div className="flex-1">
+                  <div className="font-semibold">{t(`${form.id}_title`) || form.title}</div>
+                  <div className={`text-sm ${theme.colors.muted} hide-on-mobile`}>{t(`${form.id}_desc`)?.slice(0, 80) || form.description?.slice(0, 80)}</div>
+                </div>
+                <div className="ml-3">
+                  <button onClick={() => handleStartAssessment(form)} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-3 py-2 rounded-md text-sm">
+                    {t('startAssessment')}
+                  </button>
                 </div>
               </div>
-              <CardDescription className={`${theme.colors.muted} text-sm leading-relaxed`}>
-                {t(`${form.id}_desc`) || form.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex items-center justify-between mb-4">
-                <Badge variant="secondary" className="text-xs">
-                  {t(`${form.id}_questions`) || `${form.questions?.length || 0} questions`}
-                </Badge>
-                <span className={`text-xs ${theme.colors.muted}`}>
-                  {t(`${form.id}_time`) || `~${Math.ceil((form.questions?.length || 0) * 0.5)} min`}
-                </span>
-              </div>
-                <Button 
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg transition-all duration-300"
-                onClick={() => handleStartAssessment(form)}
+            ))}
+          </div>
+
+          {/* Desktop / tablet cards */}
+          <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {availableForms.map((form) => (
+              <Card 
+                key={form.id}
+                className={`${theme.colors.card} hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 border-0 group`}
               >
-                {t('startAssessment')}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className={`text-xl ${theme.colors.text} group-hover:text-cyan-600 transition-colors`}>
+                      {t(`${form.id}_title`) || form.title}
+                    </CardTitle>
+                    <div className={`p-3 rounded-full ${getFormIconBackground(form.name)}`}>
+                      {getFormIcon(form.name)}
+                    </div>
+                  </div>
+                  <CardDescription className={`${theme.colors.muted} text-sm leading-relaxed`}>
+                    {t(`${form.id}_desc`) || form.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <Badge variant="secondary" className="text-xs">
+                      {t(`${form.id}_questions`) || `${form.questions?.length || 0} questions`}
+                    </Badge>
+                    <span className={`text-xs ${theme.colors.muted}`}>
+                      {t(`${form.id}_time`) || `~${Math.ceil((form.questions?.length || 0) * 0.5)} min`}
+                    </span>
+                  </div>
+                  <Button 
+                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg transition-all duration-300"
+                    onClick={() => handleStartAssessment(form)}
+                  >
+                    {t('startAssessment')}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Admin Forms Tab */}
+        <TabsContent value="admin" className="space-y-6">
+          {adminForms.length === 0 ? (
+            <Card className={`${theme.colors.card} border-0 shadow-lg`}>
+              <CardContent className="p-8 sm:p-12 text-center">
+                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className={`text-lg font-semibold ${theme.colors.text} mb-2`}>
+                  No Admin Forms Yet
+                </h3>
+                <p className={`${theme.colors.muted} text-sm`}>
+                  Your instructors haven't created any custom forms yet.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Mobile: compact view */}
+              <div className="md:hidden space-y-3">
+                {adminForms.map((form) => (
+                  <div key={form.id} className={`p-4 rounded-lg ${theme.colors.card} border border-gray-200`}> 
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm sm:text-base">{form.title}</div>
+                        <div className={`text-xs ${theme.colors.muted} mt-1`}>
+                          {form.questions?.length || 0} questions • {new Date(form.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    {form.description && (
+                      <p className={`text-xs sm:text-sm ${theme.colors.muted} mb-3`}>
+                        {form.description}
+                      </p>
+                    )}
+                    <button onClick={() => handleStartAssessment(form, 'admin')} className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white px-3 py-2 rounded-md text-sm font-semibold">
+                      Take Form
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop / tablet cards - 3 column grid */}
+              <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {adminForms.map((form) => (
+                  <Card 
+                    key={form.id}
+                    className={`${theme.colors.card} border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group`}
+                  >
+                    <div className={`h-2 bg-gradient-to-r from-purple-500 to-pink-600`} />
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className={`text-lg ${theme.colors.text} group-hover:text-purple-600 transition-colors truncate`}>
+                            {form.title}
+                          </CardTitle>
+                          <p className={`text-xs ${theme.colors.muted} mt-2 flex items-center gap-1`}>
+                            <Calendar className="w-3 h-3" />
+                            {new Date(form.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Badge className="bg-purple-100 text-purple-800 text-xs font-semibold">
+                          {form.questions?.length || 0} Questions
+                        </Badge>
+                      </div>
+                      {form.description && (
+                        <p className={`text-sm ${theme.colors.muted} line-clamp-2`}>
+                          {form.description}
+                        </p>
+                      )}
+                      <Button 
+                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:shadow-lg font-semibold py-2 rounded-lg hover:scale-105 transition-all duration-200"
+                        onClick={() => handleStartAssessment(form, 'admin')}
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Take Form
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
@@ -280,6 +434,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
           </CardContent>
         </Card>
       </div>
+      </div>
     </div>
   );
 
@@ -322,7 +477,13 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
       case 'overview':
         return renderOverview();
       case 'form':
-        return (
+        return selectedFormType === 'admin' ? (
+          <AdminFormResponse 
+            form={selectedForm}
+            onSubmission={handleFormSubmission}
+            onBack={() => setActiveView('overview')}
+          />
+        ) : (
           <AssessmentForm 
             form={selectedForm}
             sessionId={sessionId}

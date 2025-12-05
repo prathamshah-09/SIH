@@ -173,22 +173,119 @@ export const mockSelfHelpBooks = [
 ];
 
 export const mockJournalEntries = [
+  // Past entries for streak calculation (consecutive days from today Nov 29)
   {
     id: '1',
-    date: '2024-01-15',
-    type: 'daily-checkin',
-    mood: 7,
-    energy: 6,
-    sleep: 7,
-    notes: 'Feeling better today. Had a good morning walk.',
-    gratitude: ['Sunny weather', 'Supportive friends', 'Good health']
+    dateKey: '2025-11-29_daily',
+    type: 'daily',
+    liked: 'Completed all my tasks on time',
+    disliked: 'Couldn\'t find time to exercise',
+    reflection: 'I realized that consistency matters more than perfection',
+    goals: 'Start the day with a 15-minute workout tomorrow',
+    mood: 'Productive and slightly tired',
+    timestamp: '2025-11-29T15:30:00Z'
   },
   {
     id: '2',
-    date: '2024-01-14',
-    type: 'affirmation',
-    affirmation: 'I am capable of handling whatever comes my way today',
-    reflection: 'This affirmation helped me feel more confident before my presentation'
+    dateKey: '2025-11-28_daily',
+    type: 'daily',
+    liked: 'Had a great conversation with a friend',
+    disliked: 'Procrastinated on studying',
+    reflection: 'Social connections are important for my mental health',
+    goals: 'Dedicate 2 hours to focused study tomorrow',
+    mood: 'Anxious about upcoming exams',
+    timestamp: '2025-11-28T20:15:00Z'
+  },
+  {
+    id: '3',
+    dateKey: '2025-11-27_daily',
+    type: 'daily',
+    liked: 'Received positive feedback on my project',
+    disliked: 'Had conflict with a family member',
+    reflection: 'I need to work on my communication skills',
+    goals: 'Practice active listening in conversations',
+    mood: 'Mixed emotions - proud but conflicted',
+    timestamp: '2025-11-27T19:45:00Z'
+  },
+  {
+    id: '4',
+    dateKey: '2025-11-26_weekly',
+    type: 'weekly',
+    review: 'This week was challenging but rewarding. I managed to maintain my workout routine and completed most of my assignments. Had some conflicts that I need to resolve.',
+    nextGoals: 'Focus on better sleep schedule, practice meditation for 10 minutes daily, and resolve pending conflicts with patience',
+    timestamp: '2025-11-26T21:00:00Z'
+  },
+  {
+    id: '5',
+    dateKey: '2025-11-26_daily',
+    type: 'daily',
+    liked: 'Completed a difficult assignment successfully',
+    disliked: 'Felt overwhelmed with workload',
+    reflection: 'Breaking tasks into smaller chunks helps reduce anxiety',
+    goals: 'Create a detailed schedule for next week',
+    mood: 'Overwhelmed but accomplished',
+    timestamp: '2025-11-26T18:30:00Z'
+  },
+  {
+    id: '6',
+    dateKey: '2025-11-25_daily',
+    type: 'daily',
+    liked: 'Spent quality time outdoors',
+    disliked: 'Skipped my meditation session',
+    reflection: 'Nature has a calming effect on my mind',
+    goals: 'Maintain my meditation habit consistently',
+    mood: 'Calm and relaxed',
+    timestamp: '2025-11-25T17:20:00Z'
+  },
+  {
+    id: '7',
+    dateKey: '2025-11-24_worry',
+    type: 'worry',
+    negativeThought: 'I\'m not good enough for this job. Everyone else seems so competent.',
+    positiveReframe: 'I have valuable skills and experience. I\'ve overcome challenges before and I can do this too.',
+    geminiReframe: 'Everyone feels inadequate sometimes. This is an opportunity to learn and grow. Focus on what you can control and celebrate small wins.',
+    timestamp: '2025-11-24T22:00:00Z'
+  },
+  {
+    id: '8',
+    dateKey: '2025-11-24_daily',
+    type: 'daily',
+    liked: 'Made progress on a long-term goal',
+    disliked: 'Felt anxious about my performance',
+    reflection: 'Imposter syndrome is common but doesn\'t define my abilities',
+    goals: 'Seek feedback and focus on continuous improvement',
+    mood: 'Anxious but determined',
+    timestamp: '2025-11-24T20:15:00Z'
+  },
+  {
+    id: '9',
+    dateKey: '2025-11-23_daily',
+    type: 'daily',
+    liked: 'Had lunch with family and felt connected',
+    disliked: 'Got upset over a small misunderstanding',
+    reflection: 'Communication is key to resolving conflicts quickly',
+    goals: 'Practice expressing emotions more clearly',
+    mood: 'Happy and peaceful',
+    timestamp: '2025-11-23T19:00:00Z'
+  },
+  {
+    id: '10',
+    dateKey: '2025-11-22_daily',
+    type: 'daily',
+    liked: 'Started reading a new book I\'ve been meaning to read',
+    disliked: 'Didn\'t get enough sleep',
+    reflection: 'Sleep is crucial for maintaining mental health',
+    goals: 'Set a consistent sleep schedule',
+    mood: 'Tired but inspired',
+    timestamp: '2025-11-22T23:30:00Z'
+  },
+  {
+    id: '11',
+    dateKey: '2025-11-21_weekly',
+    type: 'weekly',
+    review: 'Last week taught me the importance of self-care and boundaries. I accomplished three major tasks and felt more balanced than usual.',
+    nextGoals: 'Continue with self-care routine, practice saying no to excessive commitments, spend more time on hobbies',
+    timestamp: '2025-11-21T20:45:00Z'
   }
 ];
 

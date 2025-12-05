@@ -95,28 +95,28 @@ const PomodoroTimer = () => {
   return (
     <Card className={`${theme.colors.card} border-0 shadow-2xl max-w-2xl mx-auto`}>
       <CardHeader className="text-center">
-        <CardTitle className={`flex items-center justify-center ${theme.colors.text} text-2xl`}>
-          <Timer className="w-8 h-8 mr-3" />
+        <CardTitle className={`flex items-center justify-center ${theme.colors.text} text-xl sm:text-2xl`}>
+          <Timer className="w-6 sm:w-8 h-6 sm:h-8 mr-2 sm:mr-3" />
           {t('pomodoroTimer')}
         </CardTitle>
-        <p className={`${theme.colors.muted} mt-2`}>
+        <p className={`${theme.colors.muted} mt-2 text-sm sm:text-base`}>
           {t('completed')}: {sessionCount} sessions
         </p>
       </CardHeader>
       
       <CardContent className="space-y-8">
         {/* Session Selector */}
-        <div className="flex justify-center space-x-2">
+        <div className="flex justify-center flex-wrap gap-2 sm:gap-3">
           {Object.keys(sessionTimes).map((type) => (
             <Button
               key={type}
               variant={currentSession === type ? 'default' : 'outline'}
               onClick={() => switchSession(type)}
-              className={`${
+              className={`px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base ${
                 currentSession === type 
                   ? `bg-gradient-to-r ${theme.colors.primary} text-white` 
                   : `hover:bg-gradient-to-r hover:${theme.colors.secondary}`
-              } transition-all duration-200`}
+              } transition-all duration-200 whitespace-nowrap`}
             >
               {type === 'work' && t('workSession')}
               {type === 'shortBreak' && t('shortBreak')}
@@ -127,32 +127,32 @@ const PomodoroTimer = () => {
 
         {/* Timer Display */}
         <div className="text-center">
-          <div className={`text-8xl font-mono font-bold ${getSessionColor()} mb-4`}>
+          <div className={`text-6xl sm:text-8xl font-mono font-bold ${getSessionColor()} mb-4`}>
             {formatTime(timeLeft)}
           </div>
-          <p className={`text-xl ${theme.colors.text} mb-6`}>
+          <p className={`text-lg sm:text-xl ${theme.colors.text} mb-6`}>
             {getSessionName()}
           </p>
         </div>
 
         {/* Timer Controls */}
-        <div className="flex justify-center space-x-4">
+        <div className="flex justify-center flex-wrap gap-3 sm:gap-4">
           {!isRunning ? (
             <Button
               onClick={startTimer}
               size="lg"
-              className={`bg-gradient-to-r ${theme.colors.primary} hover:shadow-xl text-white px-8 py-3 text-lg transition-all duration-300 hover:scale-105`}
+              className={`bg-gradient-to-r ${theme.colors.primary} hover:shadow-xl text-white px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 hover:scale-105`}
             >
-              <Play className="w-6 h-6 mr-2" />
+              <Play className="w-4 sm:w-6 h-4 sm:h-6 mr-2" />
               {t('startTimer')}
             </Button>
           ) : (
             <Button
               onClick={pauseTimer}
               size="lg"
-              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:shadow-xl text-white px-8 py-3 text-lg transition-all duration-300 hover:scale-105"
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:shadow-xl text-white px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 hover:scale-105"
             >
-              <Pause className="w-6 h-6 mr-2" />
+              <Pause className="w-4 sm:w-6 h-4 sm:h-6 mr-2" />
               {t('stopTimer')}
             </Button>
           )}
@@ -161,9 +161,9 @@ const PomodoroTimer = () => {
             onClick={resetTimer}
             size="lg"
             variant="outline"
-            className={`border-2 ${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} px-8 py-3 text-lg transition-all duration-300 hover:scale-105`}
+            className={`border-2 ${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 hover:scale-105`}
           >
-            <RotateCcw className="w-6 h-6 mr-2" />
+            <RotateCcw className="w-4 sm:w-6 h-4 sm:h-6 mr-2" />
             {t('resetTimer')}
           </Button>
         </div>
@@ -179,9 +179,9 @@ const PomodoroTimer = () => {
         </div>
 
         {/* Instructions */}
-        <div className={`${theme.colors.card} p-6 rounded-xl border ${theme.colors.secondary}`}>
-          <h4 className={`font-semibold ${theme.colors.text} mb-3`}>How to use Pomodoro Technique:</h4>
-          <ul className={`${theme.colors.muted} space-y-2 text-sm`}>
+        <div className={`${theme.colors.card} p-4 sm:p-6 rounded-xl border ${theme.colors.secondary}`}>
+          <h4 className={`font-semibold ${theme.colors.text} mb-3 text-base sm:text-lg`}>How to use Pomodoro Technique:</h4>
+          <ul className={`${theme.colors.muted} space-y-2 text-xs sm:text-sm`}>
             <li>• Work for 25 minutes with full focus</li>
             <li>• Take a 5-minute short break</li>
             <li>• After 4 work sessions, take a 15-minute long break</li>

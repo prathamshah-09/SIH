@@ -78,8 +78,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
   
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/login" replace />;
+  if (allowedRoles) {
+    const allowed = allowedRoles.map(r => r.toLowerCase());
+    const role = (user?.role || '').toLowerCase();
+    if (!allowed.includes(role)) {
+      return <Navigate to="/login" replace />;
+    }
   }
   
   return children;
@@ -145,7 +149,7 @@ function App() {
                       <Route 
                         path="/admin-dashboard" 
                         element={
-                          <ProtectedRoute allowedRoles={['admin']}>
+                          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
                             <AdminDashboard />
                           </ProtectedRoute>
                         } 
