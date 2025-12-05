@@ -312,3 +312,285 @@ export const removeListener = (event) => {
   if (!socket) return;
   socket.off(event);
 };
+
+// ==================== COMMUNITY SOCKET.IO (Separate Namespace) ====================
+
+let communitySocket = null;
+let isCommunityConnected = false;
+
+/**
+ * Initialize Socket.IO connection for community namespace
+ * @param {Object} user - User object with id, role, college_id
+ * @returns {Promise<Object>} Community socket instance
+ */
+export const initiateCommunitySocket = async (user) => {
+  if (communitySocket && isCommunityConnected) {
+    console.log('[Community Socket] Already connected');
+    return communitySocket;
+  }
+
+  try {
+    // Ensure we have user data
+    if (!user || !user.id || !user.role) {
+      console.error('[Community Socket] Invalid user data:', user);
+      throw new Error('User data is required');
+    }
+
+    // Get token from backend API
+    const token = await getAccessToken();
+
+    // Auth object - handle both college_id and collegeId formats
+    const authData = {
+      userId: user.id,
+      userRole: user.role,
+      collegeId: user.college_id || user.collegeId
+    };
+    
+    // Add token if available
+    if (token) {
+      authData.token = token;
+      console.log('[Community Socket] Connecting with explicit token');
+    } else {
+      console.log('[Community Socket] Connecting with withCredentials only');
+    }
+
+    console.log('[Community Socket] Connecting to /community namespace with auth:', { 
+      userId: authData.userId,
+      userRole: authData.userRole,
+      collegeId: authData.collegeId,
+      token: token ? '[PRESENT]' : '[MISSING]',
+      hasUserId: !!authData.userId,
+      hasUserRole: !!authData.userRole,
+      hasCollegeId: !!authData.collegeId
+    });
+
+    // Validate required fields
+    if (!authData.userId || !authData.userRole || !authData.collegeId) {
+      console.error('[Community Socket] Missing required auth fields:', {
+        hasUserId: !!authData.userId,
+        hasUserRole: !!authData.userRole,
+        hasCollegeId: !!authData.collegeId
+      });
+      throw new Error('Missing userId, userRole, or collegeId');
+    }
+
+    communitySocket = io(`${BACKEND_URL}/community`, {
+      auth: authData,
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    // Connection events
+    communitySocket.on('connect', () => {
+      console.log('[Community Socket] Connected:', communitySocket.id);
+      isCommunityConnected = true;
+    });
+
+    communitySocket.on('disconnect', (reason) => {
+      console.log('[Community Socket] Disconnected:', reason);
+      isCommunityConnected = false;
+    });
+
+    communitySocket.on('connect_error', (error) => {
+      console.error('[Community Socket] Connection error:', error.message);
+      isCommunityConnected = false;
+    });
+
+    communitySocket.on('error', (error) => {
+      console.error('[Community Socket] Error:', error);
+    });
+
+    return communitySocket;
+  } catch (error) {
+    console.error('[Community Socket] Failed to connect:', error);
+    return null;
+  }
+};
+
+/**
+ * Disconnect Community Socket.IO
+ */
+export const disconnectCommunitySocket = () => {
+  if (communitySocket) {
+    communitySocket.disconnect();
+    communitySocket = null;
+    isCommunityConnected = false;
+    console.log('[Community Socket] Disconnected');
+  }
+};
+
+/**
+ * Get current community socket instance
+ * @returns {Object|null} Community socket instance or null
+ */
+export const getCommunitySocket = () => {
+  return communitySocket;
+};
+
+/**
+ * Check if community socket is connected
+ * @returns {boolean}
+ */
+export const isCommunitySocketConnected = () => {
+  return isCommunityConnected && communitySocket?.connected;
+};
+
+// ==================== COMMUNITY SOCKET EVENTS ====================
+
+/**
+ * Join a community room
+ * @param {string} communityId - UUID of community
+ */
+export const joinCommunityRoom = (communityId) => {
+  if (!communitySocket) {
+    console.error('[Community Socket] Socket not connected');
+    return;
+  }
+  console.log('[Community Socket] Joining room:', communityId);
+  communitySocket.emit('join-community', { communityId });
+};
+
+/**
+ * Leave a community room
+ * @param {string} communityId - UUID of community
+ */
+export const leaveCommunityRoom = (communityId) => {
+  if (!communitySocket) {
+    console.error('[Community Socket] Socket not connected');
+    return;
+  }
+  console.log('[Community Socket] Leaving room:', communityId);
+  communitySocket.emit('leave-community', { communityId });
+};
+
+/**
+ * Send a message to a community
+ * @param {string} communityId - UUID of community
+ * @param {string} messageText - Message content
+ */
+export const sendCommunityMessage = (communityId, messageText) => {
+  if (!communitySocket) {
+    console.error('[Community Socket] Socket not connected');
+    return;
+  }
+  console.log('[Community Socket] Sending message to:', communityId);
+  communitySocket.emit('send-message', { communityId, messageText });
+};
+
+/**
+ * Emit typing indicator for community
+ * @param {string} communityId - UUID of community
+ */
+export const emitCommunityTyping = (communityId) => {
+  if (!communitySocket) return;
+  communitySocket.emit('typing', { communityId });
+};
+
+/**
+ * Emit stop typing for community
+ * @param {string} communityId - UUID of community
+ */
+export const emitCommunityStopTyping = (communityId) => {
+  if (!communitySocket) return;
+  communitySocket.emit('stop-typing', { communityId });
+};
+
+/**
+ * Request message history for a community
+ * @param {string} communityId - UUID of community
+ * @param {number} limit - Number of messages to fetch
+ */
+export const requestCommunityMessageHistory = (communityId, limit = 50) => {
+  if (!communitySocket) {
+    console.error('[Community Socket] Socket not connected');
+    return;
+  }
+  communitySocket.emit('get-messages', { communityId, limit });
+};
+
+// ==================== COMMUNITY SOCKET EVENT LISTENERS ====================
+
+/**
+ * Listen for new community messages
+ * @param {Function} callback - (data) => void
+ */
+export const onNewCommunityMessage = (callback) => {
+  if (!communitySocket) return;
+  communitySocket.on('new-message', callback);
+};
+
+/**
+ * Listen for community joined event
+ * @param {Function} callback - (data) => void
+ */
+export const onCommunityJoined = (callback) => {
+  if (!communitySocket) return;
+  communitySocket.on('joined-community', callback);
+};
+
+/**
+ * Listen for community left event
+ * @param {Function} callback - (data) => void
+ */
+export const onCommunityLeft = (callback) => {
+  if (!communitySocket) return;
+  communitySocket.on('left-community', callback);
+};
+
+/**
+ * Listen for user typing in community
+ * @param {Function} callback - (data) => void
+ */
+export const onCommunityUserTyping = (callback) => {
+  if (!communitySocket) return;
+  communitySocket.on('user-typing', callback);
+};
+
+/**
+ * Listen for user stopped typing in community
+ * @param {Function} callback - (data) => void
+ */
+export const onCommunityUserStoppedTyping = (callback) => {
+  if (!communitySocket) return;
+  communitySocket.on('user-stopped-typing', callback);
+};
+
+/**
+ * Listen for message history response
+ * @param {Function} callback - (data) => void
+ */
+export const onCommunityMessageHistory = (callback) => {
+  if (!communitySocket) return;
+  communitySocket.on('message-history', callback);
+};
+
+/**
+ * Listen for community errors
+ * @param {Function} callback - (data) => void
+ */
+export const onCommunityError = (callback) => {
+  if (!communitySocket) return;
+  communitySocket.on('error', callback);
+};
+
+// ==================== COMMUNITY CLEANUP ====================
+
+/**
+ * Remove all community event listeners
+ */
+export const removeAllCommunityListeners = () => {
+  if (!communitySocket) return;
+  communitySocket.removeAllListeners();
+};
+
+/**
+ * Remove specific community event listener
+ * @param {string} event - Event name
+ */
+export const removeCommunityListener = (event) => {
+  if (!communitySocket) return;
+  communitySocket.off(event);
+};
