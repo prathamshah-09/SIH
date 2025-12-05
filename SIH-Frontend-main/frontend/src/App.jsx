@@ -15,6 +15,7 @@ import CounsellorDashboard from "@components/dashboard/CounsellorDashboard";
 import AdminDashboard from "@components/dashboard/AdminDashboard";
 import AICompanion from '@components/ai/AICompanion';
 import JournalingPage from '@components/wellness/JournalingPage';
+import LandingPage from '@components/landing/LandingPage';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Component that persists the current pathname and restores it after refresh
@@ -125,6 +126,7 @@ function App() {
                     <RoutePathPersistence />
                     <Routes>
                       {/* Public Routes */}
+                      <Route path="/landing" element={<LandingPage />} />
                       <Route path="/login" element={<Login />} />
                       
                       {/* Protected Routes */}
@@ -183,11 +185,11 @@ function App() {
                         }
                       />
                       
-                      {/* Default Route */}
-                      <Route path="/" element={<Navigate to="/login" replace />} />
+                      {/* Default Route - Show landing page */}
+                      <Route path="/" element={<LandingPage />} />
                       
                       {/* Catch all route */}
-                      <Route path="*" element={<Navigate to="/login" replace />} />
+                      <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                     
                     {/* Toast notifications */}
