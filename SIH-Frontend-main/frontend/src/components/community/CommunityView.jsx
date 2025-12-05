@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@comp
 import { Button } from '@components/ui/button';
 import { Badge } from '@components/ui/badge';
 import { Input } from '@components/ui/input';
-import { Textarea } from '@components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -17,113 +16,50 @@ import {
 } from '@components/ui/dialog';
 import { 
   Users, 
-  Calendar, 
   MessageCircle, 
   Send,
   UserPlus,
-  UserCheck,
   ArrowLeft,
-  Shield,
-  Crown,
   RefreshCw,
-  Mic
+  Mic,
+  Calendar,
+  Loader2
 } from 'lucide-react';
-// Ephemeral community/chat logic (no persistence) until backend exists.
-import { mockCommunityChats } from '@mock/mockData';
-const fakeApiDelay = (ms = 150) => new Promise(res => setTimeout(res, ms));
 
-let ephemeralCommunities = mockCommunityChats.map(c => ({
-  id: c.id,
-  title: c.name,
-  description: c.description,
-  member_count: c.members,
-  created_at: c.lastActive || new Date().toISOString(),
-  assigned_counsellor: 'Dr. Sarah Johnson' // Default counsellor for all communities
-}));
+// API Services
+import {
+  getStudentAllCommunities,
+  getStudentJoinedCommunities,
+  getStudentAvailableCommunities,
+  studentJoinCommunity,
+  studentLeaveCommunity,
+  getStudentCommunityMessages,
+  getCounsellorAllCommunities,
+  getCounsellorJoinedCommunities,
+  getCounsellorAvailableCommunities,
+  counsellorJoinCommunity,
+  counsellorLeaveCommunity,
+  getCounsellorCommunityMessages,
+} from '@services/communityService';
 
-// Ephemeral message storage per community
-let ephemeralMessages = {};
-
-// Demo counsellor names
-const counsellorNames = ['Dr. Sarah Johnson', 'Dr. Priya Sharma', 'Dr. Amit Patel', 'Dr. Emma Wilson'];
-
-// Generate demo messages for a community
-const generateDemoMessages = (communityId) => {
-  if (!ephemeralMessages[communityId]) {
-    const messages = [];
-    const now = new Date();
-    const demoUsers = ['Raj Kumar', 'Neha Singh', 'Arjun Verma', currentUser?.username || 'Student123'];
-    const counsellor = counsellorNames[parseInt(communityId) % counsellorNames.length];
-    
-    // Add welcome message from counsellor as first message
-    messages.push({
-      id: `msg_${communityId}_welcome`,
-      user_name: counsellor,
-      user_role: 'counsellor',
-      content: `👋 Welcome everybody! I'm ${counsellor}, your counsellor for this group. I'm here to support your mental health journey and facilitate meaningful discussions. Feel free to share your thoughts and experiences in a safe, non-judgmental space. Let's support each other and grow together!`,
-      timestamp: new Date(now.getTime() - 10 * 60000).toISOString()
-    });
-    
-    // Generate 5 demo messages
-    for (let i = 5; i >= 1; i--) {
-      const timestamp = new Date(now.getTime() - i * 5 * 60000); // 5 mins apart
-      const isFromCounsellor = Math.random() > 0.7;
-      messages.push({
-        id: `msg_${communityId}_${i}`,
-        user_name: isFromCounsellor ? counsellor : demoUsers[i % demoUsers.length],
-        user_role: isFromCounsellor ? 'counsellor' : 'student',
-        content: isFromCounsellor 
-          ? `That's a great point! Let's discuss this further in our next session.`
-          : `Hi everyone, I've been feeling better with the techniques we discussed.`,
-        timestamp: timestamp.toISOString()
-      });
-    }
-    ephemeralMessages[communityId] = messages;
-  }
-  return ephemeralMessages[communityId];
-};
-
-const apiGet = async (path) => {
-  await fakeApiDelay();
-  if (path === '/communities') return [...ephemeralCommunities];
-  if (path.startsWith('/users/')) return []; // membership not tracked
-  if (path.endsWith('/messages')) {
-    const match = path.match(/\/communities\/(.+)\/messages/);
-    if (match) {
-      const communityId = match[1];
-      return generateDemoMessages(communityId);
-    }
-  }
-  return null;
-};
-
-const apiPost = async (path, body) => {
-  await fakeApiDelay();
-  if (path.endsWith('/join')) return { success: true }; // no-op
-  if (path.endsWith('/messages')) {
-    const match = path.match(/\/communities\/(.+)\/messages/);
-    if (match) {
-      const communityId = match[1];
-      const newMsg = {
-        id: `msg_${Date.now()}`,
-        user_name: body.user_name,
-        user_role: body.user_role,
-        content: body.content,
-        timestamp: new Date().toISOString()
-      };
-      if (!ephemeralMessages[communityId]) {
-        ephemeralMessages[communityId] = [];
-      }
-      ephemeralMessages[communityId].push(newMsg);
-    }
-    return { success: true };
-  }
-  return null;
-};
+// Socket Service
+import {
+  initiateCommunitySocket,
+  joinCommunityRoom,
+  leaveCommunityRoom,
+  sendCommunityMessage,
+  emitCommunityTyping,
+  emitCommunityStopTyping,
+  requestCommunityMessageHistory,
+  onNewCommunityMessage,
+  onCommunityJoined,
+  onCommunityUserTyping,
+  removeCommunityListener,
+} from '@services/socketService';
 
 const CommunityView = ({ userRole = 'student' }) => {
-  const [communities, setCommunities] = useState([]);
-  const [userCommunities, setUserCommunities] = useState([]);
+  const [allCommunities, setAllCommunities] = useState([]);
+  const [joinedCommunities, setJoinedCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -131,58 +67,102 @@ const CommunityView = ({ userRole = 'student' }) => {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [communityToJoin, setCommunityToJoin] = useState(null);
-  const [expandedDesc, setExpandedDesc] = useState({});
   const [isRecording, setIsRecording] = useState(false);
+  const [typingUsers, setTypingUsers] = useState(new Set());
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { user } = useAuth();
 
-  // Mock user data if auth context doesn't provide it
-  const currentUser = user || {
-    id: 'user_123',
-    name: 'John Doe',
-    role: userRole
+  // Determine API functions based on role
+  const getApiFunction = (functionName) => {
+    if (userRole === 'counsellor') {
+      switch (functionName) {
+        case 'getAllCommunities': return getCounsellorAllCommunities;
+        case 'getJoinedCommunities': return getCounsellorJoinedCommunities;
+        case 'getAvailableCommunities': return getCounsellorAvailableCommunities;
+        case 'joinCommunity': return counsellorJoinCommunity;
+        case 'leaveCommunity': return counsellorLeaveCommunity;
+        case 'getMessages': return getCounsellorCommunityMessages;
+        default: return null;
+      }
+    } else {
+      // Student
+      switch (functionName) {
+        case 'getAllCommunities': return getStudentAllCommunities;
+        case 'getJoinedCommunities': return getStudentJoinedCommunities;
+        case 'getAvailableCommunities': return getStudentAvailableCommunities;
+        case 'joinCommunity': return studentJoinCommunity;
+        case 'leaveCommunity': return studentLeaveCommunity;
+        case 'getMessages': return getStudentCommunityMessages;
+        default: return null;
+      }
+    }
   };
 
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    if (user && user.id && user.role && user.college_id) {
+      console.log('[CommunityView] Initializing socket with user:', {
+        id: user.id,
+        role: user.role,
+        college_id: user.college_id
+      });
+      initiateCommunitySocket(user).then(() => {
+        setSocketConnected(true);
+      }).catch(err => {
+        console.error('Failed to connect socket:', err);
+        setSocketConnected(false);
+      });
+    } else {
+      console.warn('[CommunityView] User data incomplete for socket connection:', user);
+    }
+  }, [user]);
+
   // Fetch all communities
-  const fetchCommunities = async () => {
+  const fetchAllCommunities = async () => {
     try {
       setLoading(true);
-      const data = await apiGet('/communities');
-      setCommunities(data || []);
+      const getAll = getApiFunction('getAllCommunities');
+      const data = await getAll();
+      setAllCommunities(data || []);
     } catch (error) {
-      console.error('Error fetching communities:', error);
+      console.error('Error fetching all communities:', error);
+      // Show error toast/notification here
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch user's communities
-  const fetchUserCommunities = async () => {
+  // Fetch joined communities
+  const fetchJoinedCommunities = async () => {
     try {
-      const data = await apiGet(`/users/${currentUser.id}/communities`);
-      setUserCommunities(data || []);
+      const getJoined = getApiFunction('getJoinedCommunities');
+      const data = await getJoined();
+      setJoinedCommunities(data || []);
     } catch (error) {
-      console.error('Error fetching user communities:', error);
+      console.error('Error fetching joined communities:', error);
     }
   };
 
-  // Fetch messages for a community
+  // Fetch messages for selected community
   const fetchMessages = async (communityId) => {
     try {
       setMessagesLoading(true);
-      // Generate demo messages with current user's username
-      const userDisplayName = currentUser.username || currentUser.name || 'Student';
-      generateDemoMessages(communityId, userDisplayName);
-      const data = await apiGet(`/communities/${communityId}/messages`);
+      const getMessages = getApiFunction('getMessages');
+      const data = await getMessages(communityId);
       setMessages(data || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
+      // Show error notification
     } finally {
       setMessagesLoading(false);
     }
@@ -190,59 +170,68 @@ const CommunityView = ({ userRole = 'student' }) => {
 
   // Join a community
   const handleJoinCommunity = async (community) => {
+    if (!community) return;
+    
     try {
-      // Use username if available, otherwise fallback to name
-      const displayName = currentUser.username || currentUser.name;
-      await apiPost(`/communities/${community.id}/join`, {
-        community_id: community.id,
-        user_id: currentUser.id,
-        user_name: displayName,
-        user_role: currentUser.role
-      });
+      const join = getApiFunction('joinCommunity');
+      await join(community.id);
       
       // Refresh communities
-      fetchCommunities();
-      fetchUserCommunities();
+      fetchAllCommunities();
+      fetchJoinedCommunities();
       setIsJoinDialogOpen(false);
       setCommunityToJoin(null);
     } catch (error) {
       console.error('Error joining community:', error);
-      if (error.response?.status === 400) {
+      if (error.status === 409) {
         alert('You are already a member of this community!');
+      } else {
+        alert('Failed to join community');
       }
     }
   };
 
-  // Send a message
+  // Leave a community
+  const handleLeaveCommunity = async (communityId) => {
+    try {
+      const leave = getApiFunction('leaveCommunity');
+      await leave(communityId);
+      
+      // Refresh and close chat
+      fetchAllCommunities();
+      fetchJoinedCommunities();
+      setSelectedCommunity(null);
+      setMessages([]);
+    } catch (error) {
+      console.error('Error leaving community:', error);
+      alert('Failed to leave community');
+    }
+  };
+
+  // Send message
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedCommunity) return;
-
+    
     try {
-      // Use username if available, otherwise fallback to name
-      const displayName = currentUser.username || currentUser.name;
+      setSendingMessage(true);
       
-      await apiPost(`/communities/${selectedCommunity.id}/messages`, {
-        community_id: selectedCommunity.id,
-        user_id: currentUser.id,
-        user_name: displayName,
-        user_role: currentUser.role,
-        content: newMessage.trim()
-      });
-
+      // Emit via Socket.IO for real-time
+      if (socketConnected) {
+        sendCommunityMessage(selectedCommunity.id, newMessage.trim());
+      } else {
+        // Fallback: fetch and refresh messages
+        console.warn('Socket not connected, using polling fallback');
+        fetchMessages(selectedCommunity.id);
+      }
+      
       setNewMessage('');
-      // Refresh messages
-      fetchMessages(selectedCommunity.id);
+      emitCommunityStopTyping(selectedCommunity.id);
     } catch (error) {
       console.error('Error sending message:', error);
-      if (error.response?.status === 403) {
-        alert('You must be a member of this community to send messages!');
-      }
+      alert('Failed to send message');
+    } finally {
+      setSendingMessage(false);
     }
-  };
-
-  // Check if user is a member of a community
-  const isMember = (communityId) => {
-    return userCommunities.some(c => c.id === communityId);
   };
 
   // Voice recording handlers
@@ -254,10 +243,9 @@ const CommunityView = ({ userRole = 'student' }) => {
       mediaRecorderRef.current = mr;
       const chunks = [];
       mr.ondataavailable = e => chunks.push(e.data);
-      mr.onstop = () => {
+      mr.onstop = async () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        handleSendAudioMessage(url);
+        // TODO: Upload to backend and send message
         stream.getTracks().forEach(t => t.stop());
         streamRef.current = null;
         mediaRecorderRef.current = null;
@@ -267,6 +255,7 @@ const CommunityView = ({ userRole = 'student' }) => {
       setIsRecording(true);
     } catch (e) {
       console.error('Recording failed', e);
+      alert('Failed to start recording');
     }
   };
 
@@ -276,77 +265,97 @@ const CommunityView = ({ userRole = 'student' }) => {
     }
   };
 
-  const handleSendAudioMessage = async () => {
-    if (!selectedCommunity) return;
-
-    try {
-      const displayName = currentUser.username || currentUser.name;
+  // Typing indicator
+  const handleTyping = () => {
+    if (selectedCommunity && socketConnected) {
+      emitCommunityTyping(selectedCommunity.id);
       
-      await apiPost(`/communities/${selectedCommunity.id}/messages`, {
-        community_id: selectedCommunity.id,
-        user_id: currentUser.id,
-        user_name: displayName,
-        user_role: currentUser.role,
-        content: t('audioMessage') || '🎙️ Voice message',
-        type: 'audio'
-      });
-
-      fetchMessages(selectedCommunity.id);
-    } catch (error) {
-      console.error('Error sending audio message:', error);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      typingTimeoutRef.current = setTimeout(() => {
+        emitCommunityStopTyping(selectedCommunity.id);
+      }, 3000);
     }
   };
 
+  // Initial load
   useEffect(() => {
-    fetchCommunities();
-    if (currentUser.id) {
-      fetchUserCommunities();
-    }
-  }, [currentUser.id]);
+    fetchAllCommunities();
+    fetchJoinedCommunities();
+  }, [userRole, user]);
 
-  // Refresh messages every 10 seconds if viewing a community
+  // Set up socket listeners when community is selected
   useEffect(() => {
-    if (selectedCommunity) {
-      const interval = setInterval(() => {
-        fetchMessages(selectedCommunity.id);
-      }, 10000); // Refresh every 10 seconds
+    if (selectedCommunity && socketConnected) {
+      // Join the community room
+      joinCommunityRoom(selectedCommunity.id);
+      
+      // Fetch initial messages
+      fetchMessages(selectedCommunity.id);
+      
+      // Listen for new messages
+      const handleNewMessage = (message) => {
+        setMessages(prev => [...prev, message]);
+      };
+      
+      const handleUserTyping = (data) => {
+        setTypingUsers(prev => new Set([...prev, data.userId]));
+      };
 
-      return () => clearInterval(interval);
+      onNewCommunityMessage(handleNewMessage);
+      onCommunityUserTyping(handleUserTyping);
+      
+      return () => {
+        // Clean up listeners
+        leaveCommunityRoom(selectedCommunity.id);
+        removeCommunityListener('new-message');
+        removeCommunityListener('user-typing');
+      };
     }
-  }, [selectedCommunity]);
+  }, [selectedCommunity, socketConnected]);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom
   useEffect(() => {
-    const el = messagesContainerRef.current;
-    if (el) {
-      requestAnimationFrame(() => {
-        try {
-          el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-        } catch (e) {
-          el.scrollTop = el.scrollHeight;
-        }
-      });
-      return;
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
+  }, [messages]);
 
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [messages, selectedCommunity]);
+  // Format timestamp
+  const formatTime = (timestamp) => {
+    return new Date(timestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Format date
+  const formatDate = (timestamp) => {
+    return new Date(timestamp).toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center w-full h-96">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-500" />
+          <p className="text-gray-500">Loading communities...</p>
+        </div>
       </div>
     );
-                      {community.member_count} members
   }
 
-  // Community Chat View - WhatsApp Style with AI Companion Theme
+  // Chat View
   if (selectedCommunity) {
     return (
       <div className={`flex flex-col w-full h-screen overflow-hidden ${theme.colors.background}`}>
-        {/* Header - Enhanced Styling with Gradient */}
+        {/* Header */}
         <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -354,7 +363,7 @@ const CommunityView = ({ userRole = 'student' }) => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedCommunity(null)}
-                className="hover:scale-105 transition-transform hover:bg-blue-100 dark:hover:bg-gray-600"
+                className="hover:scale-105 transition-transform"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
@@ -365,7 +374,7 @@ const CommunityView = ({ userRole = 'student' }) => {
                 </h2>
                 <p className={`text-xs ${theme.colors.muted} flex items-center space-x-1 mt-1`}>
                   <Users className="w-3 h-3" />
-                  <span>{selectedCommunity.member_count} {t('members') || 'members'}</span>
+                  <span>{selectedCommunity.total_members} {t('members') || 'members'}</span>
                 </p>
               </div>
             </div>
@@ -373,19 +382,22 @@ const CommunityView = ({ userRole = 'student' }) => {
               variant="ghost"
               size="sm"
               onClick={() => fetchMessages(selectedCommunity.id)}
-              className="hover:scale-105 transition-transform hover:bg-blue-100 dark:hover:bg-gray-600"
+              className="hover:scale-105 transition-transform"
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {/* Messages Container - AI Companion Style with Gradient */}
-        <div ref={messagesContainerRef} className={`flex-1 w-full overflow-y-auto bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900 p-4 sm:p-6`}>
+        {/* Messages Container */}
+        <div 
+          ref={messagesContainerRef}
+          className={`flex-1 w-full overflow-y-auto bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900 p-4 sm:p-6`}
+        >
           <div className="space-y-4 max-w-3xl mx-auto w-full pb-4">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-full min-h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex items-center justify-center h-full min-h-64 text-center">
@@ -399,27 +411,33 @@ const CommunityView = ({ userRole = 'student' }) => {
             ) : (
               <>
                 {messages.map((message) => {
-                  const msgTime = new Date(message.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
-                  const isCurrentUser = message.user_name === (currentUser?.username || currentUser?.name);
+                  const isStudent = message.sender_role === 'student';
+                  const isCurrentUser = message.sender_id === user?.id;
+                  const displayName = isStudent ? message.anonymous_username : message.username;
+                  const msgTime = formatTime(message.created_at);
+                  const msgDate = formatDate(message.created_at);
                   
                   return (
-                    <div key={message.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3 animate-fadeIn`}>
+                    <div 
+                      key={message.id} 
+                      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3 animate-fadeIn`}
+                    >
                       <div className={`flex flex-col max-w-xs lg:max-w-md`}>
-                        {/* Show sender name for non-current users */}
                         {!isCurrentUser && (
                           <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 px-3 mb-1">
-                            {message.user_name}
-                            {message.user_role === 'counsellor' && (
+                            {displayName}
+                            {message.sender_role !== 'student' && (
                               <span className="ml-2 inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-[10px] px-2 py-0.5 rounded-full font-semibold">
-                                👨‍⚕️ Counsellor
+                                👨‍⚕️ {message.sender_role}
                               </span>
                             )}
                           </p>
                         )}
-                        {/* Message Bubble */}
+                        {isCurrentUser && isStudent && (
+                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 px-3 mb-1 text-right">
+                            {displayName}
+                          </p>
+                        )}
                         <div
                           className={`px-4 py-2.5 rounded-lg break-words shadow-md hover:shadow-lg transition-shadow ${
                             isCurrentUser
@@ -427,37 +445,40 @@ const CommunityView = ({ userRole = 'student' }) => {
                               : 'bg-white text-gray-900 dark:bg-gray-700 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600'
                           }`}
                         >
-                          {message.type === 'audio' ? (
-                            <div className="flex items-center space-x-2 py-1">
-                              <Mic className={`w-4 h-4 ${isCurrentUser ? 'text-white' : 'text-blue-500'} animate-pulse`} />
-                              <span className="text-sm font-semibold">{message.content}</span>
-                            </div>
-                          ) : (
-                            <p className="text-sm leading-relaxed">{message.content}</p>
-                          )}
+                          <p className="text-sm leading-relaxed">{message.message_text}</p>
                         </div>
-                        {/* Timestamp */}
-                        <p className={`text-xs ${theme.colors.muted} mt-1 px-3`}>
+                        <p className={`text-xs ${theme.colors.muted} mt-1 px-3 ${isCurrentUser ? 'text-right' : ''}`}>
                           {msgTime}
                         </p>
                       </div>
                     </div>
                   );
                 })}
+                {typingUsers.size > 0 && (
+                  <div className="flex items-center space-x-2 text-gray-500 text-sm">
+                    <span className="animate-bounce">●</span>
+                    <span className="animate-bounce delay-100">●</span>
+                    <span className="animate-bounce delay-200">●</span>
+                    <span className="ml-2">Someone is typing...</span>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </>
             )}
           </div>
         </div>
 
-        {/* Input Area - Enhanced with better styling */}
-        <div className="flex-shrink-0 w-full p-4 sm:p-5 bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-t z-10" style={{paddingBottom: 'env(safe-area-inset-bottom)'}}>
+        {/* Input Area */}
+        <div className="flex-shrink-0 w-full p-4 sm:p-5 bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-t z-10">
           <div className="max-w-3xl mx-auto flex items-end space-x-3 sm:space-x-4 w-full px-0">
             <div className="flex-1 flex items-center bg-white dark:bg-gray-700 rounded-2xl border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-900 transition-all px-4">
               <Input
                 placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  handleTyping();
+                }}
                 className="flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-3 sm:py-4 text-base"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -470,16 +491,24 @@ const CommunityView = ({ userRole = 'student' }) => {
             <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
               <button
                 onClick={handleSendMessage}
-                disabled={!newMessage.trim()}
+                disabled={!newMessage.trim() || sendingMessage}
                 className="icon-tap rounded-full bg-blue-600 text-white p-3 h-12 w-12 flex items-center justify-center hover:bg-blue-700 hover:shadow-lg disabled:bg-gray-300 disabled:shadow-none transition-all"
                 title="Send message"
               >
-                <Send className="w-5 h-5" />
+                {sendingMessage ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
               </button>
               <button
                 aria-label={isRecording ? 'Stop recording' : 'Voice message'}
                 onClick={() => { isRecording ? stopRecording() : startRecording(); }}
-                className={`icon-tap rounded-full p-3 h-12 w-12 flex items-center justify-center transition-all ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-blue-600 shadow-sm hover:shadow-md'}`}
+                className={`icon-tap rounded-full p-3 h-12 w-12 flex items-center justify-center transition-all ${
+                  isRecording 
+                    ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl' 
+                    : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-blue-600 shadow-sm hover:shadow-md'
+                }`}
                 title={isRecording ? 'Stop recording' : 'Voice message'}
               >
                 <Mic className={`w-5 h-5 ${isRecording ? 'animate-pulse' : ''}`} />
@@ -490,18 +519,10 @@ const CommunityView = ({ userRole = 'student' }) => {
         
         <style>{`
           @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-          .animate-fadeIn {
-            animation: fadeIn 0.3s ease-out;
-          }
+          .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
         `}</style>
       </div>
     );
@@ -510,359 +531,239 @@ const CommunityView = ({ userRole = 'student' }) => {
   // Communities List View
   return (
     <div className="space-y-8">
-      {/* Header (styled like AI Companion) */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className={`text-[22px] font-semibold ${theme.colors.text}`}>{t('communitySupportGroups')}</h2>
-        {/* right-side intentionally left empty (matches AI Companion layout) */}
+        <h2 className={`text-[22px] font-semibold ${theme.colors.text}`}>
+          {t('communitySupportGroups') || 'Community Support Groups'}
+        </h2>
       </div>
-      <p className={`${theme.colors.muted} mt-1 text-sm md:text-base overflow-hidden truncate max-w-xl whitespace-nowrap` }>
-        {t('connectWithOthersDesc')}
+      <p className={`${theme.colors.muted} mt-1 text-sm md:text-base`}>
+        {t('connectWithOthersDesc') || 'Connect with others and share your experiences'}
       </p>
 
       {/* Joined Communities Section */}
-      <div className="space-y-4">
-        <h3 className={`text-xl font-semibold ${theme.colors.text} flex items-center`}>
-          <Users className="w-5 h-5 mr-2 text-blue-500" />
-          {t('joinedCommunities') || 'Joined Communities'}
-        </h3>
-        <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Dummy Joined Community 1 */}
-          <Card className={`${theme.colors.card} border-0 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer border-l-4 border-l-green-500 group`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center">
-                <MessageCircle className="w-4 h-4 mr-2 text-green-500 group-hover:text-green-600 transition-colors" />
-                Mental Health Awareness
-              </CardTitle>
-              <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
-                A supportive community for mental health awareness and peer support
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Badge className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs">
-                  <Users className="w-3 h-3 mr-1" />
-                  245 members
-                </Badge>
-                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                  <Calendar className="w-3 h-3" />
-                  {t('joined')}
-                </div>
-              </div>
-              <Button 
-                className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2 font-semibold shadow-md hover:shadow-lg transition-all"
-                onClick={() => {
-                  const dummyCommunity = {
-                    id: 'mental-health-1',
-                    title: 'Mental Health Awareness',
-                    description: 'A supportive community for mental health awareness and peer support',
-                    member_count: 245,
-                    created_at: new Date().toISOString(),
-                    assigned_counsellor: 'Dr. Sarah Johnson'
-                  };
-                  setSelectedCommunity(dummyCommunity);
-                  fetchMessages(dummyCommunity.id);
-                }}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                {t('openChat') || 'Open Chat'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Dummy Joined Community 2 */}
-          <Card className={`${theme.colors.card} border-0 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer border-l-4 border-l-green-500 group`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center">
-                <MessageCircle className="w-4 h-4 mr-2 text-green-500 group-hover:text-green-600 transition-colors" />
-                Stress Management Support
-              </CardTitle>
-              <CardDescription className="text-xs text-gray-600 dark:text-gray-400">
-                Practical techniques and strategies for managing stress and building resilience
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Badge className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs">
-                  <Users className="w-3 h-3 mr-1" />
-                  156 members
-                </Badge>
-                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                  <Calendar className="w-3 h-3" />
-                  {t('joined')}
-                </div>
-              </div>
-              <Button 
-                className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2 font-semibold shadow-md hover:shadow-lg transition-all"
-                onClick={() => {
-                  const dummyCommunity = {
-                    id: 'stress-management-1',
-                    title: 'Stress Management Support',
-                    description: 'Practical techniques and strategies for managing stress and building resilience',
-                    member_count: 156,
-                    created_at: new Date().toISOString(),
-                    assigned_counsellor: 'Dr. Priya Sharma'
-                  };
-                  setSelectedCommunity(dummyCommunity);
-                  fetchMessages(dummyCommunity.id);
-                }}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                {t('openChat') || 'Open Chat'}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Mobile view for Joined Communities */}
-        <div className="md:hidden space-y-3">
-          <div className={`w-full box-border flex items-center justify-between p-3 rounded-lg ${theme.colors.card} shadow-sm border border-l-4 border-l-green-500`}>                
-            <div className="min-w-0">
-              <div className="font-medium text-sm truncate">Mental Health Awareness</div>
-              <div className="text-[11px] text-gray-500 hidden md:block">A safe space for mental health discussions</div>
-              <div className="text-[11px] text-gray-500">245 members</div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button 
-                className="bg-green-500 text-white px-3 py-1 text-sm"
-                onClick={() => {
-                  const dummyCommunity = {
-                    id: 'mental-health-1',
-                    title: 'Mental Health Awareness',
-                    description: 'A supportive community for mental health awareness and peer support',
-                    member_count: 245,
-                    created_at: new Date().toISOString(),
-                    assigned_counsellor: 'Dr. Sarah Johnson'
-                  };
-                  setSelectedCommunity(dummyCommunity);
-                  fetchMessages(dummyCommunity.id);
-                }}
-              >
-                {t('openChat') || 'Chat'}
-              </Button>
-            </div>
-          </div>
-          <div className={`w-full box-border flex items-center justify-between p-3 rounded-lg ${theme.colors.card} shadow-sm border border-l-4 border-l-green-500`}>                
-            <div className="min-w-0">
-              <div className="font-medium text-sm truncate">Stress Management Support</div>
-              <div className="text-[11px] text-gray-500 hidden md:block">Practical tips for managing stress effectively</div>
-              <div className="text-[11px] text-gray-500">156 members</div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button 
-                className="bg-green-500 text-white px-3 py-1 text-sm"
-                onClick={() => {
-                  const dummyCommunity = {
-                    id: 'stress-management-1',
-                    title: 'Stress Management Support',
-                    description: 'Practical techniques and strategies for managing stress and building resilience',
-                    member_count: 156,
-                    created_at: new Date().toISOString(),
-                    assigned_counsellor: 'Dr. Priya Sharma'
-                  };
-                  setSelectedCommunity(dummyCommunity);
-                  fetchMessages(dummyCommunity.id);
-                }}
-              >
-                {t('openChat') || 'Chat'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-gray-200 pt-8"></div>
-
-      {/* Communities Header */}
-      {userCommunities.length > 0 && (
+      {joinedCommunities.length > 0 && (
         <div className="space-y-4">
           <h3 className={`text-xl font-semibold ${theme.colors.text} flex items-center`}>
-            <UserCheck className="w-5 h-5 mr-2 text-green-500" />
-            {t('myCommunities')}
+            <Users className="w-5 h-5 mr-2 text-blue-500" />
+            {t('joinedCommunities') || 'Joined Communities'} ({joinedCommunities.length})
           </h3>
-          {/* Mobile: compact horizontal rows (only on small phones) */}
-          <div className="md:hidden space-y-3">
-            {userCommunities.map((community) => (
-              <div key={community.id} className={`w-full box-border flex items-center justify-between p-3 rounded-lg ${theme.colors.card} shadow-sm border`}>                
-                <div className="min-w-0">
-                  <div className="font-medium text-sm truncate">{community.title}</div>
-                  <div className="text-[11px] text-gray-500">{community.member_count} members</div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button onClick={(e) => { e.preventDefault(); setSelectedCommunity(community); fetchMessages(community.id); }} className="bg-blue-500 text-white px-3 py-1 text-sm">
-                    {t('open')}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop / tablet grid */}
           <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {userCommunities.map((community) => (
-              <Card key={community.id} className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer border-l-4 border-l-green-500`}>
+            {joinedCommunities.map(community => (
+              <Card 
+                key={community.id}
+                className={`${theme.colors.card} border-0 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 border-l-4 border-l-green-500 group cursor-pointer`}
+              >
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-800">
+                  <CardTitle className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center line-clamp-2">
+                    <MessageCircle className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
                     {community.title}
                   </CardTitle>
-                  <CardDescription className="text-xs text-gray-600 line-clamp-2">
+                  <CardDescription className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
                     {community.description}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex flex-col gap-2">
-                    <Badge className="bg-green-100 text-green-800 text-xs w-fit">
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs">
                       <Users className="w-3 h-3 mr-1" />
-                      {community.member_count} members
+                      {community.total_members} {t('members') || 'members'}
                     </Badge>
                   </div>
                   <Button 
                     className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2"
-                    onClick={(e) => {
-                      e.preventDefault();
+                    onClick={() => {
                       setSelectedCommunity(community);
                       fetchMessages(community.id);
                     }}
                   >
                     <MessageCircle className="w-4 h-4 mr-2" />
-                    {t('open')}
+                    {t('openChat') || 'Open Chat'}
                   </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
+
+          {/* Mobile view */}
+          <div className="md:hidden space-y-3">
+            {joinedCommunities.map(community => (
+              <div 
+                key={community.id}
+                className={`w-full flex items-center justify-between p-4 rounded-lg ${theme.colors.card} shadow-sm border border-l-4 border-l-green-500`}
+              >
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate">{community.title}</div>
+                  <div className="text-[11px] text-gray-500">{community.total_members} {t('members') || 'members'}</div>
+                </div>
+                <Button 
+                  className="bg-green-500 text-white px-3 py-1 text-sm ml-2 flex-shrink-0"
+                  onClick={() => {
+                    setSelectedCommunity(community);
+                    fetchMessages(community.id);
+                  }}
+                >
+                  {t('chat') || 'Chat'}
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* All Communities */}
-      <div className="space-y-4">
-        <h3 className={`text-lg font-semibold ${theme.colors.text} flex items-center`}>
-          {t('allCommunities')}
-        </h3>
-        {/* Mobile compact list (only on small phones) */}
-        <div className="md:hidden space-y-3">
-          {communities.map((community) => {
-            const isUserMember = isMember(community.id);
-            return (
-              <div key={community.id} className={`w-full box-border flex items-start justify-between p-3 rounded-lg ${theme.colors.card} border`}> 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium text-sm truncate">{community.title}</div>
-                    <div className="text-[11px] text-gray-400">{new Date(community.created_at).toLocaleDateString()}</div>
-                  </div>
-                  <div className="text-[11px] text-gray-500 hidden md:block mt-1">{community.description}</div>
-                  <div className="text-[11px] text-gray-600 mt-1">{community.member_count} members</div>
-                </div>
-                <div className="flex items-start ml-3">
-                  {isUserMember ? (
-                    <Button onClick={(e) => { e.preventDefault(); setSelectedCommunity(community); fetchMessages(community.id); }} className="bg-blue-500 text-white px-3 py-1 text-sm">{t('openChat')}</Button>
-                  ) : (
-                    <Button onClick={() => { setCommunityToJoin(community); setIsJoinDialogOpen(true); }} className="bg-green-500 text-white px-3 py-1 text-sm">{t('joinCommunity')}</Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Divider */}
+      {joinedCommunities.length > 0 && <div className="border-t border-gray-200 pt-8"></div>}
 
-        <div className="hidden md:grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {communities.map((community) => {
-            const isUserMember = isMember(community.id);
-            return (
-              <Card key={community.id} className={`${theme.colors.card} border-0 shadow-sm transition-all duration-200 border-l-4 ${isUserMember ? 'border-l-green-500' : 'border-l-blue-500'}`}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-800">
-                    {community.title}
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-600 line-clamp-2">
-                    {community.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex flex-col gap-2">
-                    <Badge className={`text-xs w-fit ${isUserMember ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                      <Users className="w-3 h-3 mr-1" />
-                      {community.member_count} members
-                    </Badge>
+      {/* All Communities Section */}
+      <div className="space-y-4">
+        <h3 className={`text-xl font-semibold ${theme.colors.text} flex items-center`}>
+          <Users className="w-5 h-5 mr-2 text-blue-500" />
+          {t('allCommunities') || 'All Communities'} ({allCommunities.length})
+        </h3>
+        
+        {allCommunities.length === 0 ? (
+          <Card className={`${theme.colors.card} border-2 border-dashed border-gray-300 p-8`}>
+            <div className="text-center">
+              <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">{t('noCommunitiesAvailable') || 'No communities available'}</h3>
+            </div>
+          </Card>
+        ) : (
+          <>
+            <div className="hidden md:grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {allCommunities.map(community => {
+                const isJoined = joinedCommunities.some(c => c.id === community.id);
+                return (
+                  <Card 
+                    key={community.id}
+                    className={`${theme.colors.card} border-0 shadow-sm hover:shadow-md transition-all duration-200 border-l-4 ${
+                      isJoined ? 'border-l-green-500' : 'border-l-blue-500'
+                    }`}
+                  >
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-2">
+                        {community.title}
+                      </CardTitle>
+                      <CardDescription className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                        {community.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Badge className={`text-xs w-fit ${isJoined ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}`}>
+                        <Users className="w-3 h-3 mr-1" />
+                        {community.total_members} {t('members') || 'members'}
+                      </Badge>
+                      {isJoined ? (
+                        <Button 
+                          className="w-full bg-blue-500 hover:bg-blue-600 text-white text-sm py-2"
+                          onClick={() => {
+                            setSelectedCommunity(community);
+                            fetchMessages(community.id);
+                          }}
+                        >
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          {t('openChat') || 'Open Chat'}
+                        </Button>
+                      ) : (
+                        <Button 
+                          className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2"
+                          onClick={() => {
+                            setCommunityToJoin(community);
+                            setIsJoinDialogOpen(true);
+                          }}
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          {t('joinCommunity') || 'Join'}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Mobile view */}
+            <div className="md:hidden space-y-3">
+              {allCommunities.map(community => {
+                const isJoined = joinedCommunities.some(c => c.id === community.id);
+                return (
+                  <div 
+                    key={community.id}
+                    className={`w-full flex items-start justify-between p-4 rounded-lg ${theme.colors.card} shadow-sm border border-l-4 ${
+                      isJoined ? 'border-l-green-500' : 'border-l-blue-500'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{community.title}</div>
+                      <div className="text-[11px] text-gray-500">{community.total_members} {t('members') || 'members'}</div>
+                    </div>
+                    {isJoined ? (
+                      <Button 
+                        className="bg-blue-500 text-white px-3 py-1 text-sm ml-2 flex-shrink-0"
+                        onClick={() => {
+                          setSelectedCommunity(community);
+                          fetchMessages(community.id);
+                        }}
+                      >
+                        {t('chat') || 'Chat'}
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="bg-green-500 text-white px-3 py-1 text-sm ml-2 flex-shrink-0"
+                        onClick={() => {
+                          setCommunityToJoin(community);
+                          setIsJoinDialogOpen(true);
+                        }}
+                      >
+                        {t('join') || 'Join'}
+                      </Button>
+                    )}
                   </div>
-                  {isUserMember ? (
-                    <Button 
-                      className="w-full bg-blue-500 hover:bg-blue-600 text-white text-sm py-2"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setSelectedCommunity(community);
-                        fetchMessages(community.id);
-                      }}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      {t('open')}
-                    </Button>
-                  ) : (
-                    <Button 
-                      className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2"
-                      onClick={() => {
-                        setCommunityToJoin(community);
-                        setIsJoinDialogOpen(true);
-                      }}
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      {t('joinCommunity')}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Join Confirmation Dialog */}
       <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="flex items-center text-lg sm:text-xl">
               <UserPlus className="w-5 h-5 mr-2 text-green-500 flex-shrink-0" />
-              {t('joinCommunity')}
+              {t('joinCommunity') || 'Join Community'}
             </DialogTitle>
-            <DialogDescription>
-              {communityToJoin && (
+            <DialogDescription asChild>
+              {communityToJoin ? (
                 <div className="space-y-3 mt-4">
                   <div className="font-semibold text-base sm:text-lg break-words">{communityToJoin.title}</div>
-                  {communityToJoin.description ? (
-                    <div className="text-sm text-gray-600 break-words line-clamp-3">{communityToJoin.description}</div>
-                  ) : (
-                    <div className="text-sm text-gray-500">{t('noCommunitiesAvailable')}</div>
-                  )}
-                  <div className="text-xs sm:text-sm text-gray-400 break-words">{communityToJoin.member_count} members • {new Date(communityToJoin.created_at).toLocaleDateString()}</div>
-                  <div className="text-sm text-gray-700 mt-3 break-words">{t('joinCommunityConfirmDesc', { title: communityToJoin.title })}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 break-words line-clamp-3">{communityToJoin.description}</div>
+                  <div className="text-xs sm:text-sm text-gray-400 break-words">
+                    <Users className="w-3 h-3 inline mr-1" />
+                    {communityToJoin.total_members} {t('members') || 'members'}
+                  </div>
                 </div>
-              )}
+              ) : null}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-3 mt-6">
-            <Button variant="outline" onClick={() => setIsJoinDialogOpen(false)} className="flex-1 sm:flex-none">
-              {t('cancel')}
+            <Button 
+              variant="outline" 
+              onClick={() => setIsJoinDialogOpen(false)}
+              className="flex-1 sm:flex-none"
+            >
+              {t('cancel') || 'Cancel'}
             </Button>
             <Button 
               onClick={() => communityToJoin && handleJoinCommunity(communityToJoin)}
               className="flex-1 sm:flex-none bg-green-500 hover:bg-green-600"
             >
-              {t('joinCommunity')}
+              {t('joinCommunity') || 'Join'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Empty State */}
-      {communities.length === 0 && (
-        <Card className={`${theme.colors.card} border-2 border-dashed border-gray-300 p-8`}>
-          <div className="text-center">
-            <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">{t('noCommunitiesAvailable')}</h3>
-            <p className="text-gray-500">{t('communitiesWillAppear')}</p>
-          </div>
-        </Card>
-      )}
     </div>
   );
 };

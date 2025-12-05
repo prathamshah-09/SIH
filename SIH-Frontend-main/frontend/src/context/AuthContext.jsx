@@ -42,7 +42,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const loggedInUser = await apiLogin(email, password);
+      console.log('🔐 [AuthContext] Login response:', loggedInUser);
       const normalized = { ...loggedInUser, role: (loggedInUser?.role || '').toLowerCase() };
+      console.log('🔐 [AuthContext] Normalized user:', normalized);
       setUser(normalized);
       try { localStorage.setItem('user', JSON.stringify(normalized)); } catch {}
       return { success: true, user: normalized };

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@context/ThemeContext';
 import { useLanguage } from '@context/LanguageContext';
+import { useAuth } from '@context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Badge } from '@components/ui/badge';
@@ -14,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@components/ui/dialog';
 import {
   AlertDialog,
@@ -29,167 +29,97 @@ import {
 import { 
   Plus, 
   Users, 
-  Calendar, 
   Settings, 
   Trash2, 
   Edit, 
   MessageCircle,
-  UserCheck,
-  Crown,
-  Shield,
   ArrowLeft,
   RefreshCw,
-  Send
+  Send,
+  BarChart3,
+  Loader2
 } from 'lucide-react';
-// Backend integration placeholders removed localStorage fallback.
-// TODO: Replace with real API calls when backend is available.
-import { mockCommunityChats } from '@mock/mockData';
 
-const fakeApiDelay = (ms = 200) => new Promise(res => setTimeout(res, ms));
+// API Services
+import {
+  getAdminAllCommunities,
+  getAdminCommunityStatistics,
+  createCommunity,
+  updateCommunity,
+  deleteCommunity,
+  getAdminCommunityMessages,
+} from '@services/communityService';
 
-// Ephemeral in-memory store (module scope) to mimic CRUD without persistence
-let ephemeralCommunities = mockCommunityChats.map(c => ({
-  id: c.id,
-  title: c.name,
-  description: c.description,
-  assigned_counsellor: 'Dr. Sarah Johnson',
-  created_at: c.lastActive || new Date().toISOString(),
-  member_count: c.members || 0
-}));
-
-// Ephemeral message storage per community
-let ephemeralMessages = {};
-
-// Demo counsellor names
-const counsellorNames = ['Dr. Sarah Johnson', 'Dr. Priya Sharma', 'Dr. Amit Patel', 'Dr. Emma Wilson'];
-
-// Generate demo messages for a community
-const generateDemoMessages = (communityId, currentUserName = 'Admin') => {
-  if (!ephemeralMessages[communityId]) {
-    const messages = [];
-    const now = new Date();
-    const demoUsers = ['Raj Kumar', 'Neha Singh', 'Arjun Verma', currentUserName];
-    const counsellor = counsellorNames[parseInt(communityId) % counsellorNames.length];
-    
-    // Generate 5 demo messages
-    for (let i = 5; i >= 1; i--) {
-      const timestamp = new Date(now.getTime() - i * 5 * 60000); // 5 mins apart
-      const isFromCounsellor = Math.random() > 0.7;
-      messages.push({
-        id: `msg_${communityId}_${i}`,
-        user_name: isFromCounsellor ? counsellor : demoUsers[i % demoUsers.length],
-        user_role: isFromCounsellor ? 'counsellor' : 'student',
-        content: isFromCounsellor 
-          ? `That's a great point! Let's discuss this further in our next session.`
-          : `Hi everyone, I've been feeling better with the techniques we discussed.`,
-        timestamp: timestamp.toISOString()
-      });
-    }
-    ephemeralMessages[communityId] = messages;
-  }
-  return ephemeralMessages[communityId];
-};
-
-const apiGet = async (path) => {
-  await fakeApiDelay();
-  if (path === '/communities') return [...ephemeralCommunities];
-  if (path.startsWith('/users/')) return []; // membership not tracked locally
-  if (path.endsWith('/messages')) {
-    const match = path.match(/\/communities\/(.+)\/messages/);
-    if (match) {
-      const communityId = match[1];
-      return generateDemoMessages(communityId);
-    }
-  }
-  return null;
-};
-
-const apiPost = async (path, body) => {
-  await fakeApiDelay();
-  if (path === '/communities') {
-    const newC = {
-      id: `c_${Date.now()}`,
-      title: body.title,
-      description: body.description,
-      assigned_counsellor: body.assigned_counsellor || null,
-      created_at: new Date().toISOString(),
-      member_count: 0
-    };
-    ephemeralCommunities.push(newC);
-    return newC;
-  }
-  if (path.endsWith('/join')) return { success: true }; // no-op
-  if (path.endsWith('/messages')) {
-    const match = path.match(/\/communities\/(.+)\/messages/);
-    if (match) {
-      const communityId = match[1];
-      const newMsg = {
-        id: `msg_${Date.now()}`,
-        user_name: body.user_name,
-        user_role: body.user_role,
-        content: body.content,
-        timestamp: new Date().toISOString()
-      };
-      if (!ephemeralMessages[communityId]) {
-        ephemeralMessages[communityId] = [];
-      }
-      ephemeralMessages[communityId].push(newMsg);
-    }
-    return { success: true }; // no-op
-  }
-  return null;
-};
-
-const apiPut = async (path, body) => {
-  await fakeApiDelay();
-  const match = path.match(/\/communities\/(.+)/);
-  if (match) {
-    const id = match[1];
-    const idx = ephemeralCommunities.findIndex(c => c.id === id);
-    if (idx !== -1) {
-      ephemeralCommunities[idx] = { ...ephemeralCommunities[idx], ...body };
-      return ephemeralCommunities[idx];
-    }
-  }
-  return null;
-};
-
-const apiDelete = async (path) => {
-  await fakeApiDelay();
-  const match = path.match(/\/communities\/(.+)/);
-  if (match) {
-    const id = match[1];
-    ephemeralCommunities = ephemeralCommunities.filter(c => c.id !== id);
-    return { success: true };
-  }
-  return null;
-};
+// Socket Service
+import {
+  initiateCommunitySocket,
+  joinCommunityRoom,
+  leaveCommunityRoom,
+  sendCommunityMessage,
+  emitCommunityTyping,
+  emitCommunityStopTyping,
+  onNewCommunityMessage,
+  onCommunityUserTyping,
+  removeCommunityListener,
+} from '@services/socketService';
 
 const CommunityManagement = () => {
   const [communities, setCommunities] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, communityId: "", communityTitle: "" });
-  const [editingCommunity, setEditingCommunity] = useState(null);
+  const [statistics, setStatistics] = useState(null);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
-  const [newCommunity, setNewCommunity] = useState({
-    title: "",
-    description: ""
-  });
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, communityId: '', communityTitle: '' });
+  const [editingCommunity, setEditingCommunity] = useState(null);
+  const [newCommunityForm, setNewCommunityForm] = useState({ title: '', description: '' });
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [typingUsers, setTypingUsers] = useState(new Set());
+
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const { user } = useAuth();
 
-  // Fetch communities
-  const fetchCommunities = async () => {
+  // Initialize Socket.IO
+  useEffect(() => {
+    if (user && user.id && user.role && user.college_id) {
+      console.log('[CommunityManagement] Initializing socket with user:', {
+        id: user.id,
+        role: user.role,
+        college_id: user.college_id
+      });
+      initiateCommunitySocket(user).then(() => {
+        setSocketConnected(true);
+      }).catch(err => {
+        console.error('Failed to connect socket:', err);
+        setSocketConnected(false);
+      });
+    } else {
+      console.warn('[CommunityManagement] User data incomplete for socket connection:', user);
+    }
+  }, [user]);
+
+  // Fetch all communities and statistics
+  const fetchAllData = async () => {
     try {
       setLoading(true);
-      const data = await apiGet('/communities');
-      setCommunities(data || []);
+      const [communitiesData, statsData] = await Promise.all([
+        getAdminAllCommunities(),
+        getAdminCommunityStatistics()
+      ]);
+      setCommunities(communitiesData || []);
+      setStatistics(statsData || {});
     } catch (error) {
       console.error('Error fetching communities:', error);
     } finally {
@@ -197,16 +127,11 @@ const CommunityManagement = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCommunities();
-  }, []);
-
-  // Fetch messages for a community
+  // Fetch messages for selected community
   const fetchMessages = async (communityId) => {
     try {
       setMessagesLoading(true);
-      generateDemoMessages(communityId, 'Admin');
-      const data = await apiGet(`/communities/${communityId}/messages`);
+      const data = await getAdminCommunityMessages(communityId);
       setMessages(data || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -215,475 +140,608 @@ const CommunityManagement = () => {
     }
   };
 
-  // Send a message
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedCommunity) return;
-
-    try {
-      await apiPost(`/communities/${selectedCommunity.id}/messages`, {
-        community_id: selectedCommunity.id,
-        user_id: 'admin_001',
-        user_name: 'Admin',
-        user_role: 'admin',
-        content: newMessage.trim()
-      });
-
-      setNewMessage('');
-      // Refresh messages
-      fetchMessages(selectedCommunity.id);
-    } catch (error) {
-      console.error('Error sending message:', error);
-    }
-  };
-
   // Create community
   const handleCreateCommunity = async () => {
-    if (newCommunity.title && newCommunity.description) {
-      try {
-        const created = await apiPost('/communities', {
-          title: newCommunity.title,
-          description: newCommunity.description
-        });
-        setCommunities([...communities, created]);
-        setNewCommunity({ title: "", description: "" });
-        setIsCreateDialogOpen(false);
-      } catch (error) {
-        console.error('Error creating community:', error);
-      }
+    if (!newCommunityForm.title.trim() || !newCommunityForm.description.trim()) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const newCommunity = await createCommunity(
+        newCommunityForm.title,
+        newCommunityForm.description
+      );
+      setCommunities([...communities, newCommunity]);
+      setNewCommunityForm({ title: '', description: '' });
+      setIsCreateDialogOpen(false);
+      // Refresh statistics
+      const statsData = await getAdminCommunityStatistics();
+      setStatistics(statsData);
+    } catch (error) {
+      console.error('Error creating community:', error);
+      alert('Failed to create community');
+    } finally {
+      setIsCreating(false);
     }
   };
 
   // Update community
   const handleUpdateCommunity = async () => {
-    if (editingCommunity && editingCommunity.title && editingCommunity.description) {
-      try {
-        const updated = await apiPut(`/communities/${editingCommunity.id}`, {
-          title: editingCommunity.title,
-          description: editingCommunity.description
-        });
-        setCommunities(communities.map(c => 
-          c.id === editingCommunity.id ? updated : c
-        ));
-        setEditingCommunity(null);
-        setIsEditDialogOpen(false);
-      } catch (error) {
-        console.error('Error updating community:', error);
+    if (!editingCommunity || !editingCommunity.title.trim() || !editingCommunity.description.trim()) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      const updated = await updateCommunity(editingCommunity.id, {
+        title: editingCommunity.title,
+        description: editingCommunity.description
+      });
+      setCommunities(communities.map(c => c.id === editingCommunity.id ? updated : c));
+      if (selectedCommunity?.id === editingCommunity.id) {
+        setSelectedCommunity(updated);
       }
+      setEditingCommunity(null);
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating community:', error);
+      alert('Failed to update community');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   // Delete community
   const handleDeleteCommunity = async (communityId) => {
     try {
-      await apiDelete(`/communities/${communityId}`);
+      setIsDeleting(true);
+      await deleteCommunity(communityId);
       setCommunities(communities.filter(c => c.id !== communityId));
-      setDeleteDialog({ open: false, communityId: "", communityTitle: "" });
+      if (selectedCommunity?.id === communityId) {
+        setSelectedCommunity(null);
+        setMessages([]);
+      }
+      setDeleteDialog({ open: false, communityId: '', communityTitle: '' });
+      // Refresh statistics
+      const statsData = await getAdminCommunityStatistics();
+      setStatistics(statsData);
     } catch (error) {
       console.error('Error deleting community:', error);
+      alert('Failed to delete community');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  // Open edit dialog
-  const openEditDialog = (community) => {
-    setEditingCommunity({ ...community });
-    setIsEditDialogOpen(true);
+  // Send message
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedCommunity) return;
+
+    try {
+      setSendingMessage(true);
+      if (socketConnected) {
+        sendCommunityMessage(selectedCommunity.id, newMessage.trim());
+      } else {
+        console.warn('Socket not connected');
+        fetchMessages(selectedCommunity.id);
+      }
+      setNewMessage('');
+      emitCommunityStopTyping(selectedCommunity.id);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Failed to send message');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Typing indicator
+  const handleTyping = () => {
+    if (selectedCommunity && socketConnected) {
+      emitCommunityTyping(selectedCommunity.id);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        emitCommunityStopTyping(selectedCommunity.id);
+      }, 3000);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchAllData();
+  }, [user]);
+
+  // Set up socket listeners when community is selected
+  useEffect(() => {
+    if (selectedCommunity && socketConnected) {
+      joinCommunityRoom(selectedCommunity.id);
+      fetchMessages(selectedCommunity.id);
+
+      const handleNewMessage = (message) => {
+        setMessages(prev => [...prev, message]);
+      };
+
+      const handleUserTyping = (data) => {
+        setTypingUsers(prev => new Set([...prev, data.userId]));
+      };
+
+      onNewCommunityMessage(handleNewMessage);
+      onCommunityUserTyping(handleUserTyping);
+
+      return () => {
+        leaveCommunityRoom(selectedCommunity.id);
+        removeCommunityListener('new-message');
+        removeCommunityListener('user-typing');
+      };
+    }
+  }, [selectedCommunity, socketConnected]);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Format time
+  const formatTime = (timestamp) => {
+    return new Date(timestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="flex items-center justify-center w-full h-96">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-500" />
+          <p className="text-gray-500">Loading community management...</p>
+        </div>
       </div>
     );
   }
 
-  // Community Chat View (for admins)
+  // Chat View
   if (selectedCommunity) {
     return (
-      <div className="space-y-6">
+      <div className={`flex flex-col w-full h-screen overflow-hidden ${theme.colors.background}`}>
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="outline"
-              onClick={() => setSelectedCommunity(null)}
-              className="hover:scale-105 transition-transform"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Communities
-            </Button>
-            <div>
-              <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>
-                <MessageCircle className="w-8 h-8 mr-3 text-orange-500" />
-                {selectedCommunity.title}
-              </h2>
-              <p className={`${theme.colors.muted} mt-1`}>{selectedCommunity.description}</p>
+        <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedCommunity(null)}
+                className="hover:scale-105 transition-transform"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div>
+                <h2 className={`text-xl font-bold ${theme.colors.text} flex items-center`}>
+                  <MessageCircle className="w-5 h-5 mr-2 text-blue-500" />
+                  {selectedCommunity.title}
+                </h2>
+                <p className={`text-xs ${theme.colors.muted} flex items-center space-x-1 mt-1`}>
+                  <Users className="w-3 h-3" />
+                  <span>{selectedCommunity.total_members} {t('members') || 'members'}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditingCommunity({ ...selectedCommunity });
+                  setIsEditDialogOpen(true);
+                }}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                {t('edit') || 'Edit'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => fetchMessages(selectedCommunity.id)}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
             </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => fetchMessages(selectedCommunity.id)}
-            className="hover:scale-105 transition-transform"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            {t('refresh')}
-          </Button>
         </div>
 
-        {/* Chat Area */}
-        <Card className={`${theme.colors.card} border-0 shadow-xl h-[600px] flex flex-col`}>
-          <CardHeader className="border-b">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center">
-                <Users className="w-5 h-5 mr-2 text-orange-500" />
-                {t('communityChat')}
-              </CardTitle>
-              <Badge className="bg-orange-100 text-orange-800">
-                {selectedCommunity.member_count} members
-              </Badge>
-            </div>
-          </CardHeader>
-          
-          {/* Messages */}
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Messages */}
+        <div
+          ref={messagesContainerRef}
+          className={`flex-1 w-full overflow-y-auto bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900 p-4 sm:p-6`}
+        >
+          <div className="space-y-4 max-w-3xl mx-auto w-full pb-4">
             {messagesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+              <div className="flex items-center justify-center h-full min-h-64">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500">{t('noMessagesYet')}</p>
+              <div className="flex items-center justify-center h-full min-h-64 text-center">
+                <div>
+                  <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400 opacity-50" />
+                  <p className={`${theme.colors.muted} text-sm`}>
+                    {t('noMessagesYet') || 'No messages yet'}
+                  </p>
+                </div>
               </div>
             ) : (
-              messages.map((message) => {
-                const msgTime = new Date(message.timestamp).toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  hour12: true 
-                });
-                return (
-                  <div key={message.id} className="flex items-start space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
-                      message.user_role === 'admin' ? 'bg-red-500' :
-                      message.user_role === 'counsellor' ? 'bg-green-500' : 'bg-blue-500'
-                    }`}>
-                      {message.user_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-semibold text-gray-800">{message.user_name}</span>
-                        {message.user_role === 'counsellor' && (
-                          <Badge className="bg-green-100 text-green-800 text-xs">
-                            <Shield className="w-3 h-3 mr-1" />
-                            Counsellor
-                          </Badge>
-                        )}
-                        {message.user_role === 'admin' && (
-                          <Badge className="bg-red-100 text-red-800 text-xs">
-                            <Crown className="w-3 h-3 mr-1" />
-                            Admin
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-gray-700 bg-gray-50 rounded-lg p-3">{message.content}</p>
-                      <span className="text-xs text-gray-500 mt-1">
-                        {msgTime}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </CardContent>
+              <>
+                {messages.map((message) => {
+                  const isStudent = message.sender_role === 'student';
+                  const isAdmin = message.sender_role === 'admin';
+                  const isCounsellor = message.sender_role === 'counsellor';
+                  const isCurrentUser = message.sender_id === user?.id;
+                  const displayName = isStudent ? message.anonymous_username : message.username;
+                  const msgTime = formatTime(message.created_at);
 
-          {/* Message Input */}
-          <div className="border-t p-4">
-            <div className="flex space-x-3">
-              <Textarea
+                  return (
+                    <div 
+                      key={message.id} 
+                      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3 animate-fadeIn`}
+                    >
+                      <div className="flex flex-col max-w-xs lg:max-w-md">
+                        <p className={`text-xs font-semibold text-gray-600 dark:text-gray-300 px-3 mb-1 ${isCurrentUser ? 'text-right' : ''}`}>
+                          {displayName}
+                          {!isStudent && (
+                            <span className={`ml-2 inline-block text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                              isAdmin 
+                                ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+                                : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                            }`}>
+                              {isAdmin ? '👑 Admin' : '👨‍⚕️ Counsellor'}
+                            </span>
+                          )}
+                          {isStudent && (
+                            <span className="ml-2 inline-block bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                              👤 Student
+                            </span>
+                          )}
+                        </p>
+                        <div className={`px-4 py-2.5 rounded-lg break-words shadow-md hover:shadow-lg transition-shadow ${
+                          isCurrentUser
+                            ? 'bg-blue-600 text-white rounded-br-none'
+                            : 'bg-white text-gray-900 dark:bg-gray-700 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600'
+                        }`}>
+                          <p className="text-sm leading-relaxed">{message.message_text}</p>
+                        </div>
+                        <p className={`text-xs ${theme.colors.muted} mt-1 px-3 ${isCurrentUser ? 'text-right' : ''}`}>
+                          {msgTime}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Input */}
+        <div className="flex-shrink-0 w-full p-4 sm:p-5 bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-t z-10">
+          <div className="max-w-3xl mx-auto flex items-end space-x-3 sm:space-x-4 w-full px-0">
+            <div className="flex-1 flex items-center bg-white dark:bg-gray-700 rounded-2xl border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-900 transition-all px-4">
+              <Input
+                placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={t('typeMessagePlaceholder')}
-                className="flex-1 min-h-[60px] resize-none focus:ring-2 focus:ring-orange-500"
-                onKeyPress={(e) => {
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  handleTyping();
+                }}
+                className="flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-3 sm:py-4 text-base"
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSendMessage();
                   }
                 }}
               />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!newMessage.trim()}
-                className="bg-orange-500 hover:bg-orange-600 self-end"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
             </div>
+            <button
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || sendingMessage}
+              className="icon-tap rounded-full bg-blue-600 text-white p-3 h-12 w-12 flex items-center justify-center hover:bg-blue-700 hover:shadow-lg disabled:bg-gray-300 disabled:shadow-none transition-all"
+            >
+              {sendingMessage ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
 
+  // Management View
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-        <h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} flex items-center`}>
-          {t('communityManagement')}
-          <Shield className="w-6 h-6 ml-3 text-orange-500 animate-pulse" />
+      <div className="flex items-center justify-between">
+        <h2 className={`text-[22px] font-semibold ${theme.colors.text}`}>
+          {t('communityManagement') || 'Community Management'}
         </h2>
-
-        {/* Create Community Button */}
-        <div className="mt-4 lg:mt-0">
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className={`bg-gradient-to-r ${theme.colors.primary} hover:shadow-xl text-white transition-all duration-300 hover:scale-105 text-sm`}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t('createCommunity')}
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <Crown className="w-5 h-5 mr-2 text-orange-500" />
-                {t('createNewCommunityTitle')}
-              </DialogTitle>
-              <DialogDescription>
-                {t('createNewCommunityDesc')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">{t('communityTitleLabel')}</Label>
-                <Input
-                  id="title"
-                  value={newCommunity.title}
-                  onChange={(e) => setNewCommunity({ ...newCommunity, title: e.target.value })}
-                  placeholder={t('communityTitlePlaceholder')}
-                  className="focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">{t('communityDescriptionLabel')}</Label>
-                <Textarea
-                  id="description"
-                  value={newCommunity.description}
-                  onChange={(e) => setNewCommunity({ ...newCommunity, description: e.target.value })}
-                  placeholder={t('communityDescriptionPlaceholder')}
-                  rows={3}
-                  className="focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                {t('cancel')}
-              </Button>
-              <Button onClick={handleCreateCommunity} className="bg-orange-500 hover:bg-orange-600">
-                {t('createCommunity')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        </div>
+        <Button
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          {t('addCommunity') || 'Add Community'}
+        </Button>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
-        <Card className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`}>
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            <div>
-              <p className={`text-xs sm:text-sm font-semibold ${theme.colors.muted} mb-1 sm:mb-2`}>{t('totalCommunities')}</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-orange-600">{communities.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`}>
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            <div>
-              <p className={`text-xs sm:text-sm font-semibold ${theme.colors.muted} mb-1 sm:mb-2`}>{t('totalMembers')}</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">
-                {communities.reduce((sum, community) => sum + community.member_count, 0)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`}>
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            <div>
-              <p className={`text-xs sm:text-sm font-semibold ${theme.colors.muted} mb-1 sm:mb-2`}>{t('avgMembers')}</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">
-                {communities.length > 0 
-                  ? Math.round(communities.reduce((sum, community) => sum + community.member_count, 0) / communities.length)
-                  : 0
-                }
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Communities Mobile List */}
-      <div className="md:hidden space-y-3">
-        {communities.map((community) => (
-          <div key={community.id} className={`w-full box-border flex items-start justify-between p-3 rounded-lg ${theme.colors.card} shadow-sm border`}>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm truncate">{community.title}</div>
-              <div className="text-[11px] text-gray-500 hidden md:block">{community.description}</div>
-              <div className="text-[11px] text-gray-600 mt-1">{community.member_count} members</div>
-            </div>
-            <div className="flex items-start ml-3 space-x-1">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="text-xs"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSelectedCommunity(community);
-                  fetchMessages(community.id);
-                }}
-              >
-                <MessageCircle className="w-3 h-3" />
-              </Button>
-              <Button size="sm" variant="outline" className="text-xs">
-                <Edit className="w-3 h-3" />
-              </Button>
-              <Button size="sm" variant="outline" className="text-xs text-red-500">
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Communities Grid */}
-      <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {communities.map((community) => (
-          <Card key={community.id} className={`${theme.colors.card} border-0 shadow-sm transition-all duration-200 border-l-4 border-l-orange-500`}>
+      {/* Statistics Section */}
+      {statistics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className={`${theme.colors.card} border-0 shadow-sm`}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-800">
-                {community.title}
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t('totalCommunities') || 'Total Communities'}
               </CardTitle>
-              <CardDescription className="text-xs text-gray-600 line-clamp-2">
-                {community.description}
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-col gap-2">
-                <Badge className="bg-orange-100 text-orange-800 text-xs w-fit">
-                  <Users className="w-3 h-3 mr-1" />
-                  {community.member_count} members
-                </Badge>
-              </div>
-              <Button
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm py-2"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSelectedCommunity(community);
-                  fetchMessages(community.id);
-                }}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                {t('open')}
-              </Button>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">{statistics.total_communities || 0}</div>
             </CardContent>
           </Card>
-        ))}
+
+          <Card className={`${theme.colors.card} border-0 shadow-sm`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t('totalMembers') || 'Total Members'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{statistics.total_members || 0}</div>
+            </CardContent>
+          </Card>
+
+          <Card className={`${theme.colors.card} border-0 shadow-sm`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t('avgMembers') || 'Avg Members'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-600">
+                {statistics.avg_members_per_community?.toFixed(1) || 0}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={`${theme.colors.card} border-0 shadow-sm`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t('mostActive') || 'Most Active'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm font-bold text-orange-600 line-clamp-2">
+                {statistics.most_active_community?.title || 'N/A'}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Communities List */}
+      <div className="space-y-4">
+        <h3 className={`text-lg font-semibold ${theme.colors.text}`}>
+          {t('allCommunities') || 'All Communities'} ({communities.length})
+        </h3>
+
+        {communities.length === 0 ? (
+          <Card className={`${theme.colors.card} border-2 border-dashed border-gray-300 p-8`}>
+            <div className="text-center">
+              <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                {t('noCommunitiesCreated') || 'No communities created yet'}
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {t('createFirstCommunity') || 'Create your first community using the button above'}
+              </p>
+              <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" />
+                {t('createCommunity') || 'Create Community'}
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {communities.map(community => (
+              <Card key={community.id} className={`${theme.colors.card} border-0 shadow-sm hover:shadow-md transition-all duration-200`}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-gray-800 dark:text-gray-200 line-clamp-2 flex items-start justify-between">
+                    <span>{community.title}</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {community.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400">Members</p>
+                      <p className="font-bold text-gray-900 dark:text-gray-100">{community.total_members}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400">Messages</p>
+                      <p className="font-bold text-gray-900 dark:text-gray-100">{community.total_messages || 0}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1"
+                      onClick={() => {
+                        setSelectedCommunity(community);
+                        fetchMessages(community.id);
+                      }}
+                    >
+                      <MessageCircle className="w-3 h-3 mr-1" />
+                      {t('chat') || 'Chat'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 text-xs py-1"
+                      onClick={() => {
+                        setEditingCommunity({ ...community });
+                        setIsEditDialogOpen(true);
+                      }}
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      {t('edit') || 'Edit'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="text-xs py-1"
+                      onClick={() => setDeleteDialog({
+                        open: true,
+                        communityId: community.id,
+                        communityTitle: community.title
+                      })}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Create Community Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Plus className="w-5 h-5 mr-2 text-blue-600" />
+              {t('createCommunity') || 'Create Community'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">{t('title') || 'Title'}</Label>
+              <Input
+                id="title"
+                placeholder="Enter community title"
+                value={newCommunityForm.title}
+                onChange={(e) => setNewCommunityForm({ ...newCommunityForm, title: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">{t('description') || 'Description'}</Label>
+              <Textarea
+                id="description"
+                placeholder="Enter community description"
+                value={newCommunityForm.description}
+                onChange={(e) => setNewCommunityForm({ ...newCommunityForm, description: e.target.value })}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-3 mt-6">
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="flex-1">
+              {t('cancel') || 'Cancel'}
+            </Button>
+            <Button 
+              onClick={handleCreateCommunity}
+              disabled={isCreating}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {t('create') || 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Community Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="w-[95vw] sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="flex items-center">
-              <Edit className="w-5 h-5 mr-2 text-orange-500" />
-              {t('editCommunityTitle')}
+              <Edit className="w-5 h-5 mr-2 text-blue-600" />
+              {t('editCommunity') || 'Edit Community'}
             </DialogTitle>
-            <DialogDescription>
-              {t('editCommunityDesc')}
-            </DialogDescription>
           </DialogHeader>
           {editingCommunity && (
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-title">Community Title</Label>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-title">{t('title') || 'Title'}</Label>
                 <Input
                   id="edit-title"
                   value={editingCommunity.title}
                   onChange={(e) => setEditingCommunity({ ...editingCommunity, title: e.target.value })}
-                  className="focus:ring-2 focus:ring-orange-500"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-description">Description</Label>
+              <div>
+                <Label htmlFor="edit-description">{t('description') || 'Description'}</Label>
                 <Textarea
                   id="edit-description"
                   value={editingCommunity.description}
                   onChange={(e) => setEditingCommunity({ ...editingCommunity, description: e.target.value })}
-                  rows={3}
-                  className="focus:ring-2 focus:ring-orange-500"
+                  rows={4}
                 />
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              {t('cancel')}
+          <DialogFooter className="flex gap-3 mt-6">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="flex-1">
+              {t('cancel') || 'Cancel'}
             </Button>
-            <Button onClick={handleUpdateCommunity} className="bg-orange-500 hover:bg-orange-600">
-              {t('updateCommunity')}
+            <Button 
+              onClick={handleUpdateCommunity}
+              disabled={isUpdating}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              {isUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {t('update') || 'Update'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
-        <AlertDialogContent>
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => {
+        if (!open) setDeleteDialog({ open: false, communityId: '', communityTitle: '' });
+      }}>
+        <AlertDialogContent className="w-[95vw] sm:max-w-[425px]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center text-red-600">
-              <Trash2 className="w-5 h-5 mr-2" />
-              {t('deleteCommunityTitle')}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteCommunity') || 'Delete Community'}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('deleteCommunityDesc', { title: deleteDialog.communityTitle })}
+              {t('deleteConfirmMsg') || 'Are you sure you want to delete'} <strong>{deleteDialog.communityTitle}</strong>? 
+              {t('thisActionCannotBeUndone') || ' This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteDialog({ open: false, communityId: "", communityTitle: "" })}>
-              {t('cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel>{t('cancel') || 'Cancel'}</AlertDialogCancel>
+            <AlertDialogAction
               onClick={() => handleDeleteCommunity(deleteDialog.communityId)}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
             >
-              {t('deleteCommunity')}
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {t('delete') || 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Empty State */}
-      {communities.length === 0 && (
-        <Card className={`${theme.colors.card} border-2 border-dashed border-gray-300 p-8`}>
-          <div className="text-center">
-            <Shield className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">{t('noCommunitiesYetTitle')}</h3>
-            <p className="text-gray-500 mb-4">{t('noCommunitiesYetDesc')}</p>
-            <Button 
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="bg-orange-500 hover:bg-orange-600"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {t('createFirstCommunity')}
-            </Button>
-          </div>
-        </Card>
-      )}
     </div>
   );
 };
