@@ -401,15 +401,41 @@ const FormManagement = () => {
   return (
     <div className="w-full flex justify-center">
       <div className="w-full lg:w-[95%] space-y-6 lg:space-y-8 px-2 sm:px-3 md:px-4 lg:px-0">
+        {/* Mobile Toggle for Tabs */}
+        <div className="md:hidden flex gap-2 w-full">
+          <Button
+            onClick={() => setActiveTab('create')}
+            className={`flex-1 gap-2 transition-all ${
+              activeTab === 'create'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Create</span>
+          </Button>
+          <Button
+            onClick={() => setActiveTab('history')}
+            className={`flex-1 gap-2 transition-all ${
+              activeTab === 'history'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>History</span>
+          </Button>
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="create" className="text-sm sm:text-base">
-              <FileText className="w-4 h-4 mr-2" />
-              Create Form
+          <TabsList className="hidden md:grid w-full grid-cols-2 mb-6 gap-1 sm:gap-2 h-auto p-1 sm:p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <TabsTrigger value="create" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
+              <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+              <span className="truncate font-medium">Create Form</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="text-sm sm:text-base">
-              <Calendar className="w-4 h-4 mr-2" />
-              Form History
+            <TabsTrigger value="history" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
+              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+              <span className="truncate font-medium">Form History</span>
             </TabsTrigger>
           </TabsList>
 
