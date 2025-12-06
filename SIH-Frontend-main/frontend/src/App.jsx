@@ -1,18 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@context/AuthContext";
 import { ThemeProvider } from "@context/ThemeContext";
 import { LanguageProvider } from "@context/LanguageContext";
 import { AnnouncementProvider } from "@context/AnnouncementContext";
+import { AccessibilityProvider, useAccessibility } from "@context/AccessibilityContext";
 import { Toaster } from "@components/ui/toaster";
+import AccessibilityToolbar from "@components/shared/AccessibilityToolbar";
+import SkipToMain from "@components/shared/SkipToMain";
 import Login from "@components/auth/Login";
 import StudentDashboard from "@components/dashboard/StudentDashboard";
 import CounsellorDashboard from "@components/dashboard/CounsellorDashboard";
 import AdminDashboard from "@components/dashboard/AdminDashboard";
 import AICompanion from '@components/ai/AICompanion';
 import JournalingPage from '@components/wellness/JournalingPage';
-import { useEffect } from 'react';
+import LandingPage from '@components/landing/LandingPage';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Component that persists the current pathname and restores it after refresh
@@ -76,98 +79,132 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
   
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/login" replace />;
+  if (allowedRoles) {
+    const allowed = allowedRoles.map(r => r.toLowerCase());
+    const role = (user?.role || '').toLowerCase();
+    if (!allowed.includes(role)) {
+      return <Navigate to="/login" replace />;
+    }
   }
   
+  return children;
+};
+
+// Component to apply accessibility attributes to document element
+const AccessibilityAttributeApplier = ({ children }) => {
+  const { fontSize, highContrast } = useAccessibility();
+
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    
+    // Apply font size
+    htmlElement.setAttribute('data-font-size', fontSize);
+    
+    // Apply high contrast
+    if (highContrast) {
+      htmlElement.classList.add('high-contrast');
+    } else {
+      htmlElement.classList.remove('high-contrast');
+    }
+  }, [fontSize, highContrast]);
+
   return children;
 };
 
 // Main App Component
 function App() {
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <AnnouncementProvider>
-          <AuthProvider>
-            <div className="App">
-            <BrowserRouter>
-              <RoutePathPersistence />
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={<Login />} />
-                
-                {/* Protected Routes */}
-                <Route 
-                  path="/student-dashboard" 
-                  element={
-                    <ProtectedRoute allowedRoles={['student']}>
-                      <StudentDashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/counsellor-dashboard" 
-                  element={
-                    <ProtectedRoute allowedRoles={['counsellor']}>
-                      <CounsellorDashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/admin-dashboard" 
-                  element={
-                    <ProtectedRoute allowedRoles={['admin']}>
-                      <AdminDashboard />
-                    </ProtectedRoute>
-                  } 
-                />
+    <AccessibilityProvider>
+      <AccessibilityAttributeApplier>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AnnouncementProvider>
+              <AuthProvider>
+                <BrowserRouter>
+                  <div className="App">
+                    <SkipToMain />
+                    <RoutePathPersistence />
+                    <Routes>
+                      {/* Public Routes */}
+                      <Route path="/landing" element={<LandingPage />} />
+                      <Route path="/login" element={<Login />} />
+                      
+                      {/* Protected Routes */}
+                      <Route 
+                        path="/student-dashboard" 
+                        element={
+                          <ProtectedRoute allowedRoles={['student']}>
+                            <StudentDashboard />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      
+                      <Route 
+                        path="/counsellor-dashboard" 
+                        element={
+                          <ProtectedRoute allowedRoles={['counsellor']}>
+                            <CounsellorDashboard />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      
+                      <Route 
+                        path="/admin-dashboard" 
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                            <AdminDashboard />
+                          </ProtectedRoute>
+                        } 
+                      />
 
-                {/* AI Companion - available to all authenticated users */}
-                <Route
-                  path="/ai-companion"
-                  element={
-                    <ProtectedRoute>
-                      <AICompanion />
-                    </ProtectedRoute>
-                  }
-                />
+                      {/* AI Companion - available to all authenticated users */}
+                      <Route
+                        path="/ai-companion"
+                        element={
+                          <ProtectedRoute>
+                            <AICompanion />
+                          </ProtectedRoute>
+                        }
+                      />
 
-                {/* Journaling pages (current/past/daily/weekly) */}
-                <Route
-                  path="/journaling/:mode"
-                  element={
-                    <ProtectedRoute>
-                      <JournalingPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/journaling"
-                  element={
-                    <ProtectedRoute>
-                      <JournalingPage />
-                    </ProtectedRoute>
-                  }
-                />
-                
-                {/* Default Route */}
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                
-                {/* Catch all route */}
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
-            </BrowserRouter>
-            
-            {/* Toast notifications */}
-            <Toaster />
-            </div>
-          </AuthProvider>
-        </AnnouncementProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+                      {/* Journaling pages (current/past/daily/weekly) */}
+                      <Route
+                        path="/journaling/:mode"
+                        element={
+                          <ProtectedRoute>
+                            <JournalingPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/journaling"
+                        element={
+                          <ProtectedRoute>
+                            <JournalingPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      
+                      {/* Default Route - Show landing page */}
+                      <Route path="/" element={<LandingPage />} />
+                      
+                      {/* Catch all route */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                    
+                    {/* Toast notifications */}
+                    <Toaster />
+                    
+                    {/* Accessibility Toolbar */}
+                    <AccessibilityToolbar />
+                  </div>
+                </BrowserRouter>
+              </AuthProvider>
+            </AnnouncementProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </AccessibilityAttributeApplier>
+    </AccessibilityProvider>
   );
 }
 

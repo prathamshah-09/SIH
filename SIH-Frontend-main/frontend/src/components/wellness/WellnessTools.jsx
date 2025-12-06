@@ -198,7 +198,7 @@ const WellnessTools = () => {
   const content = wellnessContent[selectedProblem] || { videos: [], books: [] };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <button onClick={back} className="p-2 rounded-lg hover:bg-gray-200 transition-all duration-200" title={t('backToProblems')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-slate-700">
@@ -206,18 +206,18 @@ const WellnessTools = () => {
           </svg>
         </button>
 
-        <div className="flex-1 flex items-center justify-center space-x-3">
+        <div className="flex-1 flex items-center justify-center space-x-3 py-1">
           <div className="text-3xl">{problem.icon}</div>
-          <h2 className={`text-2xl sm:text-3xl font-bold ${theme.colors.text}`}>{t(selectedProblem)}</h2>
+          <h2 className={`text-xl sm:text-2xl font-bold ${theme.colors.text}`}>{t(selectedProblem)}</h2>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3 p-4 sm:p-8 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl shadow-xl">
+      <div className="flex flex-wrap justify-center gap-2.5 p-3 sm:p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl shadow-xl">
         {problem.tools.map((tool) => (
           <Button
             key={tool}
             onClick={() => setActiveTab(tool)}
-            className={`px-4 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 transform whitespace-nowrap ${
+            className={`px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 transform whitespace-nowrap ${
               activeTab === tool
                 ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-2xl'
                 : 'bg-white text-slate-700 hover:bg-indigo-50 border border-indigo-100 shadow-lg'

@@ -28,24 +28,41 @@ import {
   EyeOff,
   CheckCircle,
   AlertCircle,
+  Loader,
 } from 'lucide-react';
+import * as adminService from '@services/adminService';
 
-// Removed localStorage-based persistence. All user management is now
-// in-memory only and will reset on reload. TODO: Replace with real
-// backend API integration for CRUD operations.
+// Integrated with backend API for complete user management
 
 const UserManagement = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
   
-  const [users, setUsers] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [counsellors, setCounsellors] = useState([]);
+  // State management
+  const [allUsers, setAllUsers] = useState([]); // All users from API
+  const [filteredUsers, setFilteredUsers] = useState([]); // Filtered users for display
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    totalStudents: 0,
+    totalCounsellors: 0
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  
+  // Loading and error states
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Dialog states
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showAddCounsellor, setShowAddCounsellor] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showUserDetails, setShowUserDetails] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showPassword, setShowPassword] = useState({});
   
@@ -54,8 +71,9 @@ const UserManagement = () => {
     name: '',
     email: '',
     password: '',
-    phoneNumber: '',
-    studentId: '',
+    phone: '',
+    passing_year: '',
+    roll_no: '',
   });
   
   const [counsellorForm, setCounsellorForm] = useState({
@@ -63,164 +81,268 @@ const UserManagement = () => {
     email: '',
     specialization: '',
     password: '',
-    phoneNumber: '',
+    phone: '',
   });
 
   const [resetPasswordForm, setResetPasswordForm] = useState({
     newPassword: '',
   });
 
-  const [showEditDialog, setShowEditDialog] = useState(false);
   const [editForm, setEditForm] = useState({});
 
-  // Seed with minimal sample data (optional). Remove if undesired.
+  // Fetch user statistics
+  const fetchUserStats = async () => {
+    setIsLoadingStats(true);
+    setError(null);
+    try {
+      const stats = await adminService.getUserStats();
+      setUserStats(stats);
+    } catch (err) {
+      console.error('Failed to fetch user stats:', err);
+      setError(err.message || 'Failed to load user statistics');
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  // Fetch all users (once on mount)
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    setError(null);
+    try {
+      // Fetch all users without pagination
+      const response = await adminService.getUsers({
+        page: 1,
+        limit: 1000 // Get all users at once
+      });
+      console.log('API Response:', response);
+      console.log('Users data:', response.data);
+      setAllUsers(response.data || []);
+      applyFilters(response.data || [], filterRole, searchQuery);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setError(err.message || 'Failed to load users');
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  // Apply filters and search on frontend
+  const applyFilters = (usersToFilter, role, search) => {
+    let filtered = usersToFilter;
+
+    // Apply role filter
+    if (role && role !== 'all') {
+      filtered = filtered.filter(user => user.role === role);
+    }
+
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(user =>
+        user.name.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Reset to first page
+    setCurrentPage(1);
+    setFilteredUsers(filtered);
+  };
+
+  // Load stats and users on mount
   useEffect(() => {
-    const sampleStudents = [
-      {
-        id: 'student_seed_1',
-        name: 'Alice Student',
-        email: 'alice@student.test',
-        password: 'Pass1234!',
-        role: 'student',
-        createdAt: new Date().toISOString(),
-        status: 'active'
-      }
-    ];
-    const sampleCounsellors = [
-      {
-        id: 'counsellor_seed_1',
-        name: 'Bob Counsellor',
-        email: 'bob@counsellor.test',
-        specialization: 'General Wellness',
-        password: 'Pass1234!',
-        role: 'counsellor',
-        createdAt: new Date().toISOString(),
-        status: 'active',
-        isAvailable: true
-      }
-    ];
-    setStudents(sampleStudents);
-    setCounsellors(sampleCounsellors);
-    setUsers([...sampleStudents, ...sampleCounsellors]);
+    fetchUserStats();
+    fetchUsers();
   }, []);
 
-  // Filter users
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
-    return matchesSearch && matchesRole;
-  });
+  // Apply filters when role or search changes (frontend filtering)
+  useEffect(() => {
+    console.log('Filtering users with:', { filterRole, searchQuery });
+    applyFilters(allUsers, filterRole, searchQuery);
+  }, [filterRole, searchQuery]);
+
+  // Clear success message after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  // Clear error message after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   // Add student
-  const handleAddStudent = () => {
-    if (!studentForm.name || !studentForm.email || !studentForm.password) {
-      alert('Please fill all fields');
-      return;
-    }
-    const newStudent = {
-      id: `student_${Date.now()}`,
-      name: studentForm.name,
-      email: studentForm.email,
-      password: studentForm.password,
-      phoneNumber: studentForm.phoneNumber || '',
-      studentId: studentForm.studentId || '',
-      role: 'student',
-      createdAt: new Date().toISOString(),
-      status: 'active'
+  const handleAddStudent = async () => {
+    // Validate required fields
+    const requiredFields = {
+      name: 'Name',
+      email: 'Email',
+      password: 'Password'
     };
-    const updatedStudents = [...students, newStudent];
-    setStudents(updatedStudents);
-    setUsers([...updatedStudents, ...counsellors]);
-    setStudentForm({ name: '', email: '', password: '', phoneNumber: '', studentId: '' });
-    setShowAddStudent(false);
+    
+    for (const [field, label] of Object.entries(requiredFields)) {
+      if (!studentForm[field] || studentForm[field].trim() === '') {
+        setError(`${label} is required`);
+        return;
+      }
+    }
+    
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const studentData = {
+        name: studentForm.name,
+        email: studentForm.email,
+        password: studentForm.password,
+        phone: studentForm.phone || undefined,
+        passing_year: studentForm.passing_year ? parseInt(studentForm.passing_year) : undefined,
+        roll_no: studentForm.roll_no || undefined,
+      };
+      
+      console.log('Submitting student data:', studentData);
+      
+      await adminService.createStudent(studentData);
+      
+      setSuccessMessage(`Student "${studentForm.name}" created successfully`);
+      setStudentForm({ name: '', email: '', password: '', phone: '', passing_year: '', roll_no: '' });
+      setShowAddStudent(false);
+      
+      // Refresh data
+      await Promise.all([fetchUsers(), fetchUserStats()]);
+    } catch (err) {
+      console.error('Failed to create student:', err);
+      setError(err.message || 'Failed to create student');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Add counsellor
-  const handleAddCounsellor = () => {
-    if (!counsellorForm.name || !counsellorForm.email || !counsellorForm.password || !counsellorForm.specialization) {
-      alert('Please fill all fields');
-      return;
-    }
-    const newCounsellor = {
-      id: `counsellor_${Date.now()}`,
-      name: counsellorForm.name,
-      email: counsellorForm.email,
-      specialization: counsellorForm.specialization,
-      password: counsellorForm.password,
-      phoneNumber: counsellorForm.phoneNumber || '',
-      role: 'counsellor',
-      createdAt: new Date().toISOString(),
-      status: 'active',
-      isAvailable: true
+  const handleAddCounsellor = async () => {
+    // Validate required fields
+    const requiredFields = {
+      name: 'Name',
+      email: 'Email',
+      password: 'Password'
     };
-    const updatedCounsellors = [...counsellors, newCounsellor];
-    setCounsellors(updatedCounsellors);
-    setUsers([...students, ...updatedCounsellors]);
-    setCounsellorForm({ name: '', email: '', specialization: '', password: '', phoneNumber: '' });
-    setShowAddCounsellor(false);
-  };
-
-  // Edit handlers
-  const handleOpenEdit = (user) => {
-    setSelectedUser(user);
-    setEditForm({ ...user });
-    setShowEditDialog(true);
-  };
-
-  const handleCloseEdit = () => {
-    setShowEditDialog(false);
-    setSelectedUser(null);
-    setEditForm({});
-  };
-
-  const handleSaveEdit = () => {
-    if (!editForm || !editForm.id) return;
-    if (editForm.role === 'student') {
-      const updatedStudents = students.map(s => s.id === editForm.id ? { ...s, ...editForm } : s);
-      setStudents(updatedStudents);
-      setUsers([...updatedStudents, ...counsellors]);
-    } else {
-      const updatedCounsellors = counsellors.map(c => c.id === editForm.id ? { ...c, ...editForm } : c);
-      setCounsellors(updatedCounsellors);
-      setUsers([...students, ...updatedCounsellors]);
+    
+    for (const [field, label] of Object.entries(requiredFields)) {
+      if (!counsellorForm[field] || counsellorForm[field].trim() === '') {
+        setError(`${label} is required`);
+        return;
+      }
     }
-    handleCloseEdit();
+    
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await adminService.createCounsellor({
+        name: counsellorForm.name,
+        email: counsellorForm.email,
+        password: counsellorForm.password,
+        phone: counsellorForm.phone || undefined,
+        specialization: counsellorForm.specialization || undefined,
+      });
+      
+      setSuccessMessage(`Counsellor "${counsellorForm.name}" created successfully`);
+      setCounsellorForm({ name: '', email: '', specialization: '', password: '', phone: '' });
+      setShowAddCounsellor(false);
+      
+      // Refresh data
+      await Promise.all([fetchUsers(), fetchUserStats()]);
+    } catch (err) {
+      console.error('Failed to create counsellor:', err);
+      setError(err.message || 'Failed to create counsellor');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // View user details
+  const handleViewDetails = (user) => {
+    setSelectedUser(user);
+    setShowUserDetails(true);
+  };
+
+  const handleOpenResetPassword = (user) => {
+    setSelectedUser(user);
+    setShowResetPassword(true);
+  };
+
+  const handleCloseDetails = () => {
+    setShowUserDetails(false);
+    setSelectedUser(null);
   };
 
   // Delete user
-  const handleDeleteUser = (toDelete) => {
-    if (!window.confirm(`Delete ${toDelete.name}?`)) return;
-    if (toDelete.role === 'student') {
-      const updatedStudents = students.filter(s => s.id !== toDelete.id);
-      setStudents(updatedStudents);
-      setUsers([...updatedStudents, ...counsellors]);
-    } else {
-      const updatedCounsellors = counsellors.filter(c => c.id !== toDelete.id);
-      setCounsellors(updatedCounsellors);
-      setUsers([...students, ...updatedCounsellors]);
+  const handleDeleteUser = async (userToDelete) => {
+    if (!window.confirm(`Are you sure you want to delete ${userToDelete.name}? This action cannot be undone.`)) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await adminService.deleteUser(userToDelete.id);
+      setSuccessMessage(`User "${userToDelete.name}" deleted successfully`);
+      
+      // Refresh data
+      await Promise.all([fetchUsers(), fetchUserStats()]);
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      setError(err.message || 'Failed to delete user');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Reset password
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (!resetPasswordForm.newPassword) {
-      alert('Please enter a new password');
+      setError('Please enter a new password');
       return;
     }
-    if (!selectedUser) return;
-    if (selectedUser.role === 'student') {
-      const updatedStudents = students.map(s => s.id === selectedUser.id ? { ...s, password: resetPasswordForm.newPassword } : s);
-      setStudents(updatedStudents);
-      setUsers([...updatedStudents, ...counsellors]);
-    } else {
-      const updatedCounsellors = counsellors.map(c => c.id === selectedUser.id ? { ...c, password: resetPasswordForm.newPassword } : c);
-      setCounsellors(updatedCounsellors);
-      setUsers([...students, ...updatedCounsellors]);
+
+    // Validate password length (minimum 6 characters)
+    if (resetPasswordForm.newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
     }
-    setResetPasswordForm({ newPassword: '' });
-    setShowResetPassword(false);
-    setSelectedUser(null);
+
+    // Trim whitespace
+    const password = resetPasswordForm.newPassword.trim();
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long (excluding whitespace)');
+      return;
+    }
+
+    if (!selectedUser) {
+      setError('No user selected');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await adminService.changeUserPassword(selectedUser.id, password);
+      setSuccessMessage(`Password updated successfully for ${selectedUser.name}`);
+      setResetPasswordForm({ newPassword: '' });
+      setShowResetPassword(false);
+      setSelectedUser(null);
+    } catch (err) {
+      console.error('Failed to reset password:', err);
+      const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to reset password';
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const generatePassword = () => {
@@ -234,6 +356,25 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 md:px-0">
+      {/* Success/Error Notifications */}
+      {successMessage && (
+        <Card className="border-green-200 bg-green-50 dark:bg-green-900/20">
+          <CardContent className="p-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <p className="text-green-800 dark:text-green-200 text-sm">{successMessage}</p>
+          </CardContent>
+        </Card>
+      )}
+      
+      {error && (
+        <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
         <h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text}`}>{t('userManagement')}</h2>
@@ -253,7 +394,7 @@ const UserManagement = () => {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Full Name</label>
+                  <label className="text-sm font-medium mb-2 block">Full Name *</label>
                   <Input
                     placeholder="e.g., John Doe"
                     value={studentForm.name}
@@ -261,7 +402,7 @@ const UserManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Email Address</label>
+                  <label className="text-sm font-medium mb-2 block">Email Address *</label>
                   <Input
                     type="email"
                     placeholder="e.g., student@example.com"
@@ -273,21 +414,32 @@ const UserManagement = () => {
                   <label className="text-sm font-medium mb-2 block">Phone Number</label>
                   <Input
                     placeholder="e.g., +91 98765 43210"
-                    value={studentForm.phoneNumber}
-                    onChange={(e) => setStudentForm({ ...studentForm, phoneNumber: e.target.value })}
+                    value={studentForm.phone}
+                    onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Student ID</label>
+                  <label className="text-sm font-medium mb-2 block">Roll Number</label>
                   <Input
-                    placeholder="e.g., S123456"
-                    value={studentForm.studentId}
-                    onChange={(e) => setStudentForm({ ...studentForm, studentId: e.target.value })}
+                    placeholder="e.g., GV-CSE-2024-055"
+                    value={studentForm.roll_no}
+                    onChange={(e) => setStudentForm({ ...studentForm, roll_no: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Passing Year</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 2025"
+                    min="2020"
+                    max="2035"
+                    value={studentForm.passing_year}
+                    onChange={(e) => setStudentForm({ ...studentForm, passing_year: e.target.value })}
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium">Initial Password</label>
+                    <label className="text-sm font-medium">Initial Password *</label>
                     <Button
                       size="sm"
                       variant="outline"
@@ -306,9 +458,18 @@ const UserManagement = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAddStudent(false)}>{t('cancel')}</Button>
-                <Button onClick={handleAddStudent} className="bg-blue-500 hover:bg-blue-600">
-                  {t('createStudent')}
+                <Button variant="outline" onClick={() => setShowAddStudent(false)} disabled={isSubmitting}>
+                  {t('cancel')}
+                </Button>
+                <Button onClick={handleAddStudent} className="bg-blue-500 hover:bg-blue-600" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    t('createStudent')
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -328,7 +489,7 @@ const UserManagement = () => {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Full Name</label>
+                  <label className="text-sm font-medium mb-2 block">Full Name *</label>
                   <Input
                     placeholder="e.g., Dr. Sarah Smith"
                     value={counsellorForm.name}
@@ -336,7 +497,7 @@ const UserManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Email Address</label>
+                  <label className="text-sm font-medium mb-2 block">Email Address *</label>
                   <Input
                     type="email"
                     placeholder="e.g., counsellor@example.com"
@@ -348,8 +509,8 @@ const UserManagement = () => {
                   <label className="text-sm font-medium mb-2 block">Phone Number</label>
                   <Input
                     placeholder="e.g., +91 98765 43210"
-                    value={counsellorForm.phoneNumber}
-                    onChange={(e) => setCounsellorForm({ ...counsellorForm, phoneNumber: e.target.value })}
+                    value={counsellorForm.phone}
+                    onChange={(e) => setCounsellorForm({ ...counsellorForm, phone: e.target.value })}
                   />
                 </div>
                 <div>
@@ -362,7 +523,7 @@ const UserManagement = () => {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium">Initial Password</label>
+                    <label className="text-sm font-medium">Initial Password *</label>
                     <Button
                       size="sm"
                       variant="outline"
@@ -381,9 +542,18 @@ const UserManagement = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAddCounsellor(false)}>{t('cancel')}</Button>
-                <Button onClick={handleAddCounsellor} className="bg-purple-500 hover:bg-purple-600">
-                  {t('createCounsellor')}
+                <Button variant="outline" onClick={() => setShowAddCounsellor(false)} disabled={isSubmitting}>
+                  {t('cancel')}
+                </Button>
+                <Button onClick={handleAddCounsellor} className="bg-purple-500 hover:bg-purple-600" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    t('createCounsellor')
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -391,84 +561,161 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Search and Filter */}
+      {/* Summary Stats - Moved to Top */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
+          <CardContent className="p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Users</p>
+                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
+                  {isLoadingStats ? (
+                    <Loader className="w-6 h-6 animate-spin" />
+                  ) : (
+                    userStats.totalUsers
+                  )}
+                </p>
+              </div>
+              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
+          <CardContent className="p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Students</p>
+                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
+                  {isLoadingStats ? (
+                    <Loader className="w-6 h-6 animate-spin" />
+                  ) : (
+                    userStats.totalStudents
+                  )}
+                </p>
+              </div>
+              <User className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-500 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
+          <CardContent className="p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Counsellors</p>
+                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
+                  {isLoadingStats ? (
+                    <Loader className="w-6 h-6 animate-spin" />
+                  ) : (
+                    userStats.totalCounsellors
+                  )}
+                </p>
+              </div>
+              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-purple-500 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filter - Moved Below Counts */}
       <Card className={`${theme.colors.card} border-0 shadow-lg`}>
         <CardContent className="p-3 sm:p-4 md:p-6">
-          <div className="flex flex-row gap-2 sm:gap-4 items-stretch sm:items-center">
-            <div className="flex-[7] relative min-w-0">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-stretch sm:items-center">
+            <div className="flex-1 relative min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder={t('search') || 'Search'}
+                placeholder={t('search') || 'Search by name or email...'}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="pl-10 text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <select
               value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className={`flex-[3] px-1 py-0 border rounded text-[10px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.colors.card}`}
+              onChange={(e) => {
+                console.log('Filter changed to:', e.target.value);
+                setFilterRole(e.target.value);
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-2 border rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.colors.card}`}
             >
-              <option value="all">{t('allUsers')}</option>
-              <option value="student">{t('studentLabel')}</option>
-              <option value="counsellor">{t('counsellorLabel')}</option>
+              <option value="all">{t('allUsers') || 'All Users'}</option>
+              <option value="student">{t('studentLabel') || 'Students'}</option>
+              <option value="counsellor">{t('counsellorLabel') || 'Counsellors'}</option>
             </select>
           </div>
         </CardContent>
       </Card>
 
-        {/* Edit User Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="sm:max-w-[520px]">
+        {/* User Details Dialog */}
+        <Dialog open={showUserDetails} onOpenChange={setShowUserDetails}>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>Update user details below. Click Save to apply changes.</DialogDescription>
+              <DialogTitle>User Details</DialogTitle>
+              <DialogDescription>View user information</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Full Name</label>
-                <Input value={editForm.name || ''} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Email Address</label>
-                <Input type="email" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Phone Number</label>
-                <Input value={editForm.phoneNumber || ''} onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })} />
-              </div>
-              {editForm.role === 'student' && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Student ID</label>
-                  <Input value={editForm.studentId || ''} onChange={(e) => setEditForm({ ...editForm, studentId: e.target.value })} />
+            {selectedUser && (
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-4">
+                  <div className={`w-16 h-16 rounded-full ${selectedUser.role === 'student' ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-purple-500 to-pink-500'} flex items-center justify-center text-white text-2xl font-semibold`}>
+                    {selectedUser.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">{selectedUser.name}</h3>
+                    <Badge className={selectedUser.role === 'student' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}>
+                      {selectedUser.role === 'student' ? 'Student' : 'Counsellor'}
+                    </Badge>
+                  </div>
                 </div>
-              )}
-              {editForm.role === 'counsellor' && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Specialization</label>
-                  <Input value={editForm.specialization || ''} onChange={(e) => setEditForm({ ...editForm, specialization: e.target.value })} />
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Email Address</label>
+                    <p className="text-sm">{selectedUser.email}</p>
+                  </div>
+                  
+                  {selectedUser.role === 'student' && selectedUser.roll_no && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Roll Number</label>
+                      <p className="text-sm">{selectedUser.roll_no}</p>
+                    </div>
+                  )}
+                  
+                  {selectedUser.role === 'student' && selectedUser.year && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Passing Year</label>
+                      <p className="text-sm">{selectedUser.year}</p>
+                    </div>
+                  )}
+                  
+                  {selectedUser.phone && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Phone Number</label>
+                      <p className="text-sm">{selectedUser.phone}</p>
+                    </div>
+                  )}
+                  
+                  {selectedUser.role === 'counsellor' && selectedUser.specialization && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Specialization</label>
+                      <p className="text-sm">{selectedUser.specialization}</p>
+                    </div>
+                  )}
                 </div>
-              )}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Password</label>
-                <Input type="password" value={editForm.password || ''} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} />
               </div>
-            </div>
-            <DialogFooter className="justify-between">
-              <div className="flex items-center space-x-2">
-                <Button variant="destructive" onClick={() => { handleDeleteUser(editForm); handleCloseEdit(); }} className="text-white bg-red-600 hover:bg-red-700">Delete</Button>
-                <Button variant="outline" onClick={() => { setResetPasswordForm({ newPassword: generatePassword() }); setShowResetPassword(true); }}>Reset Password</Button>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" onClick={handleCloseEdit}>Cancel</Button>
-                <Button onClick={handleSaveEdit} className="bg-blue-500 hover:bg-blue-600">Save</Button>
-              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCloseDetails}>Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Reset Password Dialog (global) */}
+        {/* Reset Password Dialog */}
         <Dialog open={showResetPassword} onOpenChange={setShowResetPassword}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -483,107 +730,192 @@ const UserManagement = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => setResetPasswordForm({ newPassword: generatePassword() })}
+                    disabled={isSubmitting}
                   >
                     Generate
                   </Button>
                 </div>
                 <Input
                   type="password"
-                  placeholder="Enter new password"
+                  placeholder="Enter new password (min 6 characters)"
                   value={resetPasswordForm.newPassword}
                   onChange={(e) => setResetPasswordForm({ newPassword: e.target.value })}
+                  disabled={isSubmitting}
                 />
+                <p className="text-xs text-gray-500 mt-2">
+                  Password must be at least 6 characters long
+                </p>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowResetPassword(false)}>Cancel</Button>
-              <Button onClick={handleResetPassword} className="bg-yellow-500 hover:bg-yellow-600">Update Password</Button>
+              <Button variant="outline" onClick={() => setShowResetPassword(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleResetPassword} className="bg-yellow-500 hover:bg-yellow-600" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-      {/* Users Table */}
+      {/* Users Table with Pagination */}
       <Card className={`${theme.colors.card} border-0 shadow-lg overflow-hidden`}>
         <CardContent className="p-0">
-          {filteredUsers.length === 0 ? (
+          {isLoadingUsers ? (
+            <div className="p-6 sm:p-12 text-center">
+              <Loader className="w-12 sm:w-16 h-12 sm:h-16 mx-auto text-blue-500 mb-3 sm:mb-4 animate-spin" />
+              <p className={`${theme.colors.muted} text-sm sm:text-base md:text-lg`}>Loading users...</p>
+            </div>
+          ) : filteredUsers.length === 0 ? (
             <div className="p-6 sm:p-12 text-center">
               <Users className="w-12 sm:w-16 h-12 sm:h-16 mx-auto text-gray-300 mb-3 sm:mb-4" />
               <p className={`${theme.colors.muted} text-sm sm:text-base md:text-lg`}>{t('noUsersFound')}</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm sm:text-base">
-                <thead>
-                  <tr className="border-b bg-gray-50 dark:bg-gray-800">
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">{t('nameHeader')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => {
-                    const isStudent = user.role === 'student';
-                    const avatarGradient = isStudent 
-                      ? 'bg-gradient-to-br from-blue-500 to-cyan-500' 
-                      : 'bg-gradient-to-br from-purple-500 to-pink-500';
-                    return (
-                    <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" onClick={() => handleOpenEdit(user)}>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className={`w-8 sm:w-10 h-8 sm:h-10 rounded-full ${avatarGradient} flex items-center justify-center text-white text-xs sm:text-sm font-semibold flex-shrink-0`}>
-                            {user.name.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">
-                              {user.name}
-                            </p>
-                            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">ID: {user.studentId || user.id}</span>
-                          </div>
-                        </div>
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs sm:text-sm">
+                  <thead>
+                    <tr className="border-b bg-gray-50 dark:bg-gray-800">
+                      <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                      <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Roll No</th>
+                      <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Role</th>
+                      <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      // Calculate pagination on frontend
+                      const startIndex = (currentPage - 1) * itemsPerPage;
+                      const endIndex = startIndex + itemsPerPage;
+                      const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+                      const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
+                      if (paginatedUsers.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                              No users found
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return paginatedUsers.map((user) => {
+                        const isStudent = user.role === 'student';
+                        const avatarGradient = isStudent 
+                          ? 'bg-gradient-to-br from-blue-500 to-cyan-500' 
+                          : 'bg-gradient-to-br from-purple-500 to-pink-500';
+                        return (
+                          <tr 
+                            key={user.id} 
+                            className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                            onClick={() => handleViewDetails(user)}
+                          >
+                            <td className="px-3 sm:px-6 py-3 sm:py-4">
+                              <div className="flex items-center gap-2 sm:gap-3">
+                                <div className={`w-8 sm:w-10 h-8 sm:h-10 rounded-full ${avatarGradient} flex items-center justify-center text-white text-xs sm:text-sm font-semibold flex-shrink-0`}>
+                                  {user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                    {user.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-600 dark:text-gray-400 truncate">
+                              {isStudent ? (user.roll_no || '-') : '-'}
+                            </td>
+                            <td className="px-3 sm:px-6 py-3 sm:py-4">
+                              <Badge className={isStudent ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}>
+                                {isStudent ? 'Student' : 'Counsellor'}
+                              </Badge>
+                            </td>
+                            <td className="px-3 sm:px-6 py-3 sm:py-4">
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenResetPassword(user);
+                                  }}
+                                  disabled={isSubmitting}
+                                  title="Reset Password"
+                                >
+                                  <Key className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteUser(user);
+                                  }}
+                                  disabled={isSubmitting}
+                                  title="Delete User"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              {filteredUsers.length > 0 && (
+              <div className="px-3 sm:px-6 py-4 border-t bg-gray-50 dark:bg-gray-800 flex items-center justify-between">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  {(() => {
+                    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+                    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+                    const endIndex = Math.min(currentPage * itemsPerPage, filteredUsers.length);
+                    return `Showing ${startIndex} to ${endIndex} of ${filteredUsers.length} results`;
+                  })()}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1 || isLoadingUsers}
+                    className="text-xs sm:text-sm"
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-2 px-2">
+                    <span className="text-xs sm:text-sm font-medium">{currentPage} / {Math.ceil(filteredUsers.length / itemsPerPage)}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredUsers.length / itemsPerPage), prev + 1))}
+                    disabled={currentPage >= Math.ceil(filteredUsers.length / itemsPerPage) || isLoadingUsers}
+                    className="text-xs sm:text-sm"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
-        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
-          <CardContent className="p-3 sm:p-5 md:p-6">
-            <div className="flex items-start">
-              <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs font-medium`}>Users</p>
-                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
-          <CardContent className="p-3 sm:p-5 md:p-6">
-            <div className="flex items-start">
-              <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs font-medium`}>Students</p>
-                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.filter(u => u.role === 'student').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${theme.colors.card} border-0 shadow-lg hover:shadow-xl transition-shadow`}>
-          <CardContent className="p-3 sm:p-5 md:p-6">
-            <div className="flex items-start">
-              <div className="w-full">
-                <p className={`${theme.colors.muted} text-xs font-medium`}>Counsellors</p>
-                <p className={`text-xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-1 sm:mt-2`}>{users.filter(u => u.role === 'counsellor').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };

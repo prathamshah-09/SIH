@@ -318,6 +318,7 @@ const StudentDashboard = () => {
     }
   }, []);
 
+  // Load chat
   useEffect(() => {
     if (messages.length > 0)
       localStorage.setItem("sensee_current_chat", JSON.stringify(messages));
