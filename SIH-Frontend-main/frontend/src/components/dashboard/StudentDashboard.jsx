@@ -1,5 +1,3 @@
-// StudentDashboard.jsx — FULL COMBINED FILE (Option C: Premium Chat Upgrade)
-
 import React, { useState, useRef, useEffect } from "react";
 import DashboardLayout from "@components/layout/DashboardLayout";
 import { useTheme } from "@context/ThemeContext";
@@ -30,18 +28,19 @@ import {
   Mic,
   MicOff,
   Plus,
-  Trash2
+  Trash2,
+  Phone,
+  PhoneOff
 } from "lucide-react";
 import { useAnnouncements } from "@context/AnnouncementContext";
 import WellnessTools from "@components/wellness/WellnessTools";
-import AdvancedJournalingView from "@components/wellness/AdvancedJournalingView";
+import JournalWithThemeNew from "@components/wellness/JournalWithThemeNew";
 import StudentAppointments from "@components/appointments/StudentAppointments";
 import CommunityView from "@components/community/CommunityView";
 import AudioSection from "@components/wellness/AudioSection";
 import AssessmentDashboard from "@components/assessment/AssessmentDashboard";
 import DirectMessages from "@components/community/DirectMessages";
 
-// Typing animation
 const TypingDots = () => (
   <div className="flex items-center space-x-1 pl-2">
     <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400" />
@@ -50,13 +49,234 @@ const TypingDots = () => (
   </div>
 );
 
+const RealtimeVoice = ({ onAddMessage, theme }) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [status, setStatus] = useState("idle");
+  const [transcript, setTranscript] = useState("");
+  
+  const pcRef = useRef(null);
+  const dataChannelRef = useRef(null);
+  const audioElementRef = useRef(null);
+
+  const startRealtimeSession = async () => {
+    try {
+      setIsConnecting(true);
+      setStatus("Connecting...");
+
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+      const tokenRes = await fetch(`${backendUrl}/api/student/realtime-session`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (!tokenRes.ok) throw new Error("Failed to get session token");
+      
+      const response = await tokenRes.json();
+      const { client_secret } = response.data || response;
+
+      const pc = new RTCPeerConnection();
+      pcRef.current = pc;
+
+      const audioEl = document.createElement("audio");
+      audioEl.autoplay = true;
+      audioElementRef.current = audioEl;
+
+      pc.ontrack = e => {
+        audioEl.srcObject = e.streams[0];
+      };
+
+      const dc = pc.createDataChannel("oai-events");
+      dataChannelRef.current = dc;
+
+      dc.addEventListener("message", e => {
+        try {
+          const event = JSON.parse(e.data);
+          
+          if (event.type === "response.audio_transcript.delta") {
+            setTranscript(prev => prev + (event.delta || ""));
+          }
+          
+          if (event.type === "response.audio_transcript.done") {
+            const fullText = event.transcript || transcript;
+            if (fullText) {
+              onAddMessage({
+                id: Date.now(),
+                text: fullText,
+                isBot: true,
+                timestamp: new Date()
+              });
+              setTranscript("");
+            }
+          }
+
+          if (event.type === "response.done") {
+            setStatus("Listening...");
+          }
+        } catch (err) {
+          console.error("DataChannel parse error:", err);
+        }
+      });
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      pc.addTrack(stream.getTracks()[0]);
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const sdpRes = await fetch("https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${client_secret}`,
+          "Content-Type": "application/sdp"
+        },
+        body: offer.sdp
+      });
+
+      if (!sdpRes.ok) {
+        const errorText = await sdpRes.text();
+        console.error("OpenAI SDP error:", errorText);
+        throw new Error("Failed to establish session");
+      }
+
+      const answerSdp = await sdpRes.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+
+      setIsConnected(true);
+      setIsConnecting(false);
+      setStatus("Listening...");
+
+      const sessionUpdate = {
+        type: "session.update",
+        session: {
+          modalities: ["text", "audio"],
+          instructions: "You are SensEase AI, an empathetic mental health companion. Keep replies short, warm, and supportive.",
+          voice: "alloy",
+          input_audio_format: "pcm16",
+          output_audio_format: "pcm16",
+          input_audio_transcription: { model: "whisper-1" },
+          turn_detection: { type: "server_vad" }
+        }
+      };
+
+      if (dc.readyState === "open") {
+        dc.send(JSON.stringify(sessionUpdate));
+      } else {
+        dc.addEventListener("open", () => {
+          dc.send(JSON.stringify(sessionUpdate));
+        }, { once: true });
+      }
+
+    } catch (err) {
+      console.error("Realtime session error:", err);
+      setStatus("Error: " + err.message);
+      setIsConnecting(false);
+      stopRealtimeSession();
+    }
+  };
+
+  const stopRealtimeSession = () => {
+    if (dataChannelRef.current) {
+      dataChannelRef.current.close();
+      dataChannelRef.current = null;
+    }
+    
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    
+    if (audioElementRef.current) {
+      audioElementRef.current.srcObject = null;
+      audioElementRef.current = null;
+    }
+
+    setIsConnected(false);
+    setIsConnecting(false);
+    setStatus("idle");
+    setTranscript("");
+  };
+
+  useEffect(() => {
+    return () => {
+      stopRealtimeSession();
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full space-y-6 p-8">
+      <div className="text-center space-y-4">
+        <div className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center ${
+          isConnected 
+            ? "bg-gradient-to-br from-green-400 to-emerald-600 animate-pulse" 
+            : "bg-gradient-to-br from-cyan-400 to-blue-600"
+        }`}>
+          <Phone className="w-16 h-16 text-white" />
+        </div>
+
+        <h3 className={`text-2xl font-bold ${theme.colors.text}`}>
+          Realtime Voice Assistant
+        </h3>
+
+        {status !== "idle" && (
+          <p className={`text-lg ${theme.colors.muted}`}>
+            {status}
+          </p>
+        )}
+
+        {transcript && (
+          <div className={`mt-4 p-4 rounded-lg ${theme.colors.card} max-w-md`}>
+            <p className="text-sm opacity-70">Assistant is speaking:</p>
+            <p className="mt-2">{transcript}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex space-x-4">
+        {!isConnected ? (
+          <Button
+            onClick={startRealtimeSession}
+            disabled={isConnecting}
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-8 py-6 text-lg"
+          >
+            {isConnecting ? (
+              <>
+                <Loader className="w-6 h-6 mr-2 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Phone className="w-6 h-6 mr-2" />
+                Start Voice Session
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            onClick={stopRealtimeSession}
+            className="bg-gradient-to-r from-red-500 to-red-600 text-white px-8 py-6 text-lg"
+          >
+            <PhoneOff className="w-6 h-6 mr-2" />
+            End Session
+          </Button>
+        )}
+      </div>
+
+      <div className={`text-sm ${theme.colors.muted} text-center max-w-md`}>
+        <p>Click "Start" to begin a realtime voice conversation.</p>
+        <p className="mt-2">Speak naturally - the AI will respond with voice and text.</p>
+      </div>
+    </div>
+  );
+};
+
 const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { getRecentAnnouncements, incrementViews } = useAnnouncements();
 
-  // Chat
   const [messages, setMessages] = useState([]);
   const [conversationHistory, setConversationHistory] = useState([]);
   const [chatTab, setChatTab] = useState("chat");
@@ -65,20 +285,14 @@ const StudentDashboard = () => {
   const [botIsTyping, setBotIsTyping] = useState(false);
   const [isUsingChatGPT, setIsUsingChatGPT] = useState(false);
 
-  // Scroll refs
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  // Live voice flag
-  const [isLiveRecording, setIsLiveRecording] = useState(false);
-
-  // Load chat
   useEffect(() => {
     try {
       const saved = localStorage.getItem("sensee_current_chat");
@@ -92,15 +306,16 @@ const StudentDashboard = () => {
         setMessages([
           {
             id: 1,
-            text: "Hello! I'm your SensEase AI wellness companion. How are you feeling today? 💙",
+            text: "Hi! I'm your AI companion. How can I help today?",
             isBot: true,
             timestamp: new Date()
           }
         ]);
       }
-      const history = localStorage.getItem("sensee_conversation_history");
-      if (history) setConversationHistory(JSON.parse(history));
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to load chat", e);
+      setMessages([]);
+    }
   }, []);
 
   useEffect(() => {
@@ -131,7 +346,6 @@ const StudentDashboard = () => {
   // API KEY
   const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
-  // Local fallback
   const getWellnessResponse = msg => {
     msg = msg.toLowerCase();
     if (msg.includes("anx")) return "I hear your anxiety — let's try a grounding exercise.";
@@ -141,7 +355,6 @@ const StudentDashboard = () => {
     return "Thanks for sharing. Tell me more about what's on your mind.";
   };
 
-  // ChatGPT call
   const callChatGPTAPI = async userMessage => {
     if (!OPENAI_API_KEY) return getWellnessResponse(userMessage);
 
@@ -179,7 +392,6 @@ const StudentDashboard = () => {
     }
   };
 
-  // Send message
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed || isLoading) return;
@@ -211,7 +423,6 @@ const StudentDashboard = () => {
     setIsLoading(false);
   };
 
-  // Enter send
   const handleKeyPress = e => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -219,7 +430,10 @@ const StudentDashboard = () => {
     }
   };
 
-  // Recording
+  const addMessageFromVoice = msg => {
+    setMessages(prev => [...prev, msg]);
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -272,7 +486,6 @@ const StudentDashboard = () => {
     setIsTranscribing(false);
   };
 
-  // History
   const startNewChat = () => {
     if (messages.length > 1) {
       const entry = {
@@ -351,10 +564,9 @@ const StudentDashboard = () => {
     </div>
   );
 
-  // Chat UI
   const renderChatbot = () => (
-    <Card className={`h-[700px] flex flex-col ${theme.colors.card} border-0 shadow-2xl`}>
-      <CardHeader>
+    <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
+      <CardHeader className="flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
@@ -380,20 +592,21 @@ const StudentDashboard = () => {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col">
-        <Tabs value={chatTab} onValueChange={setChatTab} className="flex-1 flex flex-col">
+      <CardContent className="chat-panel">
+        <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
 
-          <TabsList className="grid grid-cols-2 w-full">
+          <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="chat">💬 Chat</TabsTrigger>
+            <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
             <TabsTrigger value="history">📜 History</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="chat" className="flex-1 flex flex-col">
+          <TabsContent value="chat" className="chat-panel">
             <div
               ref={messagesContainerRef}
-              className={`flex-1 border rounded-xl p-4 bg-gradient-to-br ${theme.colors.secondary} overflow-y-auto`}
+              className={`chat-messages border rounded-xl bg-gradient-to-br ${theme.colors.secondary}`}
             >
-              <div className="space-y-6">
+              <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
                 {messages.map(m => renderChatMessage(m))}
 
                 {botIsTyping && (
@@ -409,40 +622,53 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            <div className="flex space-x-3 mt-3 items-end">
-              <textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
-                className="flex-1 p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-500"
-                rows={2}
-              />
+            <div className="chat-input-bar bg-white dark:bg-gray-900">
+              <div className="chat-input-inner">
+                <textarea
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message..."
+                  className="flex-1 p-2 sm:p-3 border rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base"
+                  rows={1}
+                  style={{ minHeight: '40px', maxHeight: '120px' }}
+                  onInput={(e) => {
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  }}
+                />
 
-              <button
-                onClick={() => (isRecording ? stopRecording() : startRecording())}
-                disabled={isLoading || isTranscribing}
-                className={`w-12 h-12 flex items-center justify-center rounded-xl ${
-                  isRecording
-                    ? "bg-red-500"
-                    : "bg-gradient-to-br from-cyan-400 to-blue-500"
-                } text-white`}
-              >
-                {isRecording ? <MicOff /> : <Mic />}
-              </button>
+                <button
+                  onClick={() => (isRecording ? stopRecording() : startRecording())}
+                  disabled={isLoading || isTranscribing}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl ${
+                    isRecording
+                      ? "bg-red-500"
+                      : "bg-gradient-to-br from-cyan-400 to-blue-500"
+                  } text-white transition-all hover:shadow-lg`}
+                  title={isRecording ? "Stop recording" : "Voice message"}
+                >
+                  {isRecording ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
+                </button>
 
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || isLoading}
-                className="w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white"
-              >
-                {isLoading ? <Loader className="w-5 h-5 animate-spin" /> : <Send />}
-              </button>
+                <button
+                  onClick={sendMessage}
+                  disabled={!input.trim() || isLoading}
+                  className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Send message"
+                >
+                  {isLoading ? <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
+                </button>
+              </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="history">
-            <CardContent className="pt-4 h-[550px] overflow-y-auto">
+          <TabsContent value="voice" className="flex-1">
+            <RealtimeVoice onAddMessage={addMessageFromVoice} theme={theme} />
+          </TabsContent>
+
+          <TabsContent value="history" className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto pt-4 px-4">
               {conversationHistory.length === 0 ? (
                 <p className="text-center text-gray-500 mt-10">
                   No previous chats yet.
@@ -472,7 +698,7 @@ const StudentDashboard = () => {
                   </div>
                 ))
               )}
-            </CardContent>
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
@@ -560,7 +786,7 @@ const StudentDashboard = () => {
       {activeTab === "community" && <CommunityView userRole="student" />}
       {activeTab === "appointments" && <StudentAppointments />}
       {activeTab === "journaling" && (
-        <AdvancedJournalingView onBack={() => setActiveTab("overview")} />
+        <JournalWithThemeNew onBack={() => setActiveTab("overview")} />
       )}
       {activeTab === "resources" && <WellnessTools />}
       {activeTab === "audios" && <AudioSection />}
@@ -574,7 +800,6 @@ const StudentDashboard = () => {
 
 export default StudentDashboard;
 
-/* Inject subtle animation CSS */
 const style = document.createElement("style");
 style.innerHTML = `
   @keyframes message-in {
@@ -582,5 +807,53 @@ style.innerHTML = `
     to { opacity: 1; transform: translateY(0); }
   }
   .animate-message-in { animation: message-in 300ms ease-out both; }
+  
+  /* Chatbot scrolling styles */
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1rem;
+    min-height: 0;
+    max-height: 550px;
+  }
+  
+  /* Custom scrollbar */
+  .chat-messages::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .chat-messages::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+  }
+  
+  .chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(6, 182, 212, 0.4);
+    border-radius: 4px;
+  }
+  
+  .chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(6, 182, 212, 0.6);
+  }
+  
+  .chat-input-bar {
+    flex-shrink: 0;
+    padding: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .chat-input-inner {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
 `;
 document.head.appendChild(style);
