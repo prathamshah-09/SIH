@@ -579,12 +579,12 @@ const DirectMessages = ({ userRole = 'student' }) => {
   // Chat view
   if (selectedConversation) {
     return (
-      <div className="space-y-6 h-screen flex flex-col">
+      <div className="chat-shell">
         {/* Header */}
-        <Card className={`${theme.colors.card} border-0 shadow-lg`}>
+        <Card className={`${theme.colors.card} border-0 shadow-lg flex-shrink-0`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 min-w-0">
                 <button
                   onClick={handleBackToList}
                   className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-110"
@@ -592,8 +592,8 @@ const DirectMessages = ({ userRole = 'student' }) => {
                 >
                   <ArrowLeft className="w-6 h-6" />
                 </button>
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <div className="relative flex-shrink-0">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
                       {otherPartyInfo?.name?.charAt(0) || '?'}
                     </div>
@@ -601,12 +601,12 @@ const DirectMessages = ({ userRole = 'student' }) => {
                       <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                     )}
                   </div>
-                  <div>
-                    <h3 className={`font-semibold ${theme.colors.text}`}>
+                  <div className="min-w-0">
+                    <h3 className={`font-semibold truncate ${theme.colors.text}`}>
                       {otherPartyInfo?.name}
                     </h3>
                     {otherPartyInfo?.specialization && (
-                      <p className="text-xs text-gray-500">{otherPartyInfo.specialization}</p>
+                      <p className="text-xs text-gray-500 truncate">{otherPartyInfo.specialization}</p>
                     )}
                     <div className="flex items-center space-x-1">
                       <Circle className={`w-2 h-2 ${isOtherUserOnline ? 'fill-green-500 text-green-500' : 'text-gray-400'}`} />
@@ -622,105 +622,108 @@ const DirectMessages = ({ userRole = 'student' }) => {
         </Card>
 
         {/* Messages Area */}
-        <Card className={`${theme.colors.card} border-0 shadow-lg flex-1 flex flex-col overflow-hidden`}>
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messagesLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                  <p className={theme.colors.muted}>{t('noMessagesYet') || 'No messages yet'}</p>
+        <Card className={`${theme.colors.card} border-0 shadow-lg flex-1 flex flex-col overflow-hidden min-h-0`}>
+          <CardContent className="chat-panel p-0">
+            <div className="chat-messages bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900">
+              {messagesLoading ? (
+                <div className="flex items-center justify-center h-full min-h-60">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 </div>
-              </div>
-            ) : (
-              <>
-                {messages.map((msg) => {
-                  const isMine = msg.sender_id === user.id;
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-xs p-3 rounded-lg ${
-                          isMine
-                            ? 'bg-blue-500 text-white'
-                            : `${theme.colors.secondary} ${theme.colors.text}`
-                        }`}
-                      >
-                        <p className="break-words text-sm">{msg.message_text}</p>
-                        <div className="flex items-center justify-end space-x-1 mt-1 text-xs opacity-75">
-                          <span>
-                            {new Date(msg.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                          {isMine && (
-                            msg.is_read ? (
-                              <CheckCheck className="w-3 h-3" />
-                            ) : (
-                              <Check className="w-3 h-3" />
-                            )
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div ref={messagesEndRef} />
-              </>
-            )}
-
-            {/* Typing indicator */}
-            {isOtherUserTyping && (
-              <div className="flex justify-start">
-                <div className="bg-gray-200 dark:bg-gray-700 rounded-lg px-3 py-2">
-                  <div className="flex space-x-1">
-                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></div>
-                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              ) : messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full min-h-60">
+                  <div className="text-center">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    <p className={theme.colors.muted}>{t('noMessagesYet') || 'No messages yet'}</p>
                   </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((msg) => {
+                    const isMine = msg.sender_id === user.id;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs sm:max-w-md p-3 rounded-lg ${
+                            isMine
+                              ? 'bg-blue-500 text-white'
+                              : `${theme.colors.secondary} ${theme.colors.text}`
+                          }`}
+                        >
+                          <p className="chat-bubble text-sm leading-relaxed">{msg.message_text}</p>
+                          <div className="flex items-center justify-end space-x-1 mt-1 text-xs opacity-75">
+                            <span>
+                              {new Date(msg.created_at).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                            {isMine && (
+                              msg.is_read ? (
+                                <CheckCheck className="w-3 h-3" />
+                              ) : (
+                                <Check className="w-3 h-3" />
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
 
-          {/* Input Area */}
-          <div className="border-t p-4">
-            <div className="flex space-x-3 items-end">
-              <Textarea
-                value={messageText}
-                onChange={(e) => {
-                  setMessageText(e.target.value);
-                  handleTyping();
-                }}
-                placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
-                className="flex-1 min-h-[50px] max-h-[150px] resize-none focus:ring-2 focus:ring-blue-500"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                disabled={sendingMessage}
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!messageText.trim() || sendingMessage}
-                className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
-              >
-                {sendingMessage ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </Button>
+              {/* Typing indicator */}
+              {isOtherUserTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg px-3 py-2">
+                    <div className="flex space-x-1">
+                      <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></div>
+                      <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+
+            {/* Input Area */}
+            <div className="chat-input-bar bg-white dark:bg-gray-900">
+              <div className="chat-input-inner">
+                <Textarea
+                  value={messageText}
+                  onChange={(e) => {
+                    setMessageText(e.target.value);
+                    handleTyping();
+                  }}
+                  placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
+                  className="flex-1 min-h-[40px] max-h-[120px] resize-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base py-2 sm:py-3"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  disabled={sendingMessage}
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!messageText.trim() || sendingMessage}
+                  className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 hover:shadow-lg transition-all"
+                  title="Send message"
+                >
+                  {sendingMessage ? (
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
     );
