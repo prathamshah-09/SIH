@@ -92,60 +92,43 @@ const StudentDashboard = () => {
         setMessages([
           {
             id: 1,
-            text: "Hi! I'm your AI companion. How can I help today?",
+            text: "Hello! I'm your SensEase AI wellness companion. How are you feeling today? 💙",
             isBot: true,
             timestamp: new Date()
           }
         ]);
       }
-    } catch (e) {
-      console.error("Failed to load chat", e);
-      setMessages([]);
-    }
+      const history = localStorage.getItem("sensee_conversation_history");
+      if (history) setConversationHistory(JSON.parse(history));
+    } catch (e) {}
   }, []);
 
-  const renderChatMessage = message => {
-    const isBot = message.isBot;
-    return (
-      <div
-        key={message.id}
-        className={`flex ${isBot ? "justify-start" : "justify-end"} mb-3 message-row`}
-      >
-        <div
-          className={`flex ${
-            isBot
-              ? "items-start space-x-3"
-              : "flex-row-reverse items-start space-x-3 space-x-reverse"
-          } max-w-xl w-full animate-message-in`}
-        >
-          {isBot && (
-            <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <Heart className="w-5 h-5 text-white" />
-            </div>
-          )}
+  // Load chat
+  useEffect(() => {
+    if (messages.length > 0)
+      localStorage.setItem("sensee_current_chat", JSON.stringify(messages));
+  }, [messages]);
 
-          <div className={`flex flex-col ${isBot ? "items-start" : "items-end"} w-full`}>
-            <div
-              className={`inline-block p-4 rounded-2xl shadow-md ${
-                isBot
-                  ? theme.colors.card
-                  : "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-              }`}
-            >
-              {message.text}
-            </div>
-            <p className={`text-xs ${theme.colors.muted} mt-1 ${isBot ? "text-left" : "text-right"}`}>
-              {message.timestamp.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit"
-              })}
-            </p>
-          </div>
-
-        </div>
-      </div>
-    );
+  // Auto scroll
+  const scrollToBottom = () => {
+    const container = messagesContainerRef.current;
+    const anchor = messagesEndRef.current;
+    requestAnimationFrame(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth"
+        });
+      } else {
+        anchor?.scrollIntoView({ behavior: "smooth" });
+      }
+    });
   };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   // API KEY
   const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
@@ -329,11 +312,50 @@ const StudentDashboard = () => {
     localStorage.setItem("sensee_conversation_history", JSON.stringify(next));
   };
 
+  // Render bubble
+  const renderChatMessage = message => (
+    <div
+      key={message.id}
+      className={`flex items-start space-x-3 ${
+        message.isBot ? "justify-start" : "justify-end"
+      } message-row`}
+    >
+      {message.isBot && (
+        <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+          <Heart className="w-5 h-5 text-white" />
+        </div>
+      )}
+
+      <div className="max-w-md animate-message-in">
+        <div
+          className={`p-4 rounded-2xl shadow-md ${
+            message.isBot
+              ? theme.colors.card
+              : "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+          }`}
+        >
+          {message.text}
+        </div>
+        <p className={`text-xs ${theme.colors.muted} mt-1`}>
+          {message.timestamp.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+          })}
+        </p>
+      </div>
+
+      {!message.isBot && (
+        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+          <User className="w-5 h-5 text-white" />
+        </div>
+      )}
+    </div>
+  );
 
   // Chat UI
   const renderChatbot = () => (
-    <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
-      <CardHeader className="flex-shrink-0">
+    <Card className={`h-[700px] flex flex-col ${theme.colors.card} border-0 shadow-2xl`}>
+      <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
@@ -359,20 +381,20 @@ const StudentDashboard = () => {
         </div>
       </CardHeader>
 
-      <CardContent className="chat-panel">
-        <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
+      <CardContent className="flex-1 flex flex-col">
+        <Tabs value={chatTab} onValueChange={setChatTab} className="flex-1 flex flex-col">
 
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="chat">💬 Chat</TabsTrigger>
             <TabsTrigger value="history">📜 History</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="chat" className="chat-panel">
+          <TabsContent value="chat" className="flex-1 flex flex-col">
             <div
               ref={messagesContainerRef}
-              className={`chat-messages border rounded-xl bg-gradient-to-br ${theme.colors.secondary}`}
+              className={`flex-1 border rounded-xl p-4 bg-gradient-to-br ${theme.colors.secondary} overflow-y-auto`}
             >
-              <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
+              <div className="space-y-6">
                 {messages.map(m => renderChatMessage(m))}
 
                 {botIsTyping && (
@@ -388,49 +410,40 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            <div className="chat-input-bar bg-white dark:bg-gray-900">
-              <div className="chat-input-inner">
-                <textarea
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
-                  className="flex-1 p-2 sm:p-3 border rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base"
-                  rows={1}
-                  style={{ minHeight: '40px', maxHeight: '120px' }}
-                  onInput={(e) => {
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                  }}
-                />
+            <div className="flex space-x-3 mt-3 items-end">
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                className="flex-1 p-3 border rounded-xl bg-white focus:ring-2 focus:ring-cyan-500"
+                rows={2}
+              />
 
-                <button
-                  onClick={() => (isRecording ? stopRecording() : startRecording())}
-                  disabled={isLoading || isTranscribing}
-                  className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl ${
-                    isRecording
-                      ? "bg-red-500"
-                      : "bg-gradient-to-br from-cyan-400 to-blue-500"
-                  } text-white transition-all hover:shadow-lg`}
-                  title={isRecording ? "Stop recording" : "Voice message"}
-                >
-                  {isRecording ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
-                </button>
+              <button
+                onClick={() => (isRecording ? stopRecording() : startRecording())}
+                disabled={isLoading || isTranscribing}
+                className={`w-12 h-12 flex items-center justify-center rounded-xl ${
+                  isRecording
+                    ? "bg-red-500"
+                    : "bg-gradient-to-br from-cyan-400 to-blue-500"
+                } text-white`}
+              >
+                {isRecording ? <MicOff /> : <Mic />}
+              </button>
 
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim() || isLoading}
-                  className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Send message"
-                >
-                  {isLoading ? <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
-                </button>
-              </div>
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                className="w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white"
+              >
+                {isLoading ? <Loader className="w-5 h-5 animate-spin" /> : <Send />}
+              </button>
             </div>
           </TabsContent>
 
-          <TabsContent value="history" className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto pt-4 px-4">
+          <TabsContent value="history">
+            <CardContent className="pt-4 h-[550px] overflow-y-auto">
               {conversationHistory.length === 0 ? (
                 <p className="text-center text-gray-500 mt-10">
                   No previous chats yet.
@@ -460,7 +473,7 @@ const StudentDashboard = () => {
                   </div>
                 ))
               )}
-            </div>
+            </CardContent>
           </TabsContent>
         </Tabs>
       </CardContent>
