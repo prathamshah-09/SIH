@@ -27,66 +27,152 @@ import {
   Upload,
   Download,
   Trash2,
-  Plus
+  Plus,
+  Eye
 } from 'lucide-react';
 import CounsellorAppointments from '@components/appointments/CounsellorAppointments';
-import { mockAnnouncements, mockCommunityChats, mockAppointments, mockCounsellorResources } from '@mock/mockData';
+import { mockAnnouncements } from '@data/mocks/announcements';
+import { mockCommunityChats, mockAppointments } from '@mock/mockData';
 import { useAnnouncements } from '@context/AnnouncementContext';
 import CommunityView from '@components/community/CommunityView';
 import DirectMessages from '@components/community/DirectMessages';
 import { generateHistoryTitle } from '@lib/utils';
+import { getAllResources, uploadResource, deleteResource, getResourceDownloadUrl } from '@services/resourceService';
 
 
 const CounsellorResourcesSection = ({ theme }) => {
   const { t } = useLanguage();
-  const [resources, setResources] = useState(mockCounsellorResources);
+  const [resources, setResources] = useState([]);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [resourceName, setResourceName] = useState('');
   const [resourceDesc, setResourceDesc] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Fetch resources on component mount
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchResources = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await getAllResources();
+      if (response.success) {
+        setResources(response.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching resources:', err);
+      setError(err.message || 'Failed to load resources');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleFileSelect = (event) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file size (50MB max)
+      const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+      if (file.size > maxSize) {
+        alert('File size exceeds 50MB limit');
+        return;
+      }
       setSelectedFile(file);
       setFileName(file.name);
     }
   };
 
-  const handleUpload = () => {
-    if (!resourceName.trim() || !selectedFile || !fileName.trim()) {
-      alert('Please fill in all fields and select a file');
+  const handleUpload = async () => {
+    if (!resourceName.trim() || !selectedFile) {
+      alert('Please provide a resource name and select a file');
       return;
     }
 
-    const newResource = {
-      id: `res_${Date.now()}`,
-      name: resourceName,
-      description: resourceDesc || 'No description provided',
-      uploadedDate: new Date().toISOString().split('T')[0],
-      uploadedBy: 'You',
-      fileName: fileName,
-      size: (selectedFile.size / 1024).toFixed(2) + ' KB'
-    };
+    setIsUploading(true);
+    setError(null);
+    
+    try {
+      const response = await uploadResource({
+        resource_name: resourceName,
+        description: resourceDesc || undefined,
+        file: selectedFile
+      });
 
-    setResources([...resources, newResource]);
-    setResourceName('');
-    setResourceDesc('');
-    setSelectedFile(null);
-    setFileName('');
-    setShowUploadForm(false);
-  };
-
-  const handleDelete = (resourceId) => {
-    if (confirm('Are you sure you want to delete this resource?')) {
-      setResources(resources.filter(r => r.id !== resourceId));
+      if (response.success) {
+        // Refresh resources list
+        await fetchResources();
+        
+        // Clear form
+        setResourceName('');
+        setResourceDesc('');
+        setSelectedFile(null);
+        setFileName('');
+        setShowUploadForm(false);
+        
+        alert('Resource uploaded successfully!');
+      }
+    } catch (err) {
+      console.error('Error uploading resource:', err);
+      setError(err.message || 'Failed to upload resource');
+      alert(`Upload failed: ${err.message || 'Please try again'}`);
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const handleDownload = (resource) => {
-    alert(`Download feature for "${resource.name}" would be implemented with actual file storage backend.`);
+  const handleDelete = async (resourceId) => {
+    if (!confirm('Are you sure you want to delete this resource?')) {
+      return;
+    }
+
+    try {
+      const response = await deleteResource(resourceId);
+      if (response.success) {
+        // Remove from local state
+        setResources(resources.filter(r => r.id !== resourceId));
+        alert('Resource deleted successfully!');
+      }
+    } catch (err) {
+      console.error('Error deleting resource:', err);
+      alert(`Delete failed: ${err.message || 'Please try again'}`);
+    }
+  };
+
+  const handleView = async (resource) => {
+    try {
+      const response = await getResourceDownloadUrl(resource.id);
+      if (response.success && response.data.downloadUrl) {
+        // Open file in new tab for preview
+        window.open(response.data.downloadUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Error viewing resource:', err);
+      alert(`View failed: ${err.message || 'Please try again'}`);
+    }
+  };
+
+  const handleDownload = async (resource) => {
+    try {
+      const response = await getResourceDownloadUrl(resource.id);
+      if (response.success && response.data.downloadUrl) {
+        // Create temporary link to force download
+        const link = document.createElement('a');
+        link.href = response.data.downloadUrl;
+        link.download = resource.original_filename || resource.resource_name || 'download';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error('Error downloading resource:', err);
+      alert(`Download failed: ${err.message || 'Please try again'}`);
+    }
   };
 
   return (
@@ -96,11 +182,19 @@ const CounsellorResourcesSection = ({ theme }) => {
         <Button
           onClick={() => setShowUploadForm(!showUploadForm)}
           className={`${showUploadForm ? 'bg-red-500 hover:bg-red-600' : 'bg-cyan-500 hover:bg-cyan-600'} text-white`}
+          disabled={isUploading}
         >
           <Plus className="w-4 h-4 mr-2" />
           {showUploadForm ? t('cancel') : t('addResource')}
         </Button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <p className="font-medium">Error</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
       {showUploadForm && (
         <Card className={`${theme.colors.card} border-2 border-cyan-500`}>
@@ -117,6 +211,7 @@ const CounsellorResourcesSection = ({ theme }) => {
                 onChange={(e) => setResourceName(e.target.value)}
                 placeholder="e.g., Worksheet - Anxiety Management"
                 className={`w-full px-3 py-2 border rounded-lg ${theme.colors.card} ${theme.colors.text} focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                disabled={isUploading}
               />
             </div>
 
@@ -128,14 +223,15 @@ const CounsellorResourcesSection = ({ theme }) => {
                 placeholder="Describe what this resource covers..."
                 rows="3"
                 className={`w-full px-3 py-2 border rounded-lg ${theme.colors.card} ${theme.colors.text} focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                disabled={isUploading}
               />
             </div>
 
             <div>
               <label className={`block text-sm font-medium ${theme.colors.text} mb-2`}>Choose File *</label>
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className={`w-full border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                className={`w-full border-2 border-dashed rounded-lg p-6 text-center ${isUploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} transition-colors ${
                   fileName ? 'border-green-500 bg-green-50' : 'border-cyan-300 hover:border-cyan-500 hover:bg-cyan-50'
                 }`}
               >
@@ -148,19 +244,50 @@ const CounsellorResourcesSection = ({ theme }) => {
                 ) : (
                   <>
                     <p className="font-medium">{t('clickToUpload')}</p>
-                    <p className={`text-sm ${theme.colors.muted}`}>{t('supportedFiles')}</p>
+                    <p className={`text-sm ${theme.colors.muted}`}>PDF, DOC, DOCX, PPT, PPTX, MP4, JPG, PNG, TXT (Max 50MB)</p>
                   </>
                 )}
               </div>
-              <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.png" />
+              <input 
+                ref={fileInputRef} 
+                type="file" 
+                onChange={handleFileSelect} 
+                className="hidden" 
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.mp4" 
+                disabled={isUploading}
+              />
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button onClick={handleUpload} className="flex-1 bg-green-500 hover:bg-green-600 text-white">
-                <Upload className="w-4 h-4 mr-2" />
-                {t('uploadResourceButton')}
+              <Button 
+                onClick={handleUpload} 
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    {t('uploadResourceButton')}
+                  </>
+                )}
               </Button>
-              <Button onClick={() => { setShowUploadForm(false); setResourceName(''); setResourceDesc(''); setSelectedFile(null); setFileName(''); }} variant="outline" className="flex-1">
+              <Button 
+                onClick={() => { 
+                  setShowUploadForm(false); 
+                  setResourceName(''); 
+                  setResourceDesc(''); 
+                  setSelectedFile(null); 
+                  setFileName(''); 
+                }} 
+                variant="outline" 
+                className="flex-1"
+                disabled={isUploading}
+              >
                 {t('clearButton')}
               </Button>
             </div>
@@ -173,7 +300,14 @@ const CounsellorResourcesSection = ({ theme }) => {
           <h3 className={`text-lg font-semibold ${theme.colors.text}`}>{t('yourResourcesLabel', { count: resources.length })}</h3>
         </div>
 
-        {resources.length === 0 ? (
+        {isLoading ? (
+          <Card className={`${theme.colors.card} text-center py-12`}>
+            <CardContent>
+              <Loader className="w-12 h-12 mx-auto mb-4 text-cyan-500 animate-spin" />
+              <p className={theme.colors.muted}>Loading resources...</p>
+            </CardContent>
+          </Card>
+        ) : resources.length === 0 ? (
           <Card className={`${theme.colors.card} text-center py-12`}>
             <CardContent>
               <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -187,21 +321,43 @@ const CounsellorResourcesSection = ({ theme }) => {
                 <CardContent className="p-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <h4 className={`font-semibold ${theme.colors.text} truncate`}>{resource.name}</h4>
-                      <p className={`text-sm ${theme.colors.muted} mt-1`}>{resource.description}</p>
+                      <h4 className={`font-semibold ${theme.colors.text} truncate`}>
+                        {resource.resource_name || resource.name}
+                      </h4>
+                      <p className={`text-sm ${theme.colors.muted} mt-1`}>
+                        {resource.description || 'No description provided'}
+                      </p>
                       <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
-                        <span className={theme.colors.muted}>📅 {resource.uploadedDate}</span>
-                        <span className={theme.colors.muted}>👤 {resource.uploadedBy}</span>
-                        {resource.size && <span className={theme.colors.muted}>💾 {resource.size}</span>}
+                        <span className={theme.colors.muted}>
+                          📅 {resource.created_at ? new Date(resource.created_at).toLocaleDateString() : resource.uploadedDate || 'N/A'}
+                        </span>
+                        <span className={theme.colors.muted}>
+                          📄 {resource.file_type || resource.fileType || 'Unknown'}
+                        </span>
+                        {resource.file_size && (
+                          <span className={theme.colors.muted}>
+                            💾 {(resource.file_size / 1024).toFixed(2)} KB
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2 ml-4 flex-shrink-0">
-                      <Button size="sm" variant="outline" onClick={() => handleDownload(resource)} className="text-cyan-600 hover:text-cyan-700 w-full sm:w-auto px-3 py-2">
-                        <Download className="w-4 h-4 mr-2 inline-block" />
-                        <span className="hidden sm:inline">{t('download') || 'Download'}</span>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleView(resource)} 
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 w-full sm:w-auto px-3 py-2"
+                      >
+                        <Eye className="w-4 h-4 mr-2 inline-block" />
+                        <span className="hidden sm:inline">{t('view') || 'View'}</span>
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDelete(resource.id)} className="text-red-600 hover:text-red-700 w-full sm:w-auto px-3 py-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDelete(resource.id)} 
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full sm:w-auto px-3 py-2"
+                      >
                         <Trash2 className="w-4 h-4 mr-2 inline-block" />
                         <span className="hidden sm:inline">{t('delete') || 'Delete'}</span>
                       </Button>
@@ -750,8 +906,8 @@ const CounsellorDashboard = () => {
   );
 
   const renderChatbot = () => (
-    <Card className={`h-[700px] flex flex-col ${theme.colors.card} border-0 shadow-2xl`}>
-      <CardHeader>
+    <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
+      <CardHeader className="flex-shrink-0">
         <div className="w-full">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center">
@@ -798,29 +954,38 @@ const CounsellorDashboard = () => {
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 flex flex-col">
+      <CardContent className="chat-panel">
         {/* Messages Area */}
-        <div className={`flex-1 border rounded-xl p-4 bg-gradient-to-br ${theme.colors.secondary} mb-4 overflow-y-auto`}>
-          <div className="space-y-4">
+        <div className={`chat-messages border rounded-xl bg-gradient-to-br ${theme.colors.secondary}`}>
+          <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
             {messages.map((message) => (
               <div 
                 key={message.id} 
-                className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
+                className={`flex ${message.isBot ? 'justify-start' : 'justify-end'} mb-3`}
               >
-                <div className={`max-w-md ${message.isBot ? 'text-left' : 'text-right'}`}>
-                  <div className={`inline-block p-3 rounded-2xl shadow-lg ${message.isBot ? theme.colors.card : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'}`}>
-                    {message.audioUrl ? (
-                      <audio controls className="w-56 sm:w-96">
-                        <source src={message.audioUrl} />
-                        Your browser does not support the audio element.
-                      </audio>
-                    ) : (
-                      <p className={`text-sm ${message.isBot ? theme.colors.text : 'text-white'}`}>{message.text}</p>
-                    )}
+                <div className={`flex ${message.isBot ? 'items-start space-x-3' : 'flex-row-reverse items-start space-x-3 space-x-reverse'} max-w-xl w-full`}>
+                  {message.isBot && (
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <MessageCircle className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+
+                  <div className={`flex flex-col ${message.isBot ? 'items-start' : 'items-end'} w-full`}>
+                    <div className={`inline-block p-3 rounded-2xl shadow-lg ${message.isBot ? theme.colors.card : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'}`}>
+                      {message.audioUrl ? (
+                        <audio controls className="w-56 sm:w-96">
+                          <source src={message.audioUrl} />
+                          Your browser does not support the audio element.
+                        </audio>
+                      ) : (
+                        <p className={`chat-bubble text-sm ${message.isBot ? theme.colors.text : 'text-white'}`}>{message.text}</p>
+                      )}
+                    </div>
+                    <div className={`text-xs ${theme.colors.muted} mt-1 ${message.isBot ? 'text-left' : 'text-right'}`}>
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
-                  <div className={`text-xs ${theme.colors.muted} mt-1 ${message.isBot ? 'text-left' : 'text-right'}`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
+
                 </div>
               </div>
             ))}
@@ -837,39 +1002,46 @@ const CounsellorDashboard = () => {
           </div>
         </div>
 
-        {/* Preset quick responses removed intentionally */}
-
         {/* Input Area */}
-        <div className="flex space-x-3 items-end">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={t('typeYourMessageHere')}
-            className={`flex-1 px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${theme.colors.card} resize-none`}
-            rows="2"
-            disabled={isLoading}
-          />
+        <div className="chat-input-bar bg-white dark:bg-gray-900">
+          <div className="chat-input-inner">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={t('typeYourMessageHere')}
+              className={`flex-1 px-3 py-2 sm:px-4 sm:py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${theme.colors.card} resize-none text-sm sm:text-base`}
+              rows="1"
+              disabled={isLoading}
+              style={{ minHeight: '40px', maxHeight: '120px' }}
+              onInput={(e) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+              }}
+            />
 
-          <button
-            aria-label={isRecording ? 'Stop recording' : 'Voice message'}
-            onClick={() => { isRecording ? stopRecording() : startRecording(); }}
-            className={`px-3 rounded-lg ${isRecording ? 'bg-red-100' : 'bg-gray-100 dark:bg-gray-800'}`}
-          >
-            <Mic className={`w-5 h-5 ${isRecording ? 'text-red-600' : 'text-blue-600'}`} />
-          </button>
+            <button
+              aria-label={isRecording ? 'Stop recording' : 'Voice message'}
+              onClick={() => { isRecording ? stopRecording() : startRecording(); }}
+              className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl transition-all hover:shadow-lg ${isRecording ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              title={isRecording ? 'Stop recording' : 'Voice message'}
+            >
+              <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'text-white' : 'text-blue-600'}`} />
+            </button>
 
-          <Button 
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg px-6 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-          >
-            {isLoading ? (
-              <Loader className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
+            <Button 
+              onClick={sendMessage}
+              disabled={!input.trim() || isLoading}
+              className="w-10 h-10 sm:w-12 sm:h-12 sm:px-6 flex-shrink-0 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title="Send message"
+            >
+              {isLoading ? (
+                <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
+            </Button>
+          </div>
         </div>
         
         {/* Wellness Tips Footer */}

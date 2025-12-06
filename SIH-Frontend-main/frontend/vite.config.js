@@ -18,6 +18,7 @@ export default defineConfig({
       '@lib': path.resolve(__dirname, 'src/lib'),
       '@data': path.resolve(__dirname, 'src/data'),
       '@mock': path.resolve(__dirname, 'src/mock'),
+      '@services': path.resolve(__dirname, 'src/services'),
     },
   },
   server: {

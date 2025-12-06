@@ -14,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@components/ui/dialog';
-import { generateWorryPerspective } from '../../lib/geminiAPI';
 import { Slider } from '@components/ui/slider';
 import {
   Sun,
@@ -28,6 +27,15 @@ import {
   ChevronRight,
   Plus,
 } from 'lucide-react';
+import { toast } from '@hooks/use-toast';
+import {
+  saveDailyCheckin,
+  saveWeeklyCheckin,
+  createWorryEntry,
+  updateWorryEntry,
+  generateAIReframe,
+  getJournalByDate
+} from '@services/journalingService';
 
 const JournalWithTheme = () => {
   const { theme } = useTheme();
@@ -46,6 +54,11 @@ const JournalWithTheme = () => {
   const [weeklyBullets, setWeeklyBullets] = useState({ nextGoals: [''] });
   const [isEditingDaily, setIsEditingDaily] = useState(false);
   const [isEditingWeekly, setIsEditingWeekly] = useState(false);
+  const [savingDaily, setSavingDaily] = useState(false);
+  const [savingWeekly, setSavingWeekly] = useState(false);
+  const [savingWorry, setSavingWorry] = useState(false);
+  const [loadingDate, setLoadingDate] = useState(false);
+  const [currentWorryId, setCurrentWorryId] = useState(null);
 
   // Load mock data on component mount
   useEffect(() => {
@@ -79,7 +92,8 @@ const JournalWithTheme = () => {
 
     while (true) {
       const dateKey = currentDate.toISOString().split('T')[0];
-      const hasEntry = entries[`${dateKey}_daily`] || entries[`${dateKey}_weekly`] || entries[`${dateKey}_worry`];
+      // Streak counts only Daily Check-in and Worries (not Weekly)
+      const hasEntry = entries[`${dateKey}_daily`] || entries[`${dateKey}_worry`];
       
       if (hasEntry) {
         streak++;
@@ -104,6 +118,35 @@ const JournalWithTheme = () => {
 
   const formatDateKey = (date) => date.toISOString().split('T')[0];
 
+  // Compute week range (Mon-Sun) for a given date
+  const getWeekRange = (dateObj) => {
+    const d = new Date(dateObj);
+    const day = d.getDay(); // Sun=0, Mon=1, ...
+    const diffToMonday = (day + 6) % 7; // 0 for Mon, 6 for Sun
+    const start = new Date(d);
+    start.setDate(d.getDate() - diffToMonday);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  };
+
+  // Populate the same weekly entry across the entire week range in local state
+  const propagateWeeklyToWeek = (dateObj, weeklyDataNormalized) => {
+    const { start } = getWeekRange(dateObj);
+    setEntries((prev) => {
+      const updated = { ...prev };
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const key = `${formatDateKey(d)}_weekly`;
+        updated[key] = { ...weeklyDataNormalized };
+      }
+      return updated;
+    });
+  };
+
   const handlePrevMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   };
@@ -112,10 +155,79 @@ const JournalWithTheme = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   };
 
-  const handleDateClick = (day) => {
+  const loadEntriesForDate = async (date) => {
+    setLoadingDate(true);
+    try {
+      const formattedDate = date.toISOString().split('T')[0];
+      const data = await getJournalByDate(formattedDate);
+
+      const dateKey = formatDateKey(date);
+
+      setEntries((prev) => {
+        const newEntries = { ...prev };
+
+        if (data.daily_checkin) {
+          newEntries[`${dateKey}_daily`] = {
+            type: 'daily',
+            liked: data.daily_checkin.positive_moments?.join('\n') || '',
+            disliked: data.daily_checkin.challenges_faced?.join('\n') || '',
+            reflection: data.daily_checkin.todays_reflection || '',
+            goals: data.daily_checkin.intentions_tomorrow?.join('\n') || '',
+            mood: data.daily_checkin.feelings_space || '',
+            timestamp: data.daily_checkin.created_at
+          };
+        }
+
+        if (data.weekly_checkin) {
+          const normalizedWeekly = {
+            type: 'weekly',
+            review: data.weekly_checkin.week_reflection || '',
+            nextGoals: data.weekly_checkin.next_week_intentions?.join('\n') || '',
+            selfCareScore: data.weekly_checkin.self_care_score || 0,
+            selfCareReflection: data.weekly_checkin.self_care_reflection || '',
+            timestamp: data.weekly_checkin.created_at
+          };
+          newEntries[`${dateKey}_weekly`] = normalizedWeekly;
+          // Propagate to the entire week so dots and preview reflect consistently
+          propagateWeeklyToWeek(date, normalizedWeekly);
+        }
+
+        if (data.worries && data.worries.length > 0) {
+          const latestWorry = data.worries[0];
+          newEntries[`${dateKey}_worry`] = {
+            type: 'worry',
+            negativeThought: latestWorry.whats_on_mind || '',
+            positiveReframe: latestWorry.positive_reframe || '',
+            geminiReframe: latestWorry.positive_reframe && latestWorry.is_ai_generated ? latestWorry.positive_reframe : '',
+            timestamp: latestWorry.created_at
+          };
+          setCurrentWorryId(latestWorry.id);
+        }
+
+        return newEntries;
+      });
+    } catch (error) {
+      console.error('Error loading journal entries:', error);
+      if (error.response?.status !== 404) {
+        toast({ title: 'Error', description: 'Failed to load journal entries. Please try again.', variant: 'destructive' });
+      }
+    } finally {
+      setLoadingDate(false);
+    }
+  };
+
+  const handleDateClick = async (day) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(newDate);
+    await loadEntriesForDate(newDate);
+    setShowMobileCalendar(false);
   };
+
+  useEffect(() => {
+    // Load entries for the current date when entering journaling
+    loadEntriesForDate(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isToday = (date) => {
     const today = new Date();
@@ -140,7 +252,11 @@ const JournalWithTheme = () => {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
       const dateKey = formatDateKey(date);
-      const hasEntry = entries[dateKey];
+      // Only show a dot for Daily or Worry entries (not Weekly)
+      const hasEntry = Boolean(
+        entries[`${dateKey}_daily`] ||
+        entries[`${dateKey}_worry`]
+      );
       const isSelected = date.toDateString() === selectedDate.toDateString();
       const isTodayDate = isToday(date);
       const isFuture = isFutureDate(date);
@@ -255,26 +371,42 @@ const JournalWithTheme = () => {
     setWeeklyBullets({ ...weeklyBullets, [field]: newBullets.length > 0 ? newBullets : [''] });
   };
 
-  // Call Gemini API
-  const callGeminiAPI = async (fieldType) => {
+  // Call Backend AI Reframe API
+  const callBackendAIReframe = async () => {
     setLoadingGemini(true);
     try {
-      // For AI Perspective, generate based on negative thought
-      if (fieldType === 'aiPerspective') {
-        const negativeThought = tempEntries.worry_negative?.trim();
-        
-        if (!negativeThought) {
-          alert('Please write a negative thought first');
-          setLoadingGemini(false);
-          return;
-        }
-
-        // Call the Gemini API to get real-time response
-        const aiResponse = await generateWorryPerspective(negativeThought);
-        setTempEntries({ ...tempEntries, worry_ai: aiResponse });
+      const negativeThought = tempEntries.worry_negative?.trim();
+      
+      if (!negativeThought) {
+        toast({ title: 'Add a thought', description: 'Please write a negative thought first' });
+        setLoadingGemini(false);
+        return;
       }
+
+      // Generate AI reframe with optional save
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      const options = {
+        date: formattedDate,
+        save: true,  // Save the worry with AI reframe
+        id: currentWorryId || undefined  // Update existing if we have ID
+      };
+      
+      const aiResponse = await generateAIReframe(negativeThought, options);
+      
+      // If saved, store the worry ID for future updates
+      if (aiResponse.id) {
+        setCurrentWorryId(aiResponse.id);
+      }
+      
+      // Display the AI-generated reframe
+      setTempEntries({ 
+        ...tempEntries, 
+        worry_ai: aiResponse.positive_reframe,
+        worry_negative: negativeThought  // Keep the negative thought
+      });
     } catch (error) {
-      console.error('Error in callGeminiAPI:', error);
+      console.error('Error in callBackendAIReframe:', error);
+      toast({ title: 'AI Error', description: (error.response?.data?.message || 'Failed to generate AI perspective. Please try again.'), variant: 'destructive' });
     } finally {
       setLoadingGemini(false);
     }
@@ -740,20 +872,55 @@ const JournalWithTheme = () => {
                     {/* Single Save Button */}
                     <div className="border-t pt-5 mt-5">
                       <Button
-                        onClick={() => {
-                          handleSaveEntry('daily', 'liked', dailyBullets.liked.join('\n'));
-                          handleSaveEntry('daily', 'disliked', dailyBullets.disliked.join('\n'));
-                          handleSaveEntry('daily', 'reflection', tempEntries.daily_reflection || dailyBullets.reflection.join('\n'));
-                          handleSaveEntry('daily', 'goals', dailyBullets.goals.join('\n'));
-                          handleSaveEntry('daily', 'mood', tempEntries.daily_mood || dailyBullets.mood.join('\n'));
-                          setTempEntries({});
-                          setDailyBullets({ liked: [''], disliked: [''], reflection: [''], goals: [''], mood: [''] });
-                          setIsEditingDaily(false);
+                        onClick={async () => {
+                          setSavingDaily(true);
+                          try {
+                            const formattedDate = selectedDate.toISOString().split('T')[0];
+                            
+                            // Map frontend fields to backend format
+                            const dailyData = {
+                              positive_moments: dailyBullets.liked.filter(item => item.trim()),
+                              challenges_faced: dailyBullets.disliked.filter(item => item.trim()),
+                              todays_reflection: tempEntries.daily_reflection || dailyBullets.reflection.filter(item => item.trim()).join('\n') || '',
+                              intentions_tomorrow: dailyBullets.goals.filter(item => item.trim()),
+                              feelings_space: tempEntries.daily_mood || dailyBullets.mood.filter(item => item.trim()).join('\n') || ''
+                            };
+                            
+                            const result = await saveDailyCheckin(formattedDate, dailyData);
+                            
+                            // Update local state with saved data
+                            handleSaveEntry('daily', 'liked', dailyBullets.liked.join('\n'));
+                            handleSaveEntry('daily', 'disliked', dailyBullets.disliked.join('\n'));
+                            handleSaveEntry('daily', 'reflection', dailyData.todays_reflection);
+                            handleSaveEntry('daily', 'goals', dailyBullets.goals.join('\n'));
+                            handleSaveEntry('daily', 'mood', dailyData.feelings_space);
+                            
+                            setTempEntries({});
+                            setDailyBullets({ liked: [''], disliked: [''], reflection: [''], goals: [''], mood: [''] });
+                            setIsEditingDaily(false);
+                            
+                            toast({ title: 'Saved', description: 'Daily check-in saved' });
+                          } catch (error) {
+                            console.error('Error saving daily check-in:', error);
+                            toast({ title: 'Save failed', description: (error.response?.data?.message || 'Failed to save daily check-in. Please try again.'), variant: 'destructive' });
+                          } finally {
+                            setSavingDaily(false);
+                          }
                         }}
+                        disabled={savingDaily}
                         className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-base py-3"
                       >
-                        <Send className="w-5 h-5 mr-2" />
-                        Save
+                        {savingDaily ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-5 h-5 mr-2" />
+                            Save
+                          </>
+                        )}
                       </Button>
                     </div>
                   </>
@@ -983,19 +1150,64 @@ const JournalWithTheme = () => {
                     {/* Single Save Button */}
                     <div className="border-t pt-5">
                       <Button
-                        onClick={() => {
-                          handleSaveEntry('weekly', 'review', tempEntries.weekly_review);
-                          handleSaveEntry('weekly', 'nextGoals', weeklyBullets.nextGoals.join('\n'));
-                          handleSaveEntry('weekly', 'selfCareScore', tempEntries.weekly_selfCareScore !== undefined ? tempEntries.weekly_selfCareScore : 0);
-                          handleSaveEntry('weekly', 'selfCareReflection', tempEntries.weekly_selfCareReflection);
-                          setTempEntries({});
-                          setWeeklyBullets({ nextGoals: [''] });
-                          setIsEditingWeekly(false);
+                        onClick={async () => {
+                          setSavingWeekly(true);
+                          try {
+                            const formattedDate = selectedDate.toISOString().split('T')[0];
+                            
+                            // Map frontend fields to backend format
+                            const weeklyData = {
+                              week_reflection: tempEntries.weekly_review || '',
+                              next_week_intentions: weeklyBullets.nextGoals.filter(item => item.trim()),
+                              self_care_score: tempEntries.weekly_selfCareScore !== undefined ? tempEntries.weekly_selfCareScore : 0,
+                              self_care_reflection: tempEntries.weekly_selfCareReflection || ''
+                            };
+                            
+                            const result = await saveWeeklyCheckin(formattedDate, weeklyData);
+                            
+                            // Update local state with saved data
+                            handleSaveEntry('weekly', 'review', weeklyData.week_reflection);
+                            handleSaveEntry('weekly', 'nextGoals', weeklyBullets.nextGoals.join('\n'));
+                            handleSaveEntry('weekly', 'selfCareScore', weeklyData.self_care_score);
+                            handleSaveEntry('weekly', 'selfCareReflection', weeklyData.self_care_reflection);
+
+                            // Also reflect the weekly entry across the entire week locally for a consistent UX
+                            const normalizedWeekly = {
+                              type: 'weekly',
+                              review: weeklyData.week_reflection || '',
+                              nextGoals: (weeklyData.next_week_intentions || []).join('\n'),
+                              selfCareScore: weeklyData.self_care_score || 0,
+                              selfCareReflection: weeklyData.self_care_reflection || '',
+                              timestamp: new Date().toISOString(),
+                            };
+                            propagateWeeklyToWeek(selectedDate, normalizedWeekly);
+                            
+                            setTempEntries({});
+                            setWeeklyBullets({ nextGoals: [''] });
+                            setIsEditingWeekly(false);
+                            
+                            toast({ title: 'Saved', description: 'Weekly check-in saved' });
+                          } catch (error) {
+                            console.error('Error saving weekly check-in:', error);
+                            toast({ title: 'Save failed', description: (error.response?.data?.message || 'Failed to save weekly check-in. Please try again.'), variant: 'destructive' });
+                          } finally {
+                            setSavingWeekly(false);
+                          }
                         }}
+                        disabled={savingWeekly}
                         className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-base py-3"
                       >
-                        <Send className="w-5 h-5 mr-2" />
-                        Save
+                        {savingWeekly ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-5 h-5 mr-2" />
+                            Save
+                          </>
+                        )}
                       </Button>
                     </div>
                   </>
@@ -1103,7 +1315,7 @@ const JournalWithTheme = () => {
                     {/* Get AI Perspective Button */}
                     <div className="space-y-3 border-t pt-5">
                       <Button
-                        onClick={() => callGeminiAPI('aiPerspective')}
+                        onClick={callBackendAIReframe}
                         disabled={loadingGemini || !tempEntries.worry_negative?.trim()}
                         className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-base py-3"
                       >
@@ -1130,18 +1342,64 @@ const JournalWithTheme = () => {
                     {/* Single Save Button */}
                     <div className="border-t pt-5">
                       <Button
-                        onClick={() => {
-                          handleSaveEntry('worry', 'negativeThought', tempEntries.worry_negative);
-                          handleSaveEntry('worry', 'positiveReframe', tempEntries.worry_reframe);
-                          if (tempEntries.worry_ai) {
-                            handleSaveEntry('worry', 'geminiReframe', tempEntries.worry_ai);
+                        onClick={async () => {
+                          setSavingWorry(true);
+                          try {
+                            const formattedDate = selectedDate.toISOString().split('T')[0];
+                            
+                            // Map frontend fields to backend format
+                            const worryData = {
+                              whats_on_mind: tempEntries.worry_negative || '',
+                              positive_reframe: tempEntries.worry_reframe || tempEntries.worry_ai || ''
+                            };
+                            
+                            // Validate required field
+                            if (!worryData.whats_on_mind.trim()) {
+                              toast({ title: 'Add a thought', description: 'Please write a negative thought before saving' });
+                              setSavingWorry(false);
+                              return;
+                            }
+                            
+                            // If we already have a worry ID (from AI reframe or previous save), update it
+                            let result;
+                            if (currentWorryId) {
+                              result = await updateWorryEntry(currentWorryId, worryData);
+                            } else {
+                              result = await createWorryEntry(formattedDate, worryData);
+                              setCurrentWorryId(result.id);
+                            }
+                            
+                            // Update local state with saved data
+                            handleSaveEntry('worry', 'negativeThought', worryData.whats_on_mind);
+                            handleSaveEntry('worry', 'positiveReframe', worryData.positive_reframe);
+                            if (tempEntries.worry_ai) {
+                              handleSaveEntry('worry', 'geminiReframe', tempEntries.worry_ai);
+                            }
+                            
+                            setTempEntries({});
+                            
+                            toast({ title: 'Saved', description: 'Worry entry saved' });
+                          } catch (error) {
+                            console.error('Error saving worry entry:', error);
+                            toast({ title: 'Save failed', description: (error.response?.data?.message || 'Failed to save worry entry. Please try again.'), variant: 'destructive' });
+                          } finally {
+                            setSavingWorry(false);
                           }
-                          setTempEntries({});
                         }}
+                        disabled={savingWorry}
                         className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-base py-3"
                       >
-                        <Send className="w-5 h-5 mr-2" />
-                        Save All
+                        {savingWorry ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-5 h-5 mr-2" />
+                            Save
+                          </>
+                        )}
                       </Button>
                     </div>
                   </>

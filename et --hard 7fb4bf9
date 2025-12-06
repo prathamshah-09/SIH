@@ -1,0 +1,67 @@
+*   [33m8e028af[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mPratham[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #13 from prathamshah-09/Aditya
+[31m|[m[32m\[m  
+[31m|[m * [33m99a49a5[m[33m ([m[1;31morigin/Aditya[m[33m)[m Chatbot Changes
+[31m|[m[31m/[m  
+*   [33mf34e2fd[m[33m ([m[1;31morigin/Pratham[m[33m)[m Merge pull request #12 from prathamshah-09/manan-work
+[33m|[m[34m\[m  
+[33m|[m * [33m4aff30b[m[33m ([m[1;31morigin/manan-work[m[33m)[m My SIH changes
+[33m|[m[33m/[m  
+*   [33mbcfc13d[m Merge pull request #11 from prathamshah-09/Rushika
+[35m|[m[36m\[m  
+[35m|[m *   [33mf29b137[m[33m ([m[1;31morigin/Rushika[m[33m)[m Merge branch 'main' into Rushika
+[35m|[m [1;31m|[m[35m\[m  
+[35m|[m [1;31m|[m[35m/[m  
+[35m|[m[35m/[m[1;31m|[m   
+* [1;31m|[m   [33m7fb4bf9[m Merge pull request #10 from prathamshah-09/Pratham
+[1;33m|[m[1;34m\[m [1;31m\[m  
+[1;33m|[m * [1;31m|[m [33mf03b55b[m Journaling
+[1;33m|[m[1;33m/[m [1;31m/[m  
+[1;33m|[m * [33m3186ab3[m wellness tools
+[1;33m|[m[1;33m/[m  
+*   [33m24d268a[m Merge pull request #9 from prathamshah-09/Pratham
+[1;35m|[m[1;36m\[m  
+[1;35m|[m *   [33mf75292c[m Resolved merge conflicts
+[1;35m|[m [31m|[m[1;35m\[m  
+[1;35m|[m [31m|[m[1;35m/[m  
+[1;35m|[m[1;35m/[m[31m|[m   
+* [31m|[m   [33m90feaac[m Merge pull request #8 from prathamshah-09/Hriday
+[33m|[m[34m\[m [31m\[m  
+[33m|[m * [31m\[m   [33meb5c5b1[m[33m ([m[1;31morigin/Hriday[m[33m)[m Resolved merge conflicts, kept Hriday changes
+[33m|[m [35m|[m[33m\[m [31m\[m  
+[33m|[m [35m|[m[33m/[m [31m/[m  
+[33m|[m[33m/[m[35m|[m [31m|[m   
+[33m|[m * [31m|[m [33m9391000[m WELLNESS TOOLS AND AUDIO
+[33m|[m * [31m|[m   [33m84ea6fc[m Merge pull request #5 from prathamshah-09/main
+[33m|[m [1;31m|[m[1;32m\[m [31m\[m  
+[33m|[m [1;31m|[m [1;32m|[m * [33md913754[m Saved my local changes before merging main
+[33m|[m [1;31m|[m[33m_[m[1;32m|[m[33m/[m  
+[33m|[m[33m/[m[1;31m|[m [1;32m|[m   
+* [1;31m|[m [1;32m|[m   [33mbfc2420[m Merge pull request #7 from prathamshah-09/Pratham
+[1;33m|[m[1;34m\[m [1;31m\[m [1;32m\[m  
+[1;33m|[m * [1;31m|[m [1;32m|[m [33m9169438[m Updated code
+[1;33m|[m[1;33m/[m [1;31m/[m [1;32m/[m  
+* [1;31m|[m [1;32m|[m   [33me263686[m Merge pull request #6 from prathamshah-09/Pratham
+[1;32m|[m[1;36m\[m [1;31m\[m [1;32m\[m  
+[1;32m|[m [1;36m|[m[1;32m_[m[1;31m|[m[1;32m/[m  
+[1;32m|[m[1;32m/[m[1;36m|[m [1;31m|[m   
+[1;32m|[m * [1;31m|[m [33m6bee384[m Bahut hadd tak try kiya sudharne ka
+[1;32m|[m[1;32m/[m [1;31m/[m  
+* [1;31m|[m   [33m7b3ccd9[m Merge pull request #4 from prathamshah-09/Pratham
+[31m|[m[32m\[m [1;31m\[m  
+[31m|[m * [1;31m\[m   [33me2fe860[m Merge pull request #3 from prathamshah-09/main
+[31m|[m [33m|[m[31m\[m [1;31m\[m  
+[31m|[m [33m|[m[31m/[m [1;31m/[m  
+[31m|[m[31m/[m[33m|[m [1;31m|[m   
+* [33m|[m [1;31m|[m   [33mbddf9df[m Merge pull request #2 from prathamshah-09/Hriday
+[35m|[m[1;31m\[m [33m\[m [1;31m\[m  
+[35m|[m [1;31m|[m [33m|[m[1;31m/[m  
+[35m|[m [1;31m|[m[1;31m/[m[33m|[m   
+[35m|[m * [33m|[m [33m6529a49[m Updated CounsellorAppointments and DirectMessages components
+* [36m|[m [33m|[m   [33m2a7387b[m Merge pull request #1 from prathamshah-09/Pratham
+[36m|[m[33m\[m [36m\[m [33m\[m  
+[36m|[m [33m|[m[36m/[m [33m/[m  
+[36m|[m[36m/[m[33m|[m [33m/[m   
+[36m|[m [33m|[m[33m/[m    
+[36m|[m * [33m23cda55[m Admin Dashboard except announcements updated
+[36m|[m[36m/[m  
+* [33m91ee86f[m[33m ([m[1;32mmain[m[33m)[m Base Frontend

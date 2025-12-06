@@ -155,7 +155,7 @@ const AICompanion = () => {
   };
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden ${theme.colors.background} ${theme.colors.card}`}> 
+    <div className={`chat-shell ${theme.colors.background} ${theme.colors.card}`}>
       {/* Header - fixed */}
       <div className="flex-shrink-0 p-4 sm:p-6 border-b">
         <div className="flex items-center justify-between">
@@ -197,11 +197,11 @@ const AICompanion = () => {
       </div>
 
       {/* Messages container - scrollable with fixed height, cyan/blue background */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900 p-4 sm:p-6">
-        <div className="space-y-10 max-w-3xl mx-auto h-full">
+      <div ref={messagesContainerRef} className="chat-messages bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900">
+        <div className="space-y-4 max-w-3xl mx-auto w-full px-2 sm:px-4">
           {currentChat?.messages?.map(msg => (
             <div key={msg.id} className={`max-w-[85%] ${msg.role === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}>
-              <div className={`inline-block px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'}`}>
+              <div className={`chat-bubble inline-block px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'}`}>
                 {msg.type === 'audio' ? (
                   <audio controls className="w-56 sm:w-96">
                     <source src={msg.audioUrl} />
@@ -220,25 +220,31 @@ const AICompanion = () => {
       </div>
 
       {/* Input bar — fixed at bottom */}
-      <div className="flex-shrink-0 p-3 sm:p-4 bg-white dark:bg-gray-900 border-t z-10" style={{paddingBottom: 'env(safe-area-inset-bottom)'}}>
-        <div className="max-w-3xl mx-auto flex items-end space-x-3">
+      <div className="chat-input-bar bg-white dark:bg-gray-900">
+        <div className="chat-input-inner">
           <Input
             placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1"
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
+            className="flex-1 text-sm sm:text-base h-10"
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           />
-          <div className="flex items-center space-x-2 h-10">
-            <button onClick={handleSend} className="icon-tap rounded-full bg-blue-600 text-white p-2 h-10 w-10 flex items-center justify-center">
-              <Send className="w-4 h-4" />
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={handleSend} 
+              disabled={!input.trim()}
+              className="icon-tap rounded-full bg-blue-600 text-white w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Send message"
+            >
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button
               aria-label={isRecording ? 'Stop recording' : 'Voice message'}
               onClick={() => { isRecording ? stopRecording() : startRecording(); }}
-              className={`icon-tap rounded-full p-2 h-10 w-10 flex items-center justify-center ${isRecording ? 'bg-red-100' : 'bg-gray-100 dark:bg-gray-800'}`}
+              className={`icon-tap rounded-full w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center transition-all hover:shadow-lg ${isRecording ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              title={isRecording ? 'Stop recording' : 'Voice message'}
             >
-              <Mic className={`w-5 h-5 ${isRecording ? 'text-red-600' : 'text-blue-600'}`} />
+              <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'text-white' : 'text-blue-600'}`} />
             </button>
           </div>
         </div>
