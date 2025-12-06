@@ -362,7 +362,7 @@ const CommunityManagement = () => {
           ref={messagesContainerRef}
           className={`flex-1 w-full overflow-y-auto bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900 p-4 sm:p-6`}
         >
-          <div className="space-y-4 max-w-3xl mx-auto w-full pb-4">
+          <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-full min-h-64">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -392,7 +392,7 @@ const CommunityManagement = () => {
                       className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3 animate-fadeIn`}
                     >
                       <div className="flex flex-col max-w-xs lg:max-w-md">
-                        <p className={`text-xs font-semibold text-gray-600 dark:text-gray-300 px-3 mb-1 ${isCurrentUser ? 'text-right' : ''}`}>
+                        <p className={`text-xs font-semibold text-gray-600 dark:text-gray-300 px-3 mb-1 truncate ${isCurrentUser ? 'text-right' : ''}`}>
                           {displayName}
                           {!isStudent && (
                             <span className={`ml-2 inline-block text-[10px] px-2 py-0.5 rounded-full font-semibold ${

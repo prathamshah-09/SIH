@@ -168,6 +168,88 @@
     box-shadow: var(--shadow-glow);
   }
 
+  /* Shared chat layout utilities - WhatsApp/Discord style */
+  .chat-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.75rem 0.5rem;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (min-width: 640px) {
+    .chat-messages {
+      padding: 1rem 1rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .chat-messages {
+      padding: 1.25rem 1.5rem;
+    }
+  }
+
+  .chat-input-bar {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background-color: hsl(var(--card));
+    border-top: 1px solid hsl(var(--border));
+    padding: 0.5rem 0.75rem;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    z-index: 20;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  @media (min-width: 640px) {
+    .chat-input-bar {
+      padding: 0.75rem 1rem;
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  .chat-input-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  @media (min-width: 640px) {
+    .chat-input-inner {
+      gap: 0.75rem;
+    }
+  }
+
+  .chat-bubble {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+  }
+
   .hover-lift {
     @apply transition-all duration-300 ease-out;
   }

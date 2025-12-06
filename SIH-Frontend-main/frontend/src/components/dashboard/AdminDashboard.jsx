@@ -446,8 +446,8 @@ const AdminDashboard = () => {
   );
 
   const renderChatbot = () => (
-    <Card className={`h-[700px] flex flex-col ${theme.colors.card} border-0 shadow-2xl`}>
-      <CardHeader>
+    <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
+      <CardHeader className="flex-shrink-0">
         <div className="w-full">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center">
@@ -494,35 +494,44 @@ const AdminDashboard = () => {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col">
+      <CardContent className="chat-panel">
         {/* Messages Area */}
-        <div className={`flex-1 border rounded-xl p-4 bg-gradient-to-br ${theme.colors.secondary} mb-4 overflow-y-auto`}>
-          <div className="space-y-4">
+        <div className={`chat-messages border rounded-xl bg-gradient-to-br ${theme.colors.secondary}`}>
+          <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
             {messages.map((message) => (
               <div 
                 key={message.id} 
-                className={`flex items-start ${message.isBot ? 'justify-start' : 'justify-end'}`}
+                className={`flex ${message.isBot ? 'justify-start' : 'justify-end'} mb-3`}
               >
-                <div className={`max-w-md ${message.isBot ? 'order-2' : 'order-1'}`}>
-                  <div className={`p-4 rounded-xl shadow-lg hover:shadow-xl transition-shadow ${
-                      message.isBot 
-                        ? `${theme.colors.card}` 
-                        : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
-                    }`}>
-                      {message.audioUrl ? (
-                        <audio controls className="w-56 sm:w-96">
-                          <source src={message.audioUrl} />
-                          Your browser does not support the audio element.
-                        </audio>
-                      ) : (
-                        <p className={`text-sm ${message.isBot ? theme.colors.text : 'text-white'}`}>
-                          {message.text}
-                        </p>
-                      )}
+                <div className={`flex ${message.isBot ? 'items-start space-x-3' : 'flex-row-reverse items-start space-x-3 space-x-reverse'} max-w-xl w-full`}>
+                  {message.isBot && (
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <MessageCircle className="w-5 h-5 text-white" />
                     </div>
-                  <p className={`text-xs ${theme.colors.muted} mt-1 ${message.isBot ? 'text-left' : 'text-right'}`}>
-                    {formatTimestamp(message.timestamp)}
-                  </p>
+                  )}
+
+                  <div className={`flex flex-col ${message.isBot ? 'items-start' : 'items-end'} w-full`}>
+                    <div className={`inline-block p-4 rounded-xl shadow-lg hover:shadow-xl transition-shadow ${
+                        message.isBot 
+                          ? `${theme.colors.card}` 
+                          : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
+                      }`}>
+                        {message.audioUrl ? (
+                          <audio controls className="w-56 sm:w-96">
+                            <source src={message.audioUrl} />
+                            Your browser does not support the audio element.
+                          </audio>
+                        ) : (
+                          <p className={`chat-bubble text-sm ${message.isBot ? theme.colors.text : 'text-white'}`}>
+                            {message.text}
+                          </p>
+                        )}
+                      </div>
+                    <p className={`text-xs ${theme.colors.muted} mt-1 ${message.isBot ? 'text-left' : 'text-right'}`}>
+                      {formatTimestamp(message.timestamp)}
+                    </p>
+                  </div>
+
                 </div>
               </div>
             ))}
@@ -538,63 +547,72 @@ const AdminDashboard = () => {
         </div>
 
         {/* Input Area */}
-        <div className="flex space-x-3 items-end">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={t('typeYourMessageHere')}
-            className={`flex-1 px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${theme.colors.card} resize-none`}
-            rows="2"
-            disabled={isLoading}
-          />
+        <div className="chat-input-bar bg-white dark:bg-gray-900">
+          <div className="chat-input-inner">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={t('typeYourMessageHere')}
+              className={`flex-1 px-3 py-2 sm:px-4 sm:py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${theme.colors.card} resize-none text-sm sm:text-base`}
+              rows="1"
+              disabled={isLoading}
+              style={{ minHeight: '40px', maxHeight: '120px' }}
+              onInput={(e) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+              }}
+            />
 
-          <button
-            aria-label={isRecording ? 'Stop recording' : 'Voice message'}
-            onClick={async () => {
-              try {
-                if (isRecording) {
-                  if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
-                } else {
-                  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                  streamRef.current = stream;
-                  const mr = new MediaRecorder(stream);
-                  mediaRecorderRef.current = mr;
-                  const chunks = [];
-                  mr.ondataavailable = e => chunks.push(e.data);
-                  mr.onstop = () => {
-                    const blob = new Blob(chunks, { type: 'audio/webm' });
-                    const url = URL.createObjectURL(blob);
-                    const audioMsg = { id: Date.now(), isBot: false, audioUrl: url, timestamp: new Date() };
-                    setMessages(prev => [...prev, audioMsg]);
-                    stream.getTracks().forEach(t => t.stop());
-                    streamRef.current = null;
-                    mediaRecorderRef.current = null;
-                    setIsRecording(false);
-                  };
-                  mr.start();
-                  setIsRecording(true);
+            <button
+              aria-label={isRecording ? 'Stop recording' : 'Voice message'}
+              onClick={async () => {
+                try {
+                  if (isRecording) {
+                    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+                  } else {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    streamRef.current = stream;
+                    const mr = new MediaRecorder(stream);
+                    mediaRecorderRef.current = mr;
+                    const chunks = [];
+                    mr.ondataavailable = e => chunks.push(e.data);
+                    mr.onstop = () => {
+                      const blob = new Blob(chunks, { type: 'audio/webm' });
+                      const url = URL.createObjectURL(blob);
+                      const audioMsg = { id: Date.now(), isBot: false, audioUrl: url, timestamp: new Date() };
+                      setMessages(prev => [...prev, audioMsg]);
+                      stream.getTracks().forEach(t => t.stop());
+                      streamRef.current = null;
+                      mediaRecorderRef.current = null;
+                      setIsRecording(false);
+                    };
+                    mr.start();
+                    setIsRecording(true);
+                  }
+                } catch (e) {
+                  console.error('Recording failed', e);
                 }
-              } catch (e) {
-                console.error('Recording failed', e);
-              }
-            }}
-            className="px-3 rounded-lg"
-          >
-            <Mic className={`w-4 h-4 ${isRecording ? 'text-red-600' : ''}`} />
-          </button>
+              }}
+              className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl transition-all hover:shadow-lg ${isRecording ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              title={isRecording ? 'Stop recording' : 'Voice message'}
+            >
+              <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'text-white' : 'text-blue-600'}`} />
+            </button>
 
-          <Button 
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg px-6 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-          >
-            {isLoading ? (
-              <Loader className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
+            <Button 
+              onClick={sendMessage}
+              disabled={!input.trim() || isLoading}
+              className="w-10 h-10 sm:w-12 sm:h-12 sm:px-6 flex-shrink-0 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title="Send message"
+            >
+              {isLoading ? (
+                <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
+            </Button>
+          </div>
         </div>
         
         {/* Wellness Tips Footer */}
