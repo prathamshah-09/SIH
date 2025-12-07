@@ -134,7 +134,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, theme }
                     <h2 className={`text-2xl font-bold ${theme.colors.text} mb-4`}>{title}</h2>
                     <p className={`${theme.colors.muted} mb-6`}>{message}</p>
                     <div className="flex justify-end space-x-4">
-                        <Button onClick={onClose} variant="outline" className="hover:bg-gray-50">{t('cancel')}</Button>
+                        <Button onClick={onClose} variant="outline" className={`${theme.currentTheme === 'dark' ? 'hover:bg-slate-700 border-slate-600' : 'hover:bg-gray-50'}`}>{t('cancel')}</Button>
                         <Button onClick={onConfirm} className="bg-gradient-to-r from-red-500 to-red-600 hover:bg-red-600 text-white">{t('confirm')}</Button>
                     </div>
                 </CardContent>
@@ -332,7 +332,7 @@ const StudentAppointments = () => {
     // Navigation Tabs with uniform SensEase colors
     const renderTabs = () => (
         <div className="flex justify-center mb-8">
-            <div className="flex space-x-2 bg-gray-200 p-1 rounded-full">
+            <div className={`flex space-x-2 ${theme.currentTheme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'} p-1 rounded-full`}>
                 <Button 
                     onClick={() => setView('schedule')} 
                     variant={view === 'schedule' ? 'animated' : 'ghost'}
@@ -383,15 +383,15 @@ const StudentAppointments = () => {
                             </button>
                             
                             {showCalendarModal && (
-                                <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 shadow-lg border rounded-lg p-4 z-40 w-80">
+                                <div className={`absolute right-0 mt-2 ${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-white'} shadow-lg border rounded-lg p-4 z-40 w-80`}>
                                     <div className="flex items-center justify-between mb-4">
-                                        <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                        <button onClick={handlePrevMonth} className={`p-1 rounded ${theme.currentTheme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
                                             <ChevronLeftIcon className="w-5 h-5" />
                                         </button>
                                         <h4 className={`font-bold ${theme.colors.text}`}>
                                             {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
                                         </h4>
-                                        <button onClick={handleNextMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                        <button onClick={handleNextMonth} className={`p-1 rounded ${theme.currentTheme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
                                             <ChevronRightIcon className="w-5 h-5" />
                                         </button>
                                     </div>
@@ -523,10 +523,10 @@ const StudentAppointments = () => {
                                 {/* Mobile: show time selection & notes after counsellor tap */}
                                 <div className="md:hidden">
                                     {mobileShowTimeSelection && (
-                                        <div className="space-y-4 p-3 bg-white rounded-lg border border-gray-200">
+                                        <div className={`space-y-4 p-3 ${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-white'} rounded-lg border ${theme.currentTheme === 'dark' ? 'border-slate-700' : 'border-gray-200'}`}>
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-center space-x-3">
-                                                    <button onClick={() => setShowCalendarModal(true)} className="p-2 rounded-md bg-gray-100 mr-2">
+                                                    <button onClick={() => setShowCalendarModal(true)} className={`p-2 rounded-md mr-2 ${theme.currentTheme === 'dark' ? 'bg-slate-700' : 'bg-gray-100'}`}>
                                                         <CalendarIcon className="w-6 h-6 text-cyan-600" />
                                                     </button>
                                                     <img src={selectedCounsellor.imageUrl} alt={selectedCounsellor.name} className="w-12 h-12 rounded-full" />
@@ -647,7 +647,7 @@ const StudentAppointments = () => {
                                         {notes && (
                                             <div className="pt-4 border-t">
                                                 <h4 className={`font-semibold ${theme.colors.text} mb-2`}>Your Notes:</h4>
-                                                <p className={`${theme.colors.muted} bg-gray-50 p-3 rounded-lg`}>{notes}</p>
+                                                <p className={`${theme.colors.muted} ${theme.currentTheme === 'dark' ? 'bg-slate-700' : 'bg-gray-50'} p-3 rounded-lg`}>{notes}</p>
                                             </div>
                                         )}
                                     </div>
@@ -658,7 +658,7 @@ const StudentAppointments = () => {
                                 <Button
                                     onClick={() => setStep(1)}
                                     variant="outline"
-                                    className="hover:bg-gray-50"
+                                    className={`${theme.currentTheme === 'dark' ? 'hover:bg-slate-700 border-slate-600' : 'hover:bg-gray-50'}`}
                                 >
                                     {t('backToEdit')}
                                 </Button>
@@ -820,12 +820,12 @@ const StudentAppointments = () => {
                                                     <div className="space-y-3">
                                                         <h5 className={`font-semibold ${theme.colors.text} text-sm sm:text-base`}>Action Items:</h5>
                                                         {app.actionItems.map(item => (
-                                                            <div key={item.id} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                                            <div key={item.id} className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${theme.currentTheme === 'dark' ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-50 hover:bg-gray-100'}`}>
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={item.completed}
                                                                     onChange={() => toggleActionItem(app.id, item.id)}
-                                                                    className="w-5 h-5 text-cyan-600 bg-white border-gray-300 rounded focus:ring-cyan-500 cursor-pointer"
+                                                                    className={`w-5 h-5 text-cyan-600 ${theme.currentTheme === 'dark' ? 'bg-slate-600 border-slate-500' : 'bg-white border-gray-300'} rounded focus:ring-cyan-500 cursor-pointer`}
                                                                 />
                                                                 <span className={`flex-1 text-sm sm:text-base ${item.completed ? `line-through ${theme.colors.muted}` : theme.colors.text}`}>
                                                                     {item.text}
@@ -870,7 +870,7 @@ const StudentAppointments = () => {
             {showCalendarModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/40" onClick={() => setShowCalendarModal(false)} />
-                    <div className={`relative bg-white rounded-xl p-6 max-w-md w-full z-60 shadow-2xl border border-gray-100`}> 
+                    <div className={`relative ${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-white'} rounded-xl p-6 max-w-md w-full z-60 shadow-2xl ${theme.currentTheme === 'dark' ? 'border-slate-700' : 'border-gray-100'} border`}>
                         <div className="flex items-center justify-between mb-6 border-b pb-4">
                             <h3 className={`font-bold text-lg ${theme.colors.text}`}>{t('chooseYourCounselor')}</h3>
                             <button onClick={() => setShowCalendarModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">✕</button>
