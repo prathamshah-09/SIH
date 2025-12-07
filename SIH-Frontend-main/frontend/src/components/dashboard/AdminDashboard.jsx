@@ -22,8 +22,11 @@ import {
   ChevronDown,
   Plus,
   Mic,
+  MicOff,
   Trash2,
-  FileText
+  FileText,
+  Phone,
+  PhoneOff
 } from 'lucide-react';
 
 import DashboardLayout from '@components/layout/DashboardLayout';
@@ -32,6 +35,7 @@ import { useLanguage } from '@context/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Badge } from '@components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@components/ui/tabs';
 import { mockAnalytics } from '@data/mocks/analytics';
 import AnnouncementManagement from '@components/admin/AnnouncementManagement';
 import FormManagement from '@components/admin/FormManagement';
@@ -41,259 +45,670 @@ import AnalyticsModule from '@components/admin/AnalyticsModule';
 import ErrorBoundary from '@components/shared/ErrorBoundary';
 import { generateHistoryTitle } from '@lib/utils';
 
+const TypingDots = () => (
+  <div className="flex items-center space-x-1 pl-2">
+    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400" />
+    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400 delay-75" />
+    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400 delay-150" />
+  </div>
+);
+
+const RealtimeVoice = ({ onAddMessage, theme }) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [status, setStatus] = useState("idle");
+  const [transcript, setTranscript] = useState("");
+  
+  const pcRef = useRef(null);
+  const dataChannelRef = useRef(null);
+  const audioElementRef = useRef(null);
+
+  const startRealtimeSession = async () => {
+    try {
+      setIsConnecting(true);
+      setStatus("Connecting...");
+
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+      const tokenRes = await fetch(`${backendUrl}/api/admin/realtime-session`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (!tokenRes.ok) {
+        const errorData = await tokenRes.text();
+        console.error(`Backend error (${tokenRes.status}):`, errorData);
+        throw new Error(`Failed to get session token (${tokenRes.status})`);
+      }
+      
+      const response = await tokenRes.json();
+      const { client_secret } = response.data || response;
+
+      if (!client_secret) {
+        throw new Error("No client_secret in response");
+      }
+
+      const pc = new RTCPeerConnection();
+      pcRef.current = pc;
+
+      const audioEl = document.createElement("audio");
+      audioEl.autoplay = true;
+      audioElementRef.current = audioEl;
+
+      pc.ontrack = e => {
+        audioEl.srcObject = e.streams[0];
+      };
+
+      const dc = pc.createDataChannel("oai-events");
+      dataChannelRef.current = dc;
+
+      dc.addEventListener("message", e => {
+        try {
+          const event = JSON.parse(e.data);
+          
+          if (event.type === "response.audio_transcript.delta") {
+            setTranscript(prev => prev + (event.delta || ""));
+          }
+          
+          if (event.type === "response.audio_transcript.done") {
+            const fullText = event.transcript || transcript;
+            if (fullText) {
+              onAddMessage({
+                id: Date.now(),
+                text: fullText,
+                isBot: true,
+                timestamp: new Date()
+              });
+              setTranscript("");
+            }
+          }
+
+          if (event.type === "response.done") {
+            setStatus("Listening...");
+          }
+        } catch (err) {
+          console.error("DataChannel parse error:", err);
+        }
+      });
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      pc.addTrack(stream.getTracks()[0]);
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const sdpRes = await fetch("https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${client_secret}`,
+          "Content-Type": "application/sdp"
+        },
+        body: offer.sdp
+      });
+
+      if (!sdpRes.ok) {
+        const errorText = await sdpRes.text();
+        console.error("OpenAI SDP error:", errorText);
+        throw new Error("Failed to establish session");
+      }
+
+      const answerSdp = await sdpRes.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+
+      setIsConnected(true);
+      setIsConnecting(false);
+      setStatus("Listening...");
+
+      const sessionUpdate = {
+        type: "session.update",
+        session: {
+          modalities: ["text", "audio"],
+          instructions: "You are SensEase AI, an empathetic mental health companion. Keep replies short, warm, and supportive.",
+          voice: "alloy",
+          input_audio_format: "pcm16",
+          output_audio_format: "pcm16",
+          input_audio_transcription: { model: "whisper-1" },
+          turn_detection: { type: "server_vad" }
+        }
+      };
+
+      if (dc.readyState === "open") {
+        dc.send(JSON.stringify(sessionUpdate));
+      } else {
+        dc.addEventListener("open", () => {
+          dc.send(JSON.stringify(sessionUpdate));
+        }, { once: true });
+      }
+
+    } catch (err) {
+      console.error("Realtime session error:", err);
+      const errorMsg = err.message || "Connection failed";
+      setStatus(`Error: ${errorMsg}. Please ensure the backend server is running.`);
+      setIsConnecting(false);
+      stopRealtimeSession();
+    }
+  };
+
+  const stopRealtimeSession = () => {
+    if (dataChannelRef.current) {
+      dataChannelRef.current.close();
+      dataChannelRef.current = null;
+    }
+    
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    
+    if (audioElementRef.current) {
+      audioElementRef.current.srcObject = null;
+      audioElementRef.current = null;
+    }
+
+    setIsConnected(false);
+    setIsConnecting(false);
+    setStatus("idle");
+    setTranscript("");
+  };
+
+  useEffect(() => {
+    return () => {
+      stopRealtimeSession();
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full space-y-6 p-8">
+      <div className="text-center space-y-4">
+        <div className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center ${
+          isConnected 
+            ? "bg-gradient-to-br from-green-400 to-emerald-600 animate-pulse" 
+            : "bg-gradient-to-br from-cyan-400 to-blue-600"
+        }`}>
+          <Phone className="w-16 h-16 text-white" />
+        </div>
+
+        <h3 className={`text-2xl font-bold ${theme.colors.text}`}>
+          Realtime Voice Assistant
+        </h3>
+
+        {status !== "idle" && (
+          <p className={`text-lg ${theme.colors.muted}`}>
+            {status}
+          </p>
+        )}
+
+        {transcript && (
+          <div className={`mt-4 p-4 rounded-lg ${theme.colors.card} max-w-md`}>
+            <p className="text-sm opacity-70">Assistant is speaking:</p>
+            <p className="mt-2">{transcript}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex space-x-4">
+        {!isConnected ? (
+          <Button
+            onClick={startRealtimeSession}
+            disabled={isConnecting}
+            variant="animated"
+          >
+            {isConnecting ? (
+              <>
+                <Loader className="w-5 h-5 mr-2 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Phone className="w-5 h-5 mr-2" />
+                Start Voice Session
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            onClick={stopRealtimeSession}
+            variant="animated"
+            className="bg-gradient-to-135 from-red-600 to-red-500"
+          >
+            <PhoneOff className="w-5 h-5 mr-2" />
+            End Session
+          </Button>
+        )}
+      </div>
+
+      <div className={`text-sm ${theme.colors.muted} text-center max-w-md`}>
+        <p>Click "Start" to begin a realtime voice conversation.</p>
+        <p className="mt-2">Speak naturally - the AI will respond with voice and text.</p>
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState("overview");
+  const { theme } = useTheme();
+  const { t } = useLanguage();
 
   const [messages, setMessages] = useState([]);
-      const [input, setInput] = useState('');
-      const [isLoading, setIsLoading] = useState(false);
-      const messagesEndRef = useRef(null);
-      const [showHistoryPanel, setShowHistoryPanel] = useState(false);
-      const [chatHistory, setChatHistory] = useState([]);
-      const [isRecording, setIsRecording] = useState(false);
-      const mediaRecorderRef = useRef(null);
-      const streamRef = useRef(null);
-    
-      const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      };
-    
-      useEffect(() => {
-        scrollToBottom();
-      }, [messages]);
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [chatTab, setChatTab] = useState("chat");
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [botIsTyping, setBotIsTyping] = useState(false);
+  const [isUsingChatGPT, setIsUsingChatGPT] = useState(false);
 
-      // Add initial bot greeting only for tablet/desktop (md+), same behavior as StudentDashboard
-      useEffect(() => {
-        const greeting = {
-          id: 1,
-          text: "Hello! I'm your SensEase AI wellness companion. How are you feeling today? I'm here to listen and support you on your wellness journey. 💙",
-          isBot: true,
-          timestamp: new Date()
-        };
+  const messagesContainerRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
-        try {
-          if (window?.innerWidth >= 1024 && messages.length === 0) {
-            setMessages([greeting]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sensee_admin_chat");
+      if (saved) {
+        const parsed = JSON.parse(saved).map(m => ({
+          ...m,
+          timestamp: new Date(m.timestamp)
+        }));
+        setMessages(parsed);
+      } else {
+        setMessages([
+          {
+            id: 1,
+            text: "Hi! I'm your AI companion. How can I help today?",
+            isBot: true,
+            timestamp: new Date()
           }
-        } catch (e) {
-          if (messages.length === 0) setMessages([greeting]);
-        }
-      }, []);
-
-      // Load admin chat history
-      useEffect(() => {
-        try {
-          const raw = localStorage.getItem('admin_ai_history_v1');
-          if (raw) setChatHistory(JSON.parse(raw));
-        } catch (e) {
-          console.warn('Failed to load admin chat history', e);
-        }
-      }, []);
-
-      const persistHistory = (history) => {
-        try {
-          localStorage.setItem('admin_ai_history_v1', JSON.stringify(history));
-        } catch (e) {
-          console.warn('Failed to save admin chat history', e);
-        }
-      };
-
-      const handleNewAdminChat = () => {
-        // Save current conversation to history if non-empty
-        if (messages && messages.length > 0) {
-          const entry = {
-            id: `a${Date.now()}`,
-            title: generateHistoryTitle(messages, 3),
-            messages: messages
-          };
-          const next = [entry, ...chatHistory].slice(0, 50);
-          setChatHistory(next);
-          persistHistory(next);
-        }
-        // Clear current messages and input
-        setMessages([]);
-        setInput('');
-        setShowHistoryPanel(false);
-      };
-
-      const handleLoadHistory = (entry) => {
-        setMessages(entry.messages || []);
-        setShowHistoryPanel(false);
-      };
-
-      const handleDeleteHistory = (id) => {
-        const next = chatHistory.filter(h => h.id !== id);
-        setChatHistory(next);
-        persistHistory(next);
-      };
-
-      const formatTimestamp = (ts) => {
-        try {
-          const d = ts instanceof Date ? ts : new Date(ts);
-          if (isNaN(d)) return '';
-          return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch (e) {
-          return '';
-        }
-      };
-    
-      // Free AI API call using Groq
-      const callGroqAPI = async (userMessage) => {
-      try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with your actual key
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'llama3-8b-8192',
-            messages: [
-              {
-                role: 'system',
-                content: 'You are a supportive and empathetic mental health companion for students. Provide caring, helpful responses that are encouraging but not overly clinical. Keep responses conversational, warm, and under 100 words. Focus on emotional support and practical wellness tips.'
-              },
-              {
-                role: 'user',
-                content: userMessage
-              }
-            ],
-            max_tokens: 150,
-            temperature: 0.7
-          })
-        });
-    
-        if (!response.ok) {
-          throw new Error(`Groq API error: ${response.status}`);
-        }
-    
-        const data = await response.json();
-        return data.choices[0]?.message?.content || getWellnessResponse(userMessage);
-      } catch (error) {
-        console.error('Groq API Error:', error);
-        return getWellnessResponse(userMessage);
+        ]);
       }
-    };
-    
-      // Fallback wellness-focused responses (works without API)
-      const getWellnessResponse = (userMessage) => {
-        const message = userMessage.toLowerCase();
-        
-        const wellnessResponses = {
-          anxiety: [
-            "I understand anxiety can feel overwhelming. Let's try a simple breathing exercise: breathe in for 4 counts, hold for 4, and breathe out for 6. Would you like to tell me more about what's making you feel anxious?",
-            "Anxiety is very common, and you're not alone in feeling this way. Sometimes it helps to ground yourself - can you name 5 things you can see, 4 things you can touch, 3 things you can hear?",
-            "I hear that you're feeling anxious. Remember that these feelings are temporary. What usually helps you feel more calm and centered?"
-          ],
-          stress: [
-            "Stress can really weigh on us. Have you tried any stress management techniques lately? Sometimes even a 5-minute walk or some gentle stretching can help reset our mood.",
-            "I can sense you're dealing with stress right now. What's been the biggest source of stress for you lately? Sometimes talking through it can help lighten the load.",
-            "Stress affects us all differently. Are you getting enough rest and taking care of your basic needs? Sometimes stress feels worse when we're tired or haven't eaten properly."
-          ],
-          sad: [
-            "I'm sorry you're feeling sad. Your feelings are valid, and it's okay to have difficult days. What's been on your mind lately?",
-            "Sadness is a natural human emotion, though I know it doesn't feel good right now. Is there something specific that's been troubling you?",
-            "Thank you for sharing that with me. When you're feeling sad, what are some small things that usually bring you a bit of comfort?"
-          ],
-          happy: [
-            "I'm so glad to hear you're feeling good today! What's been going well for you lately?",
-            "That's wonderful! It's great when we can appreciate the positive moments. What's bringing you joy right now?",
-            "Your positive energy is lovely to hear about! Sometimes sharing our good feelings can help them grow even stronger."
-          ],
-          tired: [
-            "Feeling tired can really affect our whole outlook. Have you been getting quality sleep lately, or is this more of an emotional tiredness?",
-            "I understand that exhaustion. Sometimes when we're tired, everything feels harder to handle. Are you able to rest?",
-            "Being tired can make everything feel more challenging. What does rest and recovery look like for you?"
-          ]
-        };
-    
-        // Simple keyword matching
-        for (const [emotion, responses] of Object.entries(wellnessResponses)) {
-          if (message.includes(emotion) || 
-              (emotion === 'sad' && (message.includes('down') || message.includes('depressed') || message.includes('low'))) ||
-              (emotion === 'happy' && (message.includes('good') || message.includes('great') || message.includes('amazing'))) ||
-              (emotion === 'tired' && (message.includes('exhausted') || message.includes('drained')))) {
-            
-            return responses[Math.floor(Math.random() * responses.length)];
-          }
-        }
-    
-        // General supportive responses
-        const generalResponses = [
-          "Thank you for sharing that with me. I'm here to listen. Can you tell me more about how you're feeling?",
-          "I appreciate you opening up. Your mental health journey is important. What would be most helpful for you right now?",
-          "It sounds like you have a lot on your mind. Sometimes it helps just to have someone listen. What's been the most challenging part of your day?",
-          "I'm glad you're taking time to check in with yourself. Self-awareness is a big step in wellness. How can I best support you today?",
-          "Every feeling you have is valid. What's one small thing that might help you feel a bit better right now?",
-          "I hear you. Sometimes the first step is just acknowledging how we feel. What kind of support would be most meaningful to you today?"
-        ];
-    
-        return generalResponses[Math.floor(Math.random() * generalResponses.length)];
-      };
-    
-      const sendMessage = async () => {
-        if (!input.trim() || isLoading) return;
-    
-        const userMessage = input.trim();
-        setInput('');
-        
-        // Add user message
-        const newUserMessage = {
-          id: Date.now(),
-          text: userMessage,
-          isBot: false,
-          timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, newUserMessage]);
-        setIsLoading(true);
-    
-        try {
-          // Get AI response (tries API first, falls back to local)
-          const botResponse = await callGroqAPI(userMessage);
-          
-          // Add bot response
-          const newBotMessage = {
-            id: Date.now() + 1,
-            text: botResponse,
-            isBot: true,
-            timestamp: new Date()
-          };
-          
-          setMessages(prev => [...prev, newBotMessage]);
-        } catch (error) {
-          console.error('Error getting response:', error);
-          
-          const errorMessage = {
-            id: Date.now() + 1,
-            text: "I'm having trouble connecting right now, but I'm still here for you. Please try again in a moment. In the meantime, remember that you're not alone in this. 💙",
-            isBot: true,
-            timestamp: new Date()
-          };
-          
-          setMessages(prev => [...prev, errorMessage]);
-        }
-        
-        setIsLoading(false);
-      };
-    
-      const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-        }
-      };
-    
-      const quickResponses = [
-        "I'm feeling anxious today",
-        "I'm having a good day",
-        "I'm feeling stressed about school",
-        "I need someone to talk to",
-        "I'm feeling overwhelmed"
-      ];
+    } catch (e) {
+      console.error("Failed to load chat", e);
+      setMessages([]);
+    }
+  }, []);
 
-  const [activeTab, setActiveTab] = useState('overview');
-  const { theme } = useTheme();
-  const { t, isRTL } = useLanguage();
+  // Load chat
+  useEffect(() => {
+    if (messages.length > 0)
+      localStorage.setItem("sensee_admin_chat", JSON.stringify(messages));
+  }, [messages]);
+
+  // Auto scroll
+  const scrollToBottom = () => {
+    const container = messagesContainerRef.current;
+    const anchor = messagesEndRef.current;
+    requestAnimationFrame(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth"
+        });
+      } else {
+        anchor?.scrollIntoView({ behavior: "smooth" });
+      }
+    });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // API KEY
+  const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
+
+  const getWellnessResponse = msg => {
+    msg = msg.toLowerCase();
+    if (msg.includes("anx")) return "I hear your anxiety — let's try a grounding exercise.";
+    if (msg.includes("stress")) return "Stress can be overwhelming. Want to talk about what caused it?";
+    if (msg.includes("sad") || msg.includes("down"))
+      return "I'm sorry you're feeling this way. I'm here to listen.";
+    return "Thanks for sharing. Tell me more about what's on your mind.";
+  };
+
+  const callChatGPTAPI = async userMessage => {
+    if (!OPENAI_API_KEY) return getWellnessResponse(userMessage);
+
+    try {
+      setBotIsTyping(true);
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are SensEase AI, an empathetic mental health companion. Keep replies short, warm, and supportive."
+            },
+            { role: "user", content: userMessage }
+          ]
+        })
+      });
+
+      if (!res.ok) throw new Error("API error");
+      const data = await res.json();
+
+      setBotIsTyping(false);
+      setIsUsingChatGPT(true);
+
+      return data.choices?.[0]?.message?.content || getWellnessResponse(userMessage);
+    } catch (e) {
+      setBotIsTyping(false);
+      return getWellnessResponse(userMessage);
+    }
+  };
+
+  const sendMessage = async () => {
+    const trimmed = input.trim();
+    if (!trimmed || isLoading) return;
+
+    const userMsg = {
+      id: Date.now(),
+      text: trimmed,
+      isBot: false,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setInput("");
+    setIsLoading(true);
+
+    const reply = await callChatGPTAPI(trimmed);
+
+    setBotIsTyping(true);
+    await new Promise(r => setTimeout(r, 400 + reply.length * 5));
+
+    const botMsg = {
+      id: Date.now() + 1,
+      text: reply,
+      isBot: true,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, botMsg]);
+    setBotIsTyping(false);
+    setIsLoading(false);
+  };
+
+  const handleKeyPress = e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const addMessageFromVoice = msg => {
+    setMessages(prev => [...prev, msg]);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mr = new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+
+      mr.ondataavailable = e => audioChunksRef.current.push(e.data);
+      mr.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        await sendAudioToWhisper(blob);
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      mr.start();
+      setIsRecording(true);
+    } catch (e) {}
+  };
+
+  const stopRecording = () => {
+    try {
+      mediaRecorderRef.current?.stop();
+    } catch {}
+    setIsRecording(false);
+  };
+
+  const sendAudioToWhisper = async blob => {
+    if (!OPENAI_API_KEY) {
+      alert("No API key. Add VITE_OPENAI_API_KEY to .env");
+      return;
+    }
+
+    setIsTranscribing(true);
+    try {
+      const form = new FormData();
+      form.append("file", blob, "audio.webm");
+      form.append("model", "whisper-1");
+
+      const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+        body: form
+      });
+
+      if (!res.ok) throw new Error("Whisper error");
+      const data = await res.json();
+
+      setInput(data.text || "");
+    } catch (e) {}
+    setIsTranscribing(false);
+  };
+
+  const startNewChat = () => {
+    if (messages.length > 1) {
+      const entry = {
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        messages
+      };
+      const next = [entry, ...conversationHistory];
+      setConversationHistory(next);
+      localStorage.setItem("sensee_admin_conversation_history", JSON.stringify(next));
+    }
+    setMessages([
+      {
+        id: Date.now(),
+        text: "New conversation started — how can I help you today? 💙",
+        isBot: true,
+        timestamp: new Date()
+      }
+    ]);
+    setChatTab("chat");
+  };
+
+  const loadChat = chat => {
+    const restored = chat.messages.map(m => ({
+      ...m,
+      timestamp: new Date(m.timestamp)
+    }));
+    setMessages(restored);
+    localStorage.setItem("sensee_admin_chat", JSON.stringify(restored));
+    setChatTab("chat");
+  };
+
+  const deleteHistory = id => {
+    const next = conversationHistory.filter(h => h.id !== id);
+    setConversationHistory(next);
+    localStorage.setItem("sensee_admin_conversation_history", JSON.stringify(next));
+  };
+
+  // Render bubble
+  const renderChatMessage = message => (
+    <div
+      key={message.id}
+      className={`flex items-start space-x-3 ${
+        message.isBot ? "justify-start" : "justify-end"
+      } message-row`}
+    >
+      <div className="max-w-md animate-message-in">
+        <div
+          className={`p-4 rounded-2xl shadow-md ${
+            message.isBot
+              ? `${theme.colors.card} ${theme.colors.text}`
+              : theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
+          }`}
+        >
+          {message.text}
+        </div>
+        <p className={`text-xs ${theme.colors.muted} mt-1`}>
+          {message.timestamp.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+          })}
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderChatbot = () => (
+    <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
+      <CardHeader className="flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
+            <CardTitle className={theme.colors.text}>
+              SensEase AI Companion
+            </CardTitle>
+            <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
+          </div>
+
+          <div className={`flex items-center space-x-3 ${theme.colors.text}`}>
+            <Button onClick={startNewChat} variant="outline">
+              <Plus className="w-4 h-4 mr-1" /> New
+            </Button>
+
+            <Badge
+              className={`${
+                isUsingChatGPT ? "bg-green-500" : "bg-orange-500"
+              } text-white`}
+            >
+              {isUsingChatGPT ? "🤖 ChatGPT Active" : "⚡ Local Mode"}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="chat-panel">
+        <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
+<TabsList 
+  className="grid grid-cols-3 w-full"
+  style={theme.currentTheme === 'dark' ? { backgroundColor: 'rgb(30 41 59)' } : {}}
+>
+
+            <TabsTrigger value="chat">💬 Chat</TabsTrigger>
+            <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
+            <TabsTrigger value="history">📜 History</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="chat" className="chat-panel">
+            <div
+              ref={messagesContainerRef}
+              className={`chat-messages border rounded-xl ${theme.currentTheme === 'dark' ? 'bg-slate-800' : `bg-gradient-to-br ${theme.colors.secondary}`}`}
+            >
+              <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
+                {messages.map(m => renderChatMessage(m))}
+
+                {botIsTyping && (
+                  <div className="flex items-start space-x-3">
+                    <div className="w-10 h-10" />
+                    <div className={`p-3 rounded-xl ${theme.colors.card}`}>
+                      <TypingDots />
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+
+            <div className={`chat-input-bar ${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
+              <div className="chat-input-inner">
+                <textarea
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message..."
+                  className={`flex-1 p-2 sm:p-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base ${theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-white'}`}
+                  rows={1}
+                  style={{ minHeight: '40px', maxHeight: '120px' }}
+                  onInput={(e) => {
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  }}
+                />
+
+                <button
+                  onClick={() => (isRecording ? stopRecording() : startRecording())}
+                  disabled={isLoading || isTranscribing}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl ${
+                    isRecording
+                      ? "bg-red-500"
+                      : "bg-gradient-to-br from-cyan-400 to-blue-500"
+                  } text-white transition-all hover:shadow-lg`}
+                  title={isRecording ? "Stop recording" : "Voice message"}
+                >
+                  {isRecording ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
+                </button>
+
+                <button
+                  onClick={sendMessage}
+                  disabled={!input.trim() || isLoading}
+                  className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Send message"
+                >
+                  {isLoading ? <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
+                </button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="voice" className="flex-1">
+            <RealtimeVoice onAddMessage={addMessageFromVoice} theme={theme} />
+          </TabsContent>
+
+          <TabsContent value="history" className={`flex-1 overflow-hidden ${theme.currentTheme === 'dark' ? 'bg-slate-800' : ''}`}>
+            <div className="h-full overflow-y-auto pt-4 px-4">
+              {conversationHistory.length === 0 ? (
+                <p className="text-center text-gray-500 mt-10">
+                  No previous chats yet.
+                </p>
+              ) : (
+                conversationHistory.map(chat => (
+                  <div
+                    key={chat.id}
+                    onClick={() => loadChat(chat)}
+                    className="p-4 border rounded-lg mb-3 cursor-pointer hover:bg-gray-100"
+                  >
+                    <div className="flex justify-between">
+                      <p className="font-semibold text-sm">{chat.date}</p>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          deleteHistory(chat.id);
+                        }}
+                        className="text-red-500"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-600 truncate">
+                      {chat.messages[1]?.text || chat.messages[0].text}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
 
   // Persist active tab so refresh keeps the same section
   useEffect(() => {
@@ -330,7 +745,7 @@ const AdminDashboard = () => {
           }`}
           onClick={() => setActiveTab(key)}
         >
-          <Icon className={`w-5 h-5 ${isRTL ? 'ml-3' : 'mr-3'} ${activeTab === key ? 'text-white' : color} group-hover:scale-110 transition-transform`} />
+          <Icon className={`w-5 h-5 mr-3 ${activeTab === key ? 'text-white' : color} group-hover:scale-110 transition-transform`} />
           {label}
         </Button>
       ))}
@@ -442,184 +857,6 @@ const AdminDashboard = () => {
 
       {/* Recent Activity & Alerts removed per request */}
     </div>
-  );
-
-  const renderChatbot = () => (
-    <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
-      <CardHeader className="flex-shrink-0">
-        <div className="w-full">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center">
-              <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
-              <CardTitle className={`${theme.colors.text} mb-0`}>{t('aiCompanion')}</CardTitle>
-              <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewAdminChat} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
-                <Plus className="w-5 h-5" />
-              </button>
-
-              <div className="relative">
-                <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowHistoryPanel(s => !s)} className="p-2 rounded-md border hover:bg-gray-100 dark:hover:bg-gray-800">
-                  <ChevronDown className="w-5 h-5" />
-                </button>
-
-                {showHistoryPanel && (
-                  <div className="absolute right-0 mt-2 w-80 max-h-72 overflow-auto bg-white dark:bg-gray-800 border rounded-md p-2 z-40">
-                    {chatHistory.length === 0 ? (
-                      <div className="p-2 text-sm text-gray-500">{t('noConversationsFound') || 'No conversations found'}</div>
-                    ) : (
-                      chatHistory.map(h => (
-                        <div key={h.id} className="flex items-center justify-between p-1 rounded">
-                          <button onClick={() => handleLoadHistory(h)} className="flex-1 text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <div className="text-sm font-medium truncate" title={h.title}>{h.title}</div>
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDeleteHistory(h.id); }} aria-label="Delete history" className="ml-2 p-1 rounded hover:bg-red-50 text-red-600">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <CardDescription className={theme.colors.muted}>
-            {t('aiCompanionDesc')}
-          </CardDescription>
-        </div>
-      </CardHeader>
-
-      <CardContent className="chat-panel">
-        {/* Messages Area */}
-        <div className={`chat-messages border rounded-xl bg-gradient-to-br ${theme.colors.secondary}`}>
-          <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
-            {messages.map((message) => (
-              <div 
-                key={message.id} 
-                className={`flex ${message.isBot ? 'justify-start' : 'justify-end'} mb-3`}
-              >
-                <div className={`flex ${message.isBot ? 'items-start space-x-3' : 'flex-row-reverse items-start space-x-3 space-x-reverse'} max-w-xl w-full`}>
-                  {message.isBot && (
-                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <MessageCircle className="w-5 h-5 text-white" />
-                    </div>
-                  )}
-
-                  <div className={`flex flex-col ${message.isBot ? 'items-start' : 'items-end'} w-full`}>
-                    <div className={`inline-block p-4 rounded-xl shadow-lg hover:shadow-xl transition-shadow ${
-                        message.isBot 
-                          ? `${theme.colors.card}` 
-                          : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
-                      }`}>
-                        {message.audioUrl ? (
-                          <audio controls className="w-56 sm:w-96">
-                            <source src={message.audioUrl} />
-                            Your browser does not support the audio element.
-                          </audio>
-                        ) : (
-                          <p className={`chat-bubble text-sm ${message.isBot ? theme.colors.text : 'text-white'}`}>
-                            {message.text}
-                          </p>
-                        )}
-                      </div>
-                    <p className={`text-xs ${theme.colors.muted} mt-1 ${message.isBot ? 'text-left' : 'text-right'}`}>
-                      {formatTimestamp(message.timestamp)}
-                    </p>
-                  </div>
-
-                </div>
-              </div>
-            ))}
-            
-            {isLoading && (
-              <div className="flex items-start justify-start">
-                <div className={`${theme.colors.card} p-4 rounded-xl shadow-lg inline-block`}> <Loader className="w-5 h-5 animate-spin text-cyan-500" /> </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Input Area */}
-        <div className="chat-input-bar bg-white dark:bg-gray-900">
-          <div className="chat-input-inner">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={t('typeYourMessageHere')}
-              className={`flex-1 px-3 py-2 sm:px-4 sm:py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${theme.colors.card} resize-none text-sm sm:text-base`}
-              rows="1"
-              disabled={isLoading}
-              style={{ minHeight: '40px', maxHeight: '120px' }}
-              onInput={(e) => {
-                e.target.style.height = 'auto';
-                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-              }}
-            />
-
-            <button
-              aria-label={isRecording ? 'Stop recording' : 'Voice message'}
-              onClick={async () => {
-                try {
-                  if (isRecording) {
-                    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
-                  } else {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    streamRef.current = stream;
-                    const mr = new MediaRecorder(stream);
-                    mediaRecorderRef.current = mr;
-                    const chunks = [];
-                    mr.ondataavailable = e => chunks.push(e.data);
-                    mr.onstop = () => {
-                      const blob = new Blob(chunks, { type: 'audio/webm' });
-                      const url = URL.createObjectURL(blob);
-                      const audioMsg = { id: Date.now(), isBot: false, audioUrl: url, timestamp: new Date() };
-                      setMessages(prev => [...prev, audioMsg]);
-                      stream.getTracks().forEach(t => t.stop());
-                      streamRef.current = null;
-                      mediaRecorderRef.current = null;
-                      setIsRecording(false);
-                    };
-                    mr.start();
-                    setIsRecording(true);
-                  }
-                } catch (e) {
-                  console.error('Recording failed', e);
-                }
-              }}
-              className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl transition-all hover:shadow-lg ${isRecording ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-              title={isRecording ? 'Stop recording' : 'Voice message'}
-            >
-              <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'text-white' : 'text-blue-600'}`} />
-            </button>
-
-            <Button 
-              onClick={sendMessage}
-              disabled={!input.trim() || isLoading}
-              className="w-10 h-10 sm:w-12 sm:h-12 sm:px-6 flex-shrink-0 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              title="Send message"
-            >
-              {isLoading ? (
-                <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-              )}
-            </Button>
-          </div>
-        </div>
-        
-        {/* Wellness Tips Footer */}
-        <div className={`text-center mt-3 text-xs ${theme.colors.muted}`}>
-          {t('wellnessTip')}
-        </div>
-      </CardContent>
-    </Card>
   );
 
   const renderContent = () => {

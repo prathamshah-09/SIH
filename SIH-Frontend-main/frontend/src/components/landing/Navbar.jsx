@@ -107,7 +107,7 @@ const Navbar = ({ onLoginClick }) => {
             className={cn(
               "md:hidden p-2.5 rounded-xl transition-colors",
               isScrolled
-                ? "text-foreground hover:bg-muted"
+                ? "text-foreground "
                 : "text-white hover:bg-white/10"
             )}
           >

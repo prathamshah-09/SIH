@@ -584,8 +584,12 @@ const StudentDashboard = () => {
 
       <CardContent className="chat-panel">
         <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
+{/* <TabsList className={`grid grid-cols-3 w-full dark:!bg-slate-800`}>0 */}
+<TabsList 
+  className="grid grid-cols-3 w-full"
+  style={theme.currentTheme === 'dark' ? { backgroundColor: 'rgb(30 41 59)' } : {}}
+>
 
-          <TabsList className={`grid grid-cols-3 w-full ${theme.currentTheme === 'dark' ? '!bg-slate-800' : ''}`}>
             <TabsTrigger value="chat">💬 Chat</TabsTrigger>
             <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
             <TabsTrigger value="history">📜 History</TabsTrigger>
