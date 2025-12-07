@@ -345,7 +345,7 @@ const FormBuilder = () => {
         <Button 
           onClick={handlePublishForm}
           disabled={questions.length === 0 || !formTitle.trim()}
-          className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="animated"
         >
           Publish Form
         </Button>

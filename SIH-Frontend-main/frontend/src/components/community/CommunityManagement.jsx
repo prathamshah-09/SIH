@@ -310,7 +310,7 @@ const CommunityManagement = () => {
   // Chat View
   if (selectedCommunity) {
     return (
-      <div className={`flex flex-col w-full h-screen overflow-hidden ${theme.colors.background}`}>
+      <div className={`flex flex-col w-full overflow-hidden ${theme.colors.background}`} style={{ height: 'calc(100vh - 110px)' }}>
         {/* Header */}
         <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700">
           <div className="flex items-center justify-between">
@@ -409,12 +409,12 @@ const CommunityManagement = () => {
                             </span>
                           )}
                         </p>
-                        <div className={`px-4 py-2.5 rounded-lg break-words shadow-md hover:shadow-lg transition-shadow ${
+                        <div className={`px-4 py-4 rounded-2xl break-words shadow-md hover:shadow-lg transition-shadow ${
                           isCurrentUser
                             ? 'bg-blue-600 text-white rounded-br-none'
                             : 'bg-white text-gray-900 dark:bg-gray-700 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600'
                         }`}>
-                          <p className="text-sm leading-relaxed">{message.message_text}</p>
+                          <p className="text-base leading-relaxed">{message.message_text}</p>
                         </div>
                         <p className={`text-xs ${theme.colors.muted} mt-1 px-3 ${isCurrentUser ? 'text-right' : ''}`}>
                           {msgTime}

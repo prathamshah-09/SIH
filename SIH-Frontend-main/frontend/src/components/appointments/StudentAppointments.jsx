@@ -312,7 +312,7 @@ const StudentAppointments = () => {
                         isPast
                             ? 'text-gray-400 cursor-not-allowed'
                             : isSelected
-                                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold shadow-lg'
+                                ? 'bg-gradient-to-r from-purple-500 via-purple-600 to-violet-600 text-white font-bold shadow-lg animate-shimmer'
                                 : isToday
                                     ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold'
                                     : 'hover:bg-cyan-100'
@@ -335,24 +335,27 @@ const StudentAppointments = () => {
             <div className="flex space-x-2 bg-gray-200 p-1 rounded-full">
                 <Button 
                     onClick={() => setView('schedule')} 
+                    variant={view === 'schedule' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'schedule' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'schedule' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                 >
                     {t('bookAppointment')}
                 </Button>
                 <Button 
                     onClick={() => setView('appointments')} 
+                    variant={view === 'appointments' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'appointments' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'appointments' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                 >
                     {t('myAppointments')}
                 </Button>
                 <Button 
                     onClick={() => setView('goals')} 
+                    variant={view === 'goals' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'goals' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'goals' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                 >
                     {t('sessionGoals')}
@@ -392,7 +395,7 @@ const StudentAppointments = () => {
                                             <ChevronRightIcon className="w-5 h-5" />
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-7 gap-2 text-center font-medium text-gray-500 mb-2 text-xs">
+                                    <div className={`grid grid-cols-7 gap-2 text-center font-medium ${theme.colors.muted} mb-2 text-xs`}>
                                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                                             <div key={day}>{day}</div>
                                         ))}
@@ -488,7 +491,7 @@ const StudentAppointments = () => {
                                                     <ChevronRightIcon />
                                                 </Button>
                                             </div>
-                                            <div className="grid grid-cols-7 gap-2 text-center font-medium text-gray-500 mb-2 text-sm">
+                                            <div className={`grid grid-cols-7 gap-2 text-center font-medium ${theme.colors.muted} mb-2 text-sm`}>
                                                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                                                     <div key={day}>{day}</div>
                                                 ))}
@@ -505,10 +508,9 @@ const StudentAppointments = () => {
                                                 <Button
                                                     key={time}
                                                     onClick={() => { setSelectedTime(time); if (!selectedCounsellor) setSelectedCounsellor(counsellors[0]); }}
+                                                    variant={selectedTime === time ? 'animated' : 'outline'}
                                                     className={`p-3 transition-all duration-200 ${
-                                                        selectedTime === time
-                                                            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg'
-                                                            : 'bg-gray-100 text-gray-700 hover:bg-cyan-100 hover:text-cyan-700'
+                                                        selectedTime !== time ? 'hover:bg-cyan-50' : ''
                                                     }`}
                                                 >
                                                     {time}
@@ -534,34 +536,33 @@ const StudentAppointments = () => {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <button onClick={() => setMobileShowTimeSelection(false)} className="text-sm text-gray-500">{t('back')}</button>
+                                                    <button onClick={() => setMobileShowTimeSelection(false)} className={`text-sm ${theme.colors.muted}`}>{t('back')}</button>
                                                 </div>
                                             </div>
 
                                             <div>
                                                 <div className="mb-2">
-                                                    <div className="text-xs text-gray-400 mb-1">{t('selectAvailableTime')}</div>
+                                                    <div className={`text-xs ${theme.colors.muted} mb-1`}>{t('selectAvailableTime')}</div>
                                                     <div className="grid grid-cols-3 gap-2">
                                                         {selectedCounsellor.availableSlots.map((time) => (
-                                                            <button
+                                                            <Button
                                                                 key={time}
                                                                 onClick={() => { setSelectedTime(time); if (!selectedCounsellor) setSelectedCounsellor(counsellors[0]); }}
-                                                                className={`text-sm p-3 rounded-lg border transition-colors ${
-                                                                    selectedTime === time
-                                                                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-transparent'
-                                                                        : 'bg-gray-100 text-gray-700 border-gray-200'
+                                                                variant={selectedTime === time ? 'animated' : 'outline'}
+                                                                className={`text-sm p-3 transition-colors ${
+                                                                    selectedTime !== time ? 'hover:bg-cyan-50' : ''
                                                                 }`}
                                                             >
                                                                 {time}
-                                                            </button>
+                                                            </Button>
                                                         ))}
                                                     </div>
                                                 </div>
 
                                                 {selectedTime && (
                                                     <div className="flex items-center justify-between mt-2">
-                                                        <div className="text-sm text-gray-700">{t('selectedTime')}: <span className="font-medium">{selectedTime}</span></div>
-                                                        <div className="text-xs text-gray-400">{selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                                        <div className={`text-sm ${theme.colors.text}`}>{t('selectedTime')}: <span className="font-medium">{selectedTime}</span></div>
+                                                        <div className={`text-xs ${theme.colors.muted}`}>{selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                                     </div>
                                                 )}
 
@@ -603,7 +604,8 @@ const StudentAppointments = () => {
                                 <Button
                                     onClick={() => setStep(2)}
                                     disabled={!selectedTime}
-                                    className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                                    variant="animated"
+                                    className="disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {t('proceedToConfirmation')}
                                 </Button>
@@ -662,7 +664,7 @@ const StudentAppointments = () => {
                                 </Button>
                                 <Button
                                     onClick={handleBookAppointment}
-                                    className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                                    variant="animated"
                                 >
                                     <CheckCircleIcon className="w-5 h-5 mr-2" />
                                     {t('confirmBooking')}
@@ -694,7 +696,7 @@ const StudentAppointments = () => {
                                                                     <div className={`text-sm ${theme.colors.muted}`}>{app.time}</div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-xs text-gray-400">{app.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                                            <div className={`text-xs ${theme.colors.text}`}>{app.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                                         </div>
                                                     </button>
 
@@ -717,7 +719,7 @@ const StudentAppointments = () => {
 
                                                             {app.sessionNotes && (
                                                                 <div className="mt-2 p-3 bg-cyan-50 rounded-lg border border-cyan-200">
-                                                                    <p className="text-sm text-gray-700">{app.sessionNotes}</p>
+                                                                    <p className={`text-sm ${theme.colors.muted}`}>{app.sessionNotes}</p>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -727,7 +729,7 @@ const StudentAppointments = () => {
                                         </Card>
                                     )) : (
                                         <div className={`text-center py-12 bg-gradient-to-r ${theme.colors.secondary} rounded-2xl`}>
-                                            <CalendarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                            <CalendarIcon className={`w-16 h-16 ${theme.colors.muted} mx-auto mb-4`} />
                                             <p className={`${theme.colors.muted} text-lg`}>{t('noUpcomingAppointments')}</p>
                                             <Button
                                                 onClick={() => setView('schedule')}
@@ -781,7 +783,7 @@ const StudentAppointments = () => {
                                         </Card>
                                     )) : (
                                         <div className={`text-center py-12 bg-gradient-to-r ${theme.colors.secondary} rounded-2xl`}>
-                                            <CheckCircleIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                            <CheckCircleIcon className={`w-16 h-16 ${theme.colors.muted} mx-auto mb-4`} />
                                             <p className={`${theme.colors.muted} text-lg`}>{t('noPastSessionsYet')}</p>
                                         </div>
                                     )}
@@ -841,7 +843,7 @@ const StudentAppointments = () => {
                                 </div>
                             ) : (
                                 <div className={`text-center py-12 bg-gradient-to-r ${theme.colors.secondary} rounded-2xl`}>
-                                    <CheckCircleIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                    <CheckCircleIcon className={`w-16 h-16 ${theme.colors.muted} mx-auto mb-4`} />
                                     <p className={`${theme.colors.muted} text-lg`}>No completed sessions with action items yet</p>
                                 </div>
                             )}
@@ -868,10 +870,10 @@ const StudentAppointments = () => {
             {showCalendarModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/40" onClick={() => setShowCalendarModal(false)} />
-                    <div className={`relative bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md w-full z-60`}> 
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className={`font-bold ${theme.colors.text}`}>{t('bookAppointment')}</h3>
-                            <button onClick={() => setShowCalendarModal(false)} className="p-2">Close</button>
+                    <div className={`relative bg-white rounded-xl p-6 max-w-md w-full z-60 shadow-2xl border border-gray-100`}> 
+                        <div className="flex items-center justify-between mb-6 border-b pb-4">
+                            <h3 className={`font-bold text-lg ${theme.colors.text}`}>{t('chooseYourCounselor')}</h3>
+                            <button onClick={() => setShowCalendarModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">✕</button>
                         </div>
                         <div className="grid grid-cols-7 gap-2 text-center">{renderCalendar()}</div>
                     </div>

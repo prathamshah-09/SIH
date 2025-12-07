@@ -671,9 +671,9 @@ const CounsellorDashboard = () => {
       ].map(({ key, icon: Icon, label }) => (
         <Button
           key={key}
-          variant={activeTab === key ? 'default' : 'ghost'}
-          className={`w-full justify-start transition-all duration-200 hover:scale-105 ${activeTab === key
-              ? `bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg font-semibold`
+          variant={activeTab === key ? 'animated' : 'ghost'}
+          className={`w-full justify-start transition-all duration-200 ${activeTab === key
+              ? ``
               : `hover:bg-gradient-to-r hover:from-cyan-50 hover:to-blue-50 ${theme.colors.text} hover:text-cyan-700`
             }`}
           onClick={() => setActiveTab(key)}

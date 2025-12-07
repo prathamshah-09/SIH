@@ -267,7 +267,7 @@ const JournalWithTheme = () => {
           className={`
             text-center p-2 sm:p-3 rounded-lg cursor-pointer transition-all duration-300 relative text-sm
             ${isSelected
-            ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold shadow-lg'
+            ? 'bg-purple-600 text-white font-bold shadow-lg'
             : isTodayDate
               ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold hover:shadow-md'
               : isFuture
@@ -581,29 +581,29 @@ const JournalWithTheme = () => {
           {isPastDate() && !getEntriesForDate().daily && !getEntriesForDate().weekly && !getEntriesForDate().worry && (
             <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border-l-4 border-l-gray-400">
               <p className="text-sm text-gray-600">
-                <strong>✨ No entries found</strong> for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. Start journaling today!
+                <strong>No entries found</strong> for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. Start journaling today!
               </p>
             </div>
           )}
           
           {/* Daily Check-In */}
-          <Card className={`${theme.colors.card} border-l-4 border-l-yellow-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
+          <Card className={`${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-blue-50'} border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
             <CardHeader
-              className="pb-4 cursor-pointer hover:bg-gray-50 transition-colors"
+              className={`pb-4 cursor-pointer ${theme.currentTheme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-50'} transition-colors`}
               onClick={() => setExpandedJournal(expandedJournal === 'daily' ? null : 'daily')}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-lg bg-gradient-to-br from-yellow-100 to-orange-100">
+                  {/* <div className="p-3 rounded-lg bg-gradient-to-br from-yellow-100 to-orange-100">
                     <Sun className="w-6 h-6 text-gray-700" />
-                  </div>
+                  </div> */}
                   <div>
-                    <CardTitle className="text-lg font-bold">Daily Check-In</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">{isPastDate() ? 'Past Entry' : 'Today\'s Reflection'}</p>
+                    <CardTitle className={`text-lg font-bold ${theme.currentTheme === 'dark' ? 'text-white' : ''}`}>Daily Check-In</CardTitle>
+                    <p className={`text-sm ${theme.currentTheme === 'dark' ? 'text-slate-300' : 'text-gray-600'} mt-1`}>{isPastDate() ? 'Past Entry' : 'Today\'s Reflection'}</p>
                   </div>
                 </div>
                 <ChevronDown
-                  className={`w-6 h-6 transition-transform ${expandedJournal === 'daily' ? 'rotate-180' : ''}`}
+                  className={`w-6 h-6 transition-transform ${theme.currentTheme === 'dark' ? 'text-white' : ''} ${expandedJournal === 'daily' ? 'rotate-180' : ''}`}
                 />
               </div>
             </CardHeader>
@@ -743,7 +743,8 @@ const JournalWithTheme = () => {
                           daily_mood: entry.mood || ''
                         });
                       }}
-                      className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-base py-3 mt-4"
+                      variant="animated"
+                      className="w-full text-base py-3"
                     >
                       Edit
                     </Button>
@@ -755,12 +756,12 @@ const JournalWithTheme = () => {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Heart className="w-5 h-5 mr-2 text-pink-500" />
+                          {/* <Heart className="w-5 h-5 mr-2 text-pink-500" /> */}
                           Positive Moments of Today
                         </label>
                         <button
                           onClick={() => addDailyBullet('liked')}
-                          className="text-pink-500 hover:text-pink-700 text-xl font-bold hover:scale-125 transition-transform"
+                          className="text-blue-500 hover:text-blue-700 text-xl font-bold hover:scale-125 transition-transform"
                           title="Add item"
                         >
                           +
@@ -774,7 +775,7 @@ const JournalWithTheme = () => {
                               value={item}
                               onChange={(e) => handleDailyBulletChange('liked', index, e.target.value)}
                               placeholder="Write one thing..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 text-base"
+                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"
                             />
                           </div>
                         ))}
@@ -785,12 +786,12 @@ const JournalWithTheme = () => {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Frown className="w-5 h-5 mr-2 text-orange-500" />
+                          {/* <Frown className="w-5 h-5 mr-2 text-orange-500" /> */}
                           Challenges I Faced Today
                         </label>
                         <button
                           onClick={() => addDailyBullet('disliked')}
-                          className="text-orange-500 hover:text-orange-700 text-xl font-bold hover:scale-125 transition-transform"
+                          className="text-blue-500 hover:text-blue-700 text-xl font-bold hover:scale-125 transition-transform"
                           title="Add item"
                         >
                           +
@@ -804,7 +805,7 @@ const JournalWithTheme = () => {
                               value={item}
                               onChange={(e) => handleDailyBulletChange('disliked', index, e.target.value)}
                               placeholder="Write one thing..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-base"
+                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"
                             />
                           </div>
                         ))}
@@ -814,14 +815,14 @@ const JournalWithTheme = () => {
                     {/* Today's Reflection */}
                     <div className="space-y-3">
                       <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
+                        {/* <Sparkles className="w-5 h-5 mr-2 text-purple-500" /> */}
                         Today's Reflection
                       </label>
                       <Textarea
                         value={tempEntries.daily_reflection || dailyBullets.reflection.join('\n') || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, daily_reflection: e.target.value })}
                         placeholder="Write your reflections about today..."
-                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base"
+                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"
                       />
                     </div>
 
@@ -829,7 +830,7 @@ const JournalWithTheme = () => {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Plus className="w-5 h-5 mr-2 text-blue-500" />
+                          {/* <Plus className="w-5 h-5 mr-2 text-blue-500" /> */}
                           Intentions for Tomorrow
                         </label>
                         <button
@@ -858,14 +859,14 @@ const JournalWithTheme = () => {
                     {/* Feelings Space */}
                     <div className="space-y-3">
                       <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Frown className="w-5 h-5 mr-2 text-red-500" />
+                        {/* <Frown className="w-5 h-5 mr-2 text-red-500" /> */}
                         Feelings Space
                       </label>
                       <Textarea
                         value={tempEntries.daily_mood || dailyBullets.mood.join('\n') || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, daily_mood: e.target.value })}
                         placeholder="Share your feelings and emotions..."
-                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-base"
+                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"
                       />
                     </div>
 
@@ -908,7 +909,8 @@ const JournalWithTheme = () => {
                           }
                         }}
                         disabled={savingDaily}
-                        className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-base py-3"
+                        variant="animated"
+                        className="w-full text-base py-3"
                       >
                         {savingDaily ? (
                           <>
@@ -930,23 +932,23 @@ const JournalWithTheme = () => {
           </Card>
 
           {/* Weekly Check-In */}
-          <Card className={`${theme.colors.card} border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
+          <Card className={`${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-blue-50'} border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
             <CardHeader
-              className="pb-4 cursor-pointer hover:bg-gray-50 transition-colors"
+              className={`pb-4 cursor-pointer ${theme.currentTheme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-50'} transition-colors`}
               onClick={() => setExpandedJournal(expandedJournal === 'weekly' ? null : 'weekly')}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-lg bg-gradient-to-br from-green-100 to-teal-100">
+                  {/* <div className="p-3 rounded-lg bg-gradient-to-br from-green-100 to-teal-100">
                     <Calendar className="w-6 h-6 text-gray-700" />
-                  </div>
+                  </div> */}
                   <div>
-                    <CardTitle className="text-lg font-bold">Weekly Check-In</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">Week's Growth</p>
+                    <CardTitle className={`text-lg font-bold ${theme.currentTheme === 'dark' ? 'text-white' : ''}`}>Weekly Check-In</CardTitle>
+                    <p className={`text-sm ${theme.currentTheme === 'dark' ? 'text-slate-300' : 'text-gray-600'} mt-1`}>Week's Growth</p>
                   </div>
                 </div>
                 <ChevronDown
-                  className={`w-6 h-6 transition-transform ${expandedJournal === 'weekly' ? 'rotate-180' : ''}`}
+                  className={`w-6 h-6 transition-transform ${theme.currentTheme === 'dark' ? 'text-white' : ''} ${expandedJournal === 'weekly' ? 'rotate-180' : ''}`}
                 />
               </div>
             </CardHeader>
@@ -1010,7 +1012,7 @@ const JournalWithTheme = () => {
                   <>
                     <div className="space-y-2">
                       <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Calendar className="w-5 h-5 mr-2 text-green-500" />
+                        {/* <Calendar className="w-5 h-5 mr-2 text-green-500" /> */}
                         How was your week?
                       </label>
                       <div className="p-3 bg-green-50 rounded-lg border border-green-200 min-h-[80px]">
@@ -1020,7 +1022,7 @@ const JournalWithTheme = () => {
 
                     <div className="space-y-2">
                       <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Plus className="w-5 h-5 mr-2 text-teal-500" />
+                        {/* <Plus className="w-5 h-5 mr-2 text-teal-500" /> */}
                         Next Week Goals
                       </label>
                       <div className="p-3 bg-teal-50 rounded-lg border border-teal-200 min-h-[80px]">
@@ -1030,7 +1032,7 @@ const JournalWithTheme = () => {
 
                     <div className="space-y-2">
                       <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Heart className="w-5 h-5 mr-2 text-pink-500" />
+                        {/* <Heart className="w-5 h-5 mr-2 text-pink-500" /> */}
                         Self-Care Score
                       </label>
                       <div className="p-3 bg-pink-50 rounded-lg border border-pink-200 min-h-[60px] flex items-center">
@@ -1040,7 +1042,7 @@ const JournalWithTheme = () => {
 
                     <div className="space-y-2">
                       <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
+                        {/* <Sparkles className="w-5 h-5 mr-2 text-yellow-500" /> */}
                         Self-Care Reflection
                       </label>
                       <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 min-h-[80px]">
@@ -1062,7 +1064,8 @@ const JournalWithTheme = () => {
                           weekly_selfCareReflection: entry.selfCareReflection || ''
                         });
                       }}
-                      className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-base py-3 mt-4"
+                      variant="animated"
+                      className="w-full text-base py-3 mt-4"
                     >
                       Edit
                     </Button>
@@ -1080,7 +1083,7 @@ const JournalWithTheme = () => {
                         value={tempEntries.weekly_review || getEntry('weekly').review || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, weekly_review: e.target.value })}
                         placeholder="Summarize your week. What went well? What was challenging?"
-                        className="w-full min-h-[150px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-base"
+                        className="w-full min-h-[150px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-blue-50 text-base"
                       />
                     </div>
 
@@ -1093,7 +1096,7 @@ const JournalWithTheme = () => {
                         </label>
                         <button
                           onClick={() => addWeeklyBullet('nextGoals')}
-                          className="text-teal-500 hover:text-teal-700 text-xl font-bold hover:scale-125 transition-transform"
+                          className="text-blue-500 hover:text-blue-700 text-xl font-bold hover:scale-125 transition-transform"
                           title="Add item"
                         >
                           +
@@ -1107,7 +1110,7 @@ const JournalWithTheme = () => {
                               value={item}
                               onChange={(e) => handleWeeklyBulletChange('nextGoals', index, e.target.value)}
                               placeholder="Write one goal..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-base"
+                              className={`flex-1 p-2 border ${theme.currentTheme === 'dark' ? 'bg-slate-700 text-white border-slate-600 focus:ring-slate-400' : 'bg-white text-base border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500`}
                             />
                           </div>
                         ))}
@@ -1143,7 +1146,7 @@ const JournalWithTheme = () => {
                         value={tempEntries.weekly_selfCareReflection || getEntry('weekly').selfCareReflection || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, weekly_selfCareReflection: e.target.value })}
                         placeholder="What self-care activities did you do? How did they make you feel?"
-                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 text-base"
+                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-blue-50 text-base"
                       />
                     </div>
 
@@ -1195,7 +1198,8 @@ const JournalWithTheme = () => {
                           }
                         }}
                         disabled={savingWeekly}
-                        className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-base py-3"
+                        variant="animated"
+                        className="w-full text-base py-3"
                       >
                         {savingWeekly ? (
                           <>
@@ -1217,23 +1221,23 @@ const JournalWithTheme = () => {
           </Card>
 
           {/* Worries & Negative Feelings */}
-          <Card className={`${theme.colors.card} border-l-4 border-l-purple-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
+          <Card className={`${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-blue-50'} border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
             <CardHeader
-              className="pb-4 cursor-pointer hover:bg-gray-50 transition-colors"
+              className={`pb-4 cursor-pointer ${theme.currentTheme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-50'} transition-colors`}
               onClick={() => setExpandedJournal(expandedJournal === 'worry' ? null : 'worry')}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100">
+                  {/* <div className="p-3 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100">
                     <Frown className="w-6 h-6 text-gray-700" />
-                  </div>
+                  </div> */}
                   <div>
-                    <CardTitle className="text-lg font-bold">Worries & Negative Feelings</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">Safe Space</p>
+                    <CardTitle className={`text-lg font-bold ${theme.currentTheme === 'dark' ? 'text-white' : ''}`}>Worries & Negative Feelings</CardTitle>
+                    <p className={`text-sm ${theme.currentTheme === 'dark' ? 'text-slate-300' : 'text-gray-600'} mt-1`}>Safe Space</p>
                   </div>
                 </div>
                 <ChevronDown
-                  className={`w-6 h-6 transition-transform ${expandedJournal === 'worry' ? 'rotate-180' : ''}`}
+                  className={`w-6 h-6 transition-transform ${theme.currentTheme === 'dark' ? 'text-white' : ''} ${expandedJournal === 'worry' ? 'rotate-180' : ''}`}
                 />
               </div>
             </CardHeader>
@@ -1250,7 +1254,7 @@ const JournalWithTheme = () => {
                     {getEntry('worry').negativeThought && (
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Frown className="w-5 h-5 mr-2 text-red-500" />
+                          {/* <Frown className="w-5 h-5 mr-2 text-red-500" /> */}
                           Negative Thought
                         </label>
                         <div className="p-3 bg-red-50 rounded-lg border border-red-200">
@@ -1261,7 +1265,7 @@ const JournalWithTheme = () => {
                     {getEntry('worry').positiveReframe && (
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Heart className="w-5 h-5 mr-2 text-green-500" />
+                          {/* <Heart className="w-5 h-5 mr-2 text-green-500" /> */}
                           Your Positive Reframe
                         </label>
                         <div className="p-3 bg-green-50 rounded-lg border border-green-200">
@@ -1272,7 +1276,7 @@ const JournalWithTheme = () => {
                     {getEntry('worry').geminiReframe && (
                       <div className="space-y-2">
                         <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Sparkles className="w-5 h-5 mr-2 text-blue-500" />
+                          {/* <Sparkles className="w-5 h-5 mr-2 text-blue-500" /> */}
                           AI's Positive Perspective
                         </label>
                         <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
@@ -1287,7 +1291,7 @@ const JournalWithTheme = () => {
                     {/* Negative Thought Field */}
                     <div className="space-y-3">
                       <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Frown className="w-5 h-5 mr-2 text-red-500" />
+                        {/* <Frown className="w-5 h-5 mr-2 text-red-500" /> */}
                         Negative Thought
                       </label>
                       <Textarea
@@ -1301,7 +1305,7 @@ const JournalWithTheme = () => {
                     {/* Your Positive Reframe Field */}
                     <div className="space-y-3">
                       <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Heart className="w-5 h-5 mr-2 text-green-500" />
+                        {/* <Heart className="w-5 h-5 mr-2 text-green-500" /> */}
                         Your Positive Reframe
                       </label>
                       <Textarea
@@ -1317,7 +1321,8 @@ const JournalWithTheme = () => {
                       <Button
                         onClick={callBackendAIReframe}
                         disabled={loadingGemini || !tempEntries.worry_negative?.trim()}
-                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-base py-3"
+                        variant="animated"
+                        className="w-full text-base py-3"
                       >
                         {loadingGemini ? (
                           <>
@@ -1326,14 +1331,14 @@ const JournalWithTheme = () => {
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-5 h-5 mr-2" />
+                            {/* <Sparkles className="w-5 h-5 mr-2" /> */}
                             Get AI Perspective
                           </>
                         )}
                       </Button>
                       {tempEntries.worry_ai && (
                         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                          <p className="text-xs font-bold text-blue-900 mb-2">✨ AI's Positive Perspective:</p>
+                          <p className="text-xs font-bold text-blue-900 mb-2">AI's Positive Perspective:</p>
                           <p className="text-base text-gray-800">{tempEntries.worry_ai}</p>
                         </div>
                       )}
@@ -1387,7 +1392,8 @@ const JournalWithTheme = () => {
                           }
                         }}
                         disabled={savingWorry}
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-base py-3"
+                        variant="animated"
+                        className="w-full text-base py-3"
                       >
                         {savingWorry ? (
                           <>

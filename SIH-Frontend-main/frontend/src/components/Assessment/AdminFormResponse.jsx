@@ -160,11 +160,11 @@ const AdminFormResponse = ({ form, onSubmission, onBack }) => {
           <Button 
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:shadow-lg"
+            variant="animated"
           >
             {isSubmitting ? (
               <div className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <Loader className="w-4 h-4 mr-2 animate-spin" />
                 Submitting...
               </div>
             ) : (

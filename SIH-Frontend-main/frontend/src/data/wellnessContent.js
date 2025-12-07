@@ -17,25 +17,25 @@ export const wellnessProblems = {
     id: 'burnout',
     icon: '😫',
     color: 'text-orange-500',
-    tools: [/*'audios',*/ 'videos', 'books', 'pomodoroTimer', 'eisenhowerMatrix']
+    tools: [/*'audios',*/ 'videos', 'books', 'pomodoroTimer', 'eisenhowerMatrix', 'journaling']
   },
   sleepDisorders: {
     id: 'sleepDisorders',
     icon: '😴',
     color: 'text-indigo-500',
-    tools: [/*'audios',*/ 'videos', 'books']
+    tools: [/*'audios',*/ 'videos', 'books', 'journaling']
   },
   academicStress: {
     id: 'academicStress',
     icon: '📚',
     color: 'text-green-500',
-    tools: [/*'audios',*/ 'videos', 'books', 'pomodoroTimer', 'eisenhowerMatrix']
+    tools: [/*'audios',*/ 'videos', 'books', 'pomodoroTimer', 'eisenhowerMatrix', 'journaling']
   },
   socialIsolation: {
     id: 'socialIsolation',
     icon: '🤝',
     color: 'text-pink-500',
-    tools: [/*'audios',*/ 'videos', 'books']
+    tools: [/*'audios',*/ 'videos', 'books', 'journaling']
   }
 };
 
