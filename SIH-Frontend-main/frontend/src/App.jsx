@@ -9,7 +9,6 @@ import { AccessibilityProvider, useAccessibility } from "@context/AccessibilityC
 import { Toaster } from "@components/ui/toaster";
 import AccessibilityToolbar from "@components/shared/AccessibilityToolbar";
 import SkipToMain from "@components/shared/SkipToMain";
-import Login from "@components/auth/Login";
 import StudentDashboard from "@components/dashboard/StudentDashboard";
 import CounsellorDashboard from "@components/dashboard/CounsellorDashboard";
 import AdminDashboard from "@components/dashboard/AdminDashboard";
@@ -33,11 +32,11 @@ const RoutePathPersistence = () => {
   useEffect(() => {
     try {
       const last = localStorage.getItem('last_path');
-      // Only restore saved path when the app is at the root/login on mount.
+      // Only restore saved path when the app is at the root on mount.
       // This prevents forcing navigation away when the user refreshes a specific page.
       if (last && user) {
-        const isAtAuthEntry = location.pathname === '/' || location.pathname.startsWith('/login');
-        if (isAtAuthEntry && last !== location.pathname && !last.startsWith('/login')) {
+        const isAtAuthEntry = location.pathname === '/';
+        if (isAtAuthEntry && last !== location.pathname && !last.startsWith('/')) {
           navigate(last, { replace: true });
         }
       }
@@ -76,14 +75,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
   
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
   
   if (allowedRoles) {
     const allowed = allowedRoles.map(r => r.toLowerCase());
     const role = (user?.role || '').toLowerCase();
     if (!allowed.includes(role)) {
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/" replace />;
     }
   }
   
@@ -127,7 +126,6 @@ function App() {
                     <Routes>
                       {/* Public Routes */}
                       <Route path="/landing" element={<LandingPage />} />
-                      <Route path="/login" element={<Login />} />
                       
                       {/* Protected Routes */}
                       <Route 

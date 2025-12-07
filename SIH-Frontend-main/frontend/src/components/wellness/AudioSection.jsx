@@ -458,12 +458,20 @@ const AudioSection = () => {
 
         <div className="mt-2 flex items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            <Badge className="bg-gradient-to-r from-green-500 to-teal-500 text-white">
-              {`${getPlayingCount()} ${t('playing')}`}
-            </Badge>
+           <Badge
+  className={`${
+    theme.currentTheme === 'dark'
+      ? ' bg-slate-800 text-white'
+      : 'bg-blue-500 text-white'
+  }`}
+>
+
+{`${getPlayingCount()} ${t('playing')}`}
+</Badge>
+
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className={`flex items-center space-x-2 ${theme.colors.text}`}>
             <Button
               onClick={stopAll}
               variant="outline"
@@ -487,7 +495,7 @@ const AudioSection = () => {
           return (
             <Card 
               key={audio.id} 
-              className={`${theme.colors.card} hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border-0 group overflow-hidden ${
+              className={`${theme.colors.card} ${theme.currentTheme === 'dark' ? 'bg-slate-800' : ''} hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border-0 group overflow-hidden ${
                 currentState.isPlaying ? 'ring-2 ring-green-400 shadow-green-100' : ''
               }`}
             >
@@ -512,14 +520,25 @@ const AudioSection = () => {
               </div> */}
 
               <CardContent className="p-5">
-                {/* Single horizontal row per audio: title | slider | tiny play/pause */}
-                <div className="w-full flex items-center space-x-3">
-                  <div className="flex-0 min-w-[40%]">
-                    <h3 className={`font-semibold text-sm ${theme.colors.text} truncate`}>{t(`audio_${audio.id.replace(/-/g, '_')}_title`)}</h3>
+                {/* Mobile: title and play button same line | Tablet/Laptop: title, volume, play/pause in one line */}
+                <div className="w-full space-y-3 md:space-y-0 md:flex md:items-center md:gap-4">
+                  {/* Title and Play Button - Same line on mobile, title only on md+ */}
+                  <div className="flex items-center justify-between md:flex-initial md:min-w-[25%]">
+                    <h3 className={`font-semibold text-sm ${theme.colors.text} truncate flex-1 md:flex-none`}>{t(`audio_${audio.id.replace(/-/g, '_')}_title`)}</h3>
+                    <Button
+                      onClick={() => togglePlay(audio.id)}
+                      aria-label={currentState.isPlaying ? 'Pause' : 'Play'}
+                      variant={currentState.isPlaying ? 'animated' : 'animated'}
+                      className="sm:w-9 sm:h-9 w-8 h-8 p-0 flex items-center justify-center flex-shrink-0 ml-2 md:hidden"
+                      title={currentState.isPlaying ? t('pause') || 'Pause' : t('play') || 'Play'}
+                    >
+                      {currentState.isPlaying ? <Pause className="sm:w-4 sm:h-4 w-3 h-3" /> : <Play className="sm:w-4 sm:h-4 w-3 h-3" />}
+                    </Button>
                   </div>
 
-                  <div className="flex-1 flex items-center space-x-3">
-                    <span className={`text-xs ${theme.colors.muted} w-10 text-right`}>{currentState.volume || 0}%</span>
+                  {/* Volume Control - Full width on mobile, flex-1 on md+ */}
+                  <div className="flex items-center space-x-2 md:flex-1">
+                    <span className={`text-xs ${theme.colors.muted} w-8`}>{currentState.volume || 0}%</span>
                     <div className="flex-1">
                       <Slider
                         value={[currentState.volume || 0]}
@@ -530,27 +549,28 @@ const AudioSection = () => {
                         aria-label={`${t('audio_' + audio.id.replace(/-/g, '_') + '_title')} volume`}
                       />
                     </div>
-                  </div>
-
-                  <div className="flex-0 flex items-center space-x-2">
-                    <button
+                    <Button
                       onClick={() => toggleMute(audio.id)}
                       aria-label={currentState.volume > 0 ? 'Mute' : 'Unmute'}
-                      className="p-2 rounded-md bg-gray-100 hover:bg-gray-200"
+                      variant="outline"
+                      size="sm"
+                      className="p-1 h-8 w-8 flex items-center justify-center flex-shrink-0"
                       title={currentState.volume > 0 ? t('mute') || 'Mute' : t('unmute') || 'Unmute'}
                     >
-                      {currentState.volume > 0 ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                    </button>
-
-                    <button
-                      onClick={() => togglePlay(audio.id)}
-                      aria-label={currentState.isPlaying ? 'Pause' : 'Play'}
-                      className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors focus:outline-none ${currentState.isPlaying ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'}`}
-                      title={currentState.isPlaying ? t('pause') || 'Pause' : t('play') || 'Play'}
-                    >
-                      {currentState.isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </button>
+                      {currentState.volume > 0 ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                    </Button>
                   </div>
+
+                  {/* Play/Pause Button - Hidden on mobile, visible on md+ */}
+                  <Button
+                    onClick={() => togglePlay(audio.id)}
+                    aria-label={currentState.isPlaying ? 'Pause' : 'Play'}
+                    variant={currentState.isPlaying ? 'animated' : 'animated'}
+                    className="sm:w-9 sm:h-9 w-8 h-8 p-0 flex items-center justify-center flex-shrink-0 hidden md:flex"
+                    title={currentState.isPlaying ? t('pause') || 'Pause' : t('play') || 'Play'}
+                  >
+                    {currentState.isPlaying ? <Pause className="sm:w-4 sm:h-4 w-3 h-3" /> : <Play className="sm:w-4 sm:h-4 w-3 h-3" />}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

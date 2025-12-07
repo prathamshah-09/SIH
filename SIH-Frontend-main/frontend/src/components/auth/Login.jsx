@@ -13,7 +13,7 @@ import ThemeLanguageSelector from '@components/shared/ThemeLanguageSelector';
 import AnimatedBackground from '@components/shared/AnimatedBackground';
 import SensEaseLogo from '@components/shared/SensEaseLogo';
 
-const Login = () => {
+const Login = ({ onLoginSuccess, isModal = false }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,21 +31,44 @@ const Login = () => {
     try {
       const result = await login(email, password);
       if (result.success) {
-        // Navigate based on user role
-        const role = (result.user?.role || '').toLowerCase();
-        switch (role) {
-          case 'student':
-            navigate('/student-dashboard');
-            break;
-          case 'counsellor':
-            navigate('/counsellor-dashboard');
-            break;
-          case 'admin':
-          case 'superadmin':
-            navigate('/admin-dashboard');
-            break;
-          default:
-            setError('Unknown role. Please contact support.');
+        // Call the success callback if provided (modal mode)
+        if (onLoginSuccess && isModal) {
+          onLoginSuccess();
+          // Navigate after a short delay to allow modal to close
+          setTimeout(() => {
+            const role = (result.user?.role || '').toLowerCase();
+            switch (role) {
+              case 'student':
+                navigate('/student-dashboard');
+                break;
+              case 'counsellor':
+                navigate('/counsellor-dashboard');
+                break;
+              case 'admin':
+              case 'superadmin':
+                navigate('/admin-dashboard');
+                break;
+              default:
+                setError('Unknown role. Please contact support.');
+            }
+          }, 300);
+        } else {
+          // Navigate based on user role (normal mode)
+          const role = (result.user?.role || '').toLowerCase();
+          switch (role) {
+            case 'student':
+              navigate('/student-dashboard');
+              break;
+            case 'counsellor':
+              navigate('/counsellor-dashboard');
+              break;
+            case 'admin':
+            case 'superadmin':
+              navigate('/admin-dashboard');
+              break;
+            default:
+              setError('Unknown role. Please contact support.');
+          }
         }
       } else {
         setError(result.error || 'Invalid email or password');
@@ -72,8 +95,140 @@ const Login = () => {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${theme.colors.background} flex items-center justify-center p-4 relative ${isRTL ? 'rtl' : 'ltr'}`}>
-      <AnimatedBackground theme={theme} />
+    <>
+      {isModal ? (
+        // Modal mode - just show the card
+        <Card className={`w-full ${theme.colors.card} border-0 shadow-2xl transform transition-transform duration-300`}>
+          <CardHeader className="text-center space-y-6 pb-8">
+            {/* Enhanced Logo Section */}
+            <div className="flex justify-center">
+              <SensEaseLogo 
+                className="w-16 h-16 sm:w-24 sm:h-24" 
+                showText={false}
+              />
+            </div>
+            
+            <div className="space-y-3">
+              <CardTitle className={`text-3xl sm:text-4xl font-bold bg-gradient-to-r ${theme.colors.primary} bg-clip-text text-transparent`}>
+                {t('sensEase')}
+              </CardTitle>
+              <CardDescription className={`${theme.colors.muted} text-base sm:text-lg font-medium`}>
+                {t('mentalHealthSupport')}
+              </CardDescription>
+              <p className={`text-sm ${theme.colors.muted} opacity-80`}>
+                {t('tagline')}
+              </p>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                <Label htmlFor="email" className={`text-sm font-medium ${theme.colors.text}`}>
+                  {t('email')}
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('email')}
+                  required
+                  className="transition-all duration-300 focus:ring-2 focus:ring-blue-500/20 hover:shadow-md h-11 text-base"
+                />
+              </div>
+              
+                <div className="space-y-2">
+                <Label htmlFor="password" className={`text-sm font-medium ${theme.colors.text}`}>
+                  {t('password')}
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t('password')}
+                  required
+                  className="transition-all duration-300 focus:ring-2 focus:ring-blue-500/20 hover:shadow-md h-11 text-base"
+                />
+              </div>
+              
+              {error && (
+                <Alert className="border-red-200 bg-red-50 animate-shake">
+                  <AlertDescription className="text-red-700">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <Button 
+                type="submit" 
+                variant="animated"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    {t('signIn')}...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="w-5 h-5 mr-2" />
+                    {t('signIn')}
+                  </>
+                )}
+              </Button>
+            </form>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className={`px-3 ${theme.colors.card} ${theme.colors.muted}`}>
+                  {t('demoAccounts')}
+                </span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleDemoLogin('student')}
+                className="flex flex-col items-center p-3 h-auto hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 hover:scale-105 space-y-1"
+              >
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                  <UserCheck className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium">{t('student')}</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleDemoLogin('counsellor')}
+                className="flex flex-col items-center p-3 h-auto hover:bg-green-50 hover:border-green-200 transition-all duration-200 hover:scale-105 space-y-1"
+              >
+                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                  <Heart className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium">{t('counsellor')}</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleDemoLogin('admin')}
+                className="flex flex-col items-center p-3 h-auto hover:bg-purple-50 hover:border-purple-200 transition-all duration-200 hover:scale-105 space-y-1"
+              >
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-violet-500 rounded-full flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium">{t('admin')}</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        // Full page mode - show everything
+        <div className={`min-h-screen bg-gradient-to-br ${theme.colors.background} flex items-center justify-center p-4 relative ${isRTL ? 'rtl' : 'ltr'}`}>
+          <AnimatedBackground theme={theme} />
       
       {/* Theme and Language selector in top corner */}
       <div className={`absolute top-4 ${isRTL ? 'left-4' : 'right-4'} z-20`}>
@@ -163,7 +318,7 @@ const Login = () => {
             
             <Button 
               type="submit" 
-              className={`w-full bg-gradient-to-r ${theme.colors.primary} hover:shadow-xl text-white font-semibold py-3 text-base transition-all duration-300 transform hover:scale-[1.02] hover:-translate-y-1`}
+              variant="animated"
               disabled={loading}
             >
               {loading ? (
@@ -243,7 +398,9 @@ const Login = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -378,24 +378,27 @@ const CounsellorAppointments = () => {
             <div className="flex space-x-2 bg-gray-200 p-1 rounded-full">
                 <Button 
                     onClick={() => setView('requests')} 
+                    variant={view === 'requests' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'requests' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'requests' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                     >
                     {t('appointmentRequestsTitle')}
                 </Button>
                 <Button 
                     onClick={() => setView('sessions')} 
+                    variant={view === 'sessions' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'sessions' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'sessions' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                 >
                     {t('sessions') || 'Sessions'}
                 </Button>
                 <Button 
                     onClick={() => setView('availability')} 
+                    variant={view === 'availability' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'availability' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'availability' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                     >
                     {t('manageAvailability')}

@@ -11,7 +11,7 @@ const navLinks = [
   { label: "About Us", href: "#about" },
 ];
 
-const Navbar = () => {
+const Navbar = ({ onLoginClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -92,18 +92,13 @@ const Navbar = () => {
 
           {/* Login Button */}
           <div className="hidden md:block">
-            <Link to="/login">
-              <Button
-                className={cn(
-                  "font-semibold px-6 rounded-xl transition-all duration-300",
-                  isScrolled 
-                    ? "bg-gradient-to-r from-primary to-ocean-glow text-white shadow-button hover:shadow-soft hover:scale-105" 
-                    : "bg-white text-primary hover:bg-white/90 shadow-lg"
-                )}
-              >
-                Login
-              </Button>
-            </Link>
+            <Button
+              onClick={onLoginClick}
+              variant="animated"
+              className="px-6 rounded-lg"
+            >
+              Login
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -138,11 +133,11 @@ const Navbar = () => {
               {link.label}
             </button>
           ))}
-          <Link to="/login" className="block pt-2">
-            <Button className="w-full font-semibold bg-gradient-to-r from-primary to-ocean-glow text-white rounded-xl">
+          <button onClick={onLoginClick} className="block pt-2 w-full">
+            <Button variant="animated" className="w-full rounded-lg">
               Login
             </Button>
-          </Link>
+          </button>
         </div>
       </div>
     </nav>

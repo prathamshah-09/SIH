@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@context/ThemeContext';
 import { useLanguage } from '@context/LanguageContext';
 import { Button } from '../ui/button';
@@ -11,6 +12,7 @@ import ProfileDropdown from '@components/shared/ProfileDropdown';
 
 const DashboardLayout = ({ children, sidebarContent }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const { theme } = useTheme();
   const { t, isRTL } = useLanguage();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -19,6 +21,7 @@ const DashboardLayout = ({ children, sidebarContent }) => {
 
   const handleLogout = () => {
     logout();
+    navigate('/');
   };
 
   const getGreeting = () => {

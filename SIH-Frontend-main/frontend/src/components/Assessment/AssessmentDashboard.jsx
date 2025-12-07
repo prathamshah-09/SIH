@@ -137,7 +137,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button 
             size="sm"
-            className="flex-1 sm:flex-none bg-gradient-to-r from-orange-500 to-red-600 hover:shadow-lg text-white transition-all duration-300 hover:scale-105"
+            variant="animated"
             onClick={() => setActiveView('history')}
             title={t('viewHistory')}
           >
@@ -147,7 +147,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
           {userRole === 'admin' && (
             <Button 
               size="sm"
-              className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105"
+              // className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105"
               onClick={() => setActiveView('admin')}
             >
               <Settings className="w-4 h-4 mr-2" />
@@ -158,7 +158,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
       </div>
 
       {/* Anonymity Notice */}
-      <Card className={`${theme.colors.card} border-l-4 border-l-green-500 shadow-lg`}>
+      <Card className={`${theme.colors.card} !border-l-4 !border-l-blue-500 shadow-lg`}>
         <CardContent className="p-6">
           <div className="flex items-center space-x-3">
             <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
@@ -223,9 +223,13 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                   <div className={`text-sm ${theme.colors.muted} hide-on-mobile`}>{t(`${form.id}_desc`)?.slice(0, 80) || form.description?.slice(0, 80)}</div>
                 </div>
                 <div className="ml-3">
-                  <button onClick={() => handleStartAssessment(form)} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-3 py-2 rounded-md text-sm">
+                  <Button 
+                    onClick={() => handleStartAssessment(form)} 
+                    variant="animated"
+                    className="text-sm px-4"
+                  >
                     {t('startAssessment')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -261,7 +265,8 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                     </span>
                   </div>
                   <Button 
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg transition-all duration-300"
+                    variant="animated"
+                    className="w-full"
                     onClick={() => handleStartAssessment(form)}
                   >
                     {t('startAssessment')}
@@ -276,7 +281,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
         {/* Admin Forms Tab */}
         <TabsContent value="admin" className="space-y-6">
           {adminForms.length === 0 ? (
-            <Card className={`${theme.colors.card} border-0 shadow-lg`}>
+            <Card className={`${theme.colors.card} !border-2 !border-blue-500 shadow-lg`}>
               <CardContent className="p-8 sm:p-12 text-center">
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className={`text-lg font-semibold ${theme.colors.text} mb-2`}>
@@ -306,9 +311,13 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                         {form.description}
                       </p>
                     )}
-                    <button onClick={() => handleStartAssessment(form, 'admin')} className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white px-3 py-2 rounded-md text-sm font-semibold">
+                    <Button 
+                      variant="animated"
+                      className="w-full"
+                      onClick={() => handleStartAssessment(form, 'admin')}
+                    >
                       Take Form
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -320,7 +329,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                     key={form.id}
                     className={`${theme.colors.card} border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group`}
                   >
-                    <div className={`h-2 bg-gradient-to-r from-purple-500 to-pink-600`} />
+                    {/* <div className={`h-2 bg-gradient-to-r from-purple-500 to-pink-600`} /> */}
                     <CardHeader className="pb-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -350,7 +359,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                         </p>
                       )}
                       <Button 
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:shadow-lg font-semibold py-2 rounded-lg hover:scale-105 transition-all duration-200"
+                        variant="animated"
                         onClick={() => handleStartAssessment(form, 'admin')}
                       >
                         <FileText className="w-4 h-4 mr-2" />
@@ -387,7 +396,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
 
       {/* Information Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className={`${theme.colors.card} shadow-lg`}>
+        <Card className={`${theme.colors.card} shadow-lg !border-2 !border-blue-500`}>
             <CardHeader>
             <CardTitle className={`flex items-center ${theme.colors.text}`}>
               <AlertCircle className="w-5 h-5 mr-2 text-blue-500" />
@@ -409,7 +418,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
           </CardContent>
         </Card>
 
-        <Card className={`${theme.colors.card} shadow-lg`}>
+        <Card className={`${theme.colors.card} shadow-lg !border-2 !border-blue-500`}>
             <CardHeader>
             <CardTitle className={`flex items-center ${theme.colors.text}`}>
               <Users className="w-5 h-5 mr-2 text-green-500" />

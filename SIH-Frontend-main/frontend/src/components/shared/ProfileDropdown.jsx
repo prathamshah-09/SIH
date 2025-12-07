@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../ui/button';
@@ -24,6 +25,7 @@ import { generateRandomUsername } from '../../utils/usernameGenerator';
 
 const ProfileDropdown = () => {
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const { user: authUser, logout } = useAuth();
   // Frontend-only profile: read/write user from localStorage (no backend/auth calls)
   const [user, setUser] = React.useState(authUser || null);
@@ -160,16 +162,18 @@ const ProfileDropdown = () => {
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-2">
               <p className="text-sm font-medium leading-none">{user?.name}</p>
-              <div className="flex items-center space-x-2">
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user?.username ? `@${user.username}` : 'No username set'}
-                </p>
-                {user?.username && (
-                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                    Active
-                  </span>
-                )}
-              </div>
+              {user?.role === 'student' && (
+                <div className="flex items-center space-x-2">
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.username ? `@${user.username}` : 'No username set'}
+                  </p>
+                  {user?.username && (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                      Active
+                    </span>
+                  )}
+                </div>
+              )}
               <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
             </div>
           </DropdownMenuLabel>
@@ -217,7 +221,7 @@ const ProfileDropdown = () => {
             onClick={async () => {
               try { await logout(); } catch {}
               try { localStorage.removeItem('user'); } catch {}
-              window.location.href = '/login';
+              navigate('/');
             }}
           >
             <LogOut className="mr-2 h-4 w-4" />
@@ -312,12 +316,14 @@ const ProfileDropdown = () => {
                 <p className="text-xs text-gray-500">Full Name</p>
                 <p className="text-sm font-semibold text-gray-800">{user?.name || 'Not provided'}</p>
               </div>
-              <div className="p-3 rounded-lg border bg-gray-50">
-                <p className="text-xs text-gray-500">Username</p>
-                <p className="text-sm font-semibold text-gray-800">
-                  {user?.username ? `@${user.username}` : 'Not set'}
-                </p>
-              </div>
+              {user?.role === 'student' && (
+                <div className="p-3 rounded-lg border bg-gray-50">
+                  <p className="text-xs text-gray-500">Username</p>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {user?.username ? `@${user.username}` : 'Not set'}
+                  </p>
+                </div>
+              )}
               <div className="p-3 rounded-lg border bg-gray-50">
                 <p className="text-xs text-gray-500">Mobile Number</p>
                 <p className="text-sm font-semibold text-gray-800">

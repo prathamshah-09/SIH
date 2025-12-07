@@ -238,16 +238,16 @@ const RealtimeVoice = ({ onAddMessage, theme }) => {
           <Button
             onClick={startRealtimeSession}
             disabled={isConnecting}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-8 py-6 text-lg"
+            variant="animated"
           >
             {isConnecting ? (
               <>
-                <Loader className="w-6 h-6 mr-2 animate-spin" />
+                <Loader className="w-5 h-5 mr-2 animate-spin" />
                 Connecting...
               </>
             ) : (
               <>
-                <Phone className="w-6 h-6 mr-2" />
+                <Phone className="w-5 h-5 mr-2" />
                 Start Voice Session
               </>
             )}
@@ -255,9 +255,10 @@ const RealtimeVoice = ({ onAddMessage, theme }) => {
         ) : (
           <Button
             onClick={stopRealtimeSession}
-            className="bg-gradient-to-r from-red-500 to-red-600 text-white px-8 py-6 text-lg"
+            variant="animated"
+            className="bg-gradient-to-135 from-red-600 to-red-500"
           >
-            <PhoneOff className="w-6 h-6 mr-2" />
+            <PhoneOff className="w-5 h-5 mr-2" />
             End Session
           </Button>
         )}
@@ -533,18 +534,12 @@ const StudentDashboard = () => {
         message.isBot ? "justify-start" : "justify-end"
       } message-row`}
     >
-      {message.isBot && (
-        <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
-          <Heart className="w-5 h-5 text-white" />
-        </div>
-      )}
-
       <div className="max-w-md animate-message-in">
         <div
           className={`p-4 rounded-2xl shadow-md ${
             message.isBot
-              ? theme.colors.card
-              : "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+              ? `${theme.colors.card} ${theme.colors.text}`
+              : theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
           }`}
         >
           {message.text}
@@ -556,12 +551,6 @@ const StudentDashboard = () => {
           })}
         </p>
       </div>
-
-      {!message.isBot && (
-        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-          <User className="w-5 h-5 text-white" />
-        </div>
-      )}
     </div>
   );
 
@@ -577,7 +566,7 @@ const StudentDashboard = () => {
             <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className={`flex items-center space-x-3 ${theme.colors.text}`}>
             <Button onClick={startNewChat} variant="outline">
               <Plus className="w-4 h-4 mr-1" /> New
             </Button>
@@ -596,7 +585,7 @@ const StudentDashboard = () => {
       <CardContent className="chat-panel">
         <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
 
-          <TabsList className="grid grid-cols-3 w-full">
+          <TabsList className={`grid grid-cols-3 w-full ${theme.currentTheme === 'dark' ? '!bg-slate-800' : ''}`}>
             <TabsTrigger value="chat">💬 Chat</TabsTrigger>
             <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
             <TabsTrigger value="history">📜 History</TabsTrigger>
@@ -605,7 +594,7 @@ const StudentDashboard = () => {
           <TabsContent value="chat" className="chat-panel">
             <div
               ref={messagesContainerRef}
-              className={`chat-messages border rounded-xl bg-gradient-to-br ${theme.colors.secondary}`}
+              className={`chat-messages border rounded-xl ${theme.currentTheme === 'dark' ? 'bg-slate-800' : `bg-gradient-to-br ${theme.colors.secondary}`}`}
             >
               <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
                 {messages.map(m => renderChatMessage(m))}
@@ -623,14 +612,14 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            <div className="chat-input-bar bg-white dark:bg-gray-900">
+            <div className={`chat-input-bar ${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
               <div className="chat-input-inner">
                 <textarea
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Type your message..."
-                  className="flex-1 p-2 sm:p-3 border rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base"
+                  className={`flex-1 p-2 sm:p-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base ${theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-white'}`}
                   rows={1}
                   style={{ minHeight: '40px', maxHeight: '120px' }}
                   onInput={(e) => {
@@ -668,7 +657,7 @@ const StudentDashboard = () => {
             <RealtimeVoice onAddMessage={addMessageFromVoice} theme={theme} />
           </TabsContent>
 
-          <TabsContent value="history" className="flex-1 overflow-hidden">
+          <TabsContent value="history" className={`flex-1 overflow-hidden ${theme.currentTheme === 'dark' ? 'bg-slate-800' : ''}`}>
             <div className="h-full overflow-y-auto pt-4 px-4">
               {conversationHistory.length === 0 ? (
                 <p className="text-center text-gray-500 mt-10">
@@ -718,31 +707,24 @@ const StudentDashboard = () => {
             Your personal wellness companion - how are you feeling?
           </p>
         </div>
-        <Button
-          onClick={() => setActiveTab("chatbot")}
-          className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-        >
-          <MessageCircle className="w-4 h-4 mr-2" />
-          Quick Chat
-        </Button>
       </div>
 
       <Card className={`${theme.colors.card} p-6 shadow-xl`}>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Bell className="w-6 h-6 mr-2 text-orange-500" /> Recent Updates
+          <CardTitle className={`flex items-center ${theme.colors.text}`}>
+            Recent Updates
           </CardTitle>
         </CardHeader>
         <CardContent>
           {getRecentAnnouncements(3).map(a => (
             <div
               key={a.id}
-              className="p-4 rounded-lg border mb-3 cursor-pointer hover:bg-gray-100"
+              className={`p-4 rounded-lg border mb-3 cursor-pointer transition-all ${theme.currentTheme === 'dark' ? 'hover:bg-black-600' : 'hover:bg-white-100'}`}
               onClick={() => incrementViews(a.id)}
             >
-              <p className="font-semibold">{a.title}</p>
-              <p className="text-sm text-gray-500">{a.content}</p>
-              <p className="text-xs mt-1 opacity-70">{a.date}</p>
+              <p className={`font-semibold ${theme.colors.text}`}>{a.title}</p>
+              <p className={`text-sm ${theme.currentTheme === 'dark' ? 'text-slate-300' : 'text-gray-500'}`}>{a.content}</p>
+              <p className={`text-xs mt-1 opacity-70 ${theme.colors.text}`}>{a.date}</p>
             </div>
           ))}
         </CardContent>
@@ -765,11 +747,11 @@ const StudentDashboard = () => {
       ].map(({ key, icon: Icon, label }) => (
         <Button
           key={key}
-          variant={activeTab === key ? "default" : "ghost"}
+          variant={activeTab === key ? "animated" : "ghost"}
           onClick={() => setActiveTab(key)}
           className={`w-full justify-start ${
             activeTab === key
-              ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+              ? ""
               : theme.colors.text
           }`}
         >
@@ -800,61 +782,3 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
-
-const style = document.createElement("style");
-style.innerHTML = `
-  @keyframes message-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-message-in { animation: message-in 300ms ease-out both; }
-  
-  /* Chatbot scrolling styles */
-  .chat-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-  }
-  
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 1rem;
-    min-height: 0;
-    max-height: 550px;
-  }
-  
-  /* Custom scrollbar */
-  .chat-messages::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  .chat-messages::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 4px;
-  }
-  
-  .chat-messages::-webkit-scrollbar-thumb {
-    background: rgba(6, 182, 212, 0.4);
-    border-radius: 4px;
-  }
-  
-  .chat-messages::-webkit-scrollbar-thumb:hover {
-    background: rgba(6, 182, 212, 0.6);
-  }
-  
-  .chat-input-bar {
-    flex-shrink: 0;
-    padding: 1rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-  }
-  
-  .chat-input-inner {
-    display: flex;
-    gap: 0.75rem;
-    align-items: flex-end;
-  }
-`;
-document.head.appendChild(style);

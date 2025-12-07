@@ -319,15 +319,14 @@ const AdminDashboard = () => {
         { key: 'community', icon: Shield, label: t('communityManagement'), color: 'text-orange-500' },
         { key: 'announcements', icon: Bell, label: t('announcements'), color: 'text-pink-500' },
         { key: 'forms', icon: FileText, label: 'Form Creation', color: 'text-cyan-500' },
-        // { key: 'settings', icon: Settings, label: t('settings'), color: 'text-gray-500' }
       ].map(({ key, icon: Icon, label, color }) => (
         <Button
           key={key}
-          variant={activeTab === key ? 'default' : 'ghost'}
-          className={`w-full justify-start transition-all duration-300 hover:scale-105 group ${
+          variant={activeTab === key ? 'animated' : 'ghost'}
+          className={`w-full justify-start transition-all duration-300 group ${
             activeTab === key 
-              ? `bg-gradient-to-r ${theme.colors.primary} text-white shadow-lg` 
-              : `hover:bg-gradient-to-r hover:${theme.colors.secondary} ${theme.colors.text}`
+              ? `` 
+              : `hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 ${theme.colors.text}`
           }`}
           onClick={() => setActiveTab(key)}
         >

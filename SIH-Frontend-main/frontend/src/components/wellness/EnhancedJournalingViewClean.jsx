@@ -103,7 +103,7 @@ const EnhancedJournalingView = ({ onBack }) => {
           className={`
             text-center p-3 rounded-lg cursor-pointer transition-all duration-300 relative
             ${isSelected 
-              ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold shadow-lg scale-105' 
+              ? 'bg-purple-600 text-white font-bold shadow-lg hover:shadow-xl hover:scale-105' 
               : isTodayDate
                 ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold hover:shadow-md'
                 : isFuture
@@ -133,20 +133,11 @@ const EnhancedJournalingView = ({ onBack }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          className={`${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} transition-all duration-200 hover:scale-105`}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('backToProblems')}
-        </Button>
-        
-        <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>
+      <div className="flex items-center justify-end">
+        {/* <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>
           <BookOpen className="w-8 h-8 mr-3 text-blue-500" />
           {t('journaling')}
-        </h2>
+        </h2> */}
         <div className="relative">
           <button
             onClick={() => setShowCalendarPopup(!showCalendarPopup)}
@@ -299,18 +290,20 @@ const EnhancedJournalingView = ({ onBack }) => {
                   <>
                     {!isEditing ? (
                       <Button
+                          variant="animated"
                           onClick={() => setIsEditing(true)}
                           size="sm"
-                          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-lg hover:scale-105 transition-all duration-200 px-3 py-2"
+                          className="px-3 py-2"
                       >
                         <Plus className="w-4 h-4 mr-1" />
                         {currentEntry ? t('edit') : t('addEntry')}
                       </Button>
                     ) : (
                       <Button
+                          variant="animated"
                           onClick={saveEntry}
                           size="sm"
-                          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:shadow-lg hover:scale-105 transition-all duration-200 px-3 py-2"
+                          className="px-3 py-2"
                       >
                         <Save className="w-4 h-4 mr-1" />
                         {t('saveEntry')}
