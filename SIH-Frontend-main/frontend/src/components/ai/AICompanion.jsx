@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
-import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Plus, Mic, Send, ChevronDown, Trash2 } from 'lucide-react';
 import ThemeLanguageSelector from '@components/shared/ThemeLanguageSelector';
@@ -438,7 +437,7 @@ const AICompanion = () => {
 
       setChats(prev => prev.filter(c => c.id !== chatId));
       if (currentChatId === chatId) {
-        setCurrentChatId(prev => {
+        setCurrentChatId(() => {
           const remaining = chats.filter(c => c.id !== chatId);
           return remaining[0]?.id || null;
         });
@@ -461,31 +460,6 @@ const AICompanion = () => {
 
             <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowChatsPanel(s => !s)} className={`p-2 rounded-md border transition-colors ${isMidnight ? 'text-white border-slate-700 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'}`} disabled={!userId}>
               <ChevronDown className="w-5 h-5" />
-
-              {showChatsPanel && (
-                <div className={`absolute right-0 mt-2 w-64 max-h-72 overflow-auto shadow-lg border rounded-md p-2 z-40 ${isMidnight ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
-                  {chats.length === 0 && <div className={`p-2 text-sm ${isMidnight ? 'text-slate-400' : theme.colors.muted}`}>{t('noConversationsFound') || 'No conversations found'}</div>}
-                  {chats.map(c => (
-                    <div key={c.id} className="w-full flex items-center justify-between p-1 rounded">
-                      <button onClick={() => handleSelectChat(c.id)} className={`flex-1 text-left p-2 rounded ${isMidnight ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
-                        <div className={`text-sm font-medium truncate ${isMidnight ? 'text-white' : 'text-gray-900'}`} title={c.title}>{c.title}</div>
-                        <div className={`text-[11px] truncate ${isMidnight ? 'text-slate-400' : 'text-gray-500'}`}>
-                          {c.messages[c.messages.length - 1]?.text || (
-                            c.messages[c.messages.length - 1]?.type === 'audio' ? 'Voice message' : ''
-                          )}
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => deleteChat(c.id)}
-                        aria-label="Delete chat"
-                        className="ml-2 p-1 rounded hover:bg-red-50 text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </button>
 
             <div className="ml-2 pl-2 border-l border-gray-300 dark:border-slate-700">
@@ -495,9 +469,53 @@ const AICompanion = () => {
         </div>
       </div>
 
+      {showChatsPanel && (
+        <div className={`w-full border-b ${isMidnight ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+          <div className="max-w-4xl mx-auto px-4 py-3">
+            {chats.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-24 text-center p-4">
+                <p className="text-sm text-gray-500">{t('noConversationsFound') || 'No conversations found'}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {chats.map(c => (
+                  <div
+                    key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSelectChat(c.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSelectChat(c.id);
+                      }
+                    }}
+                    className={`p-3 rounded-xl cursor-pointer transition-all ${isMidnight ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' : 'bg-white border-gray-100 hover:bg-gray-50'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-semibold text-sm mb-1 ${isMidnight ? 'text-gray-200' : 'text-gray-800'}`}>{c.title}</p>
+                        <p className="text-xs text-gray-500 truncate">{c.messages[c.messages.length - 1]?.text || (c.messages[c.messages.length - 1]?.type === 'audio' ? 'Voice message' : '')}</p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
+                        className="ml-3 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="Delete conversation"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={messagesContainerRef} className="chat-messages bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900">
-        <div className="space-y-4 max-w-3xl mx-auto w-full px-2 sm:px-4">
+        <div className="space-y-4 max-w-4xl mx-auto w-full px-2 sm:px-4">
           {!userId && (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <h3 className="text-lg font-medium mb-2 text-red-600">
@@ -524,6 +542,7 @@ const AICompanion = () => {
                 {msg.type === 'audio' ? (
                   <audio controls className="w-56 sm:w-96">
                     <source src={msg.audioUrl} />
+                    <track kind="captions" />
                     Your browser does not support the audio element.
                   </audio>
                 ) : (
@@ -578,6 +597,10 @@ const AICompanion = () => {
               <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'animate-pulse' : ''}`} />
             </button>
           </div>
+        </div>
+        <div className="text-center text-xs text-gray-500 dark:text-gray-400 pt-2 px-4">
+          <p className="mb-1">💡 Our chatbot can make mistakes</p>
+          <p>🔒 To keep your chats private, turn on incognito mode</p>
         </div>
       </div>
     </div>

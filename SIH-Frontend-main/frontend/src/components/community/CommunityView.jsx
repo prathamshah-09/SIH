@@ -565,7 +565,7 @@ const CommunityView = ({ userRole = 'student' }) => {
       </div>
 
       <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[425px]">
+        <DialogContent className="w-[95vw] sm:max-w-[425px] bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center text-lg sm:text-xl">
               <UserPlus className="w-5 h-5 mr-2 text-green-500 flex-shrink-0" />

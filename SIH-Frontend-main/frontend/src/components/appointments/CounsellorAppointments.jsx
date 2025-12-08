@@ -458,14 +458,14 @@ const CounsellorAppointments = () => {
                                                         <CheckIcon className="w-4 h-4 mr-2" />
                                                         {t('accept')}
                                                     </Button>
-                                                    <Button
+                                                    {/* <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'reschedule')}
                                                         className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white"
                                                         size="sm"
                                                     >
                                                         <RefreshIcon className="w-4 h-4 mr-2" />
                                                         {t('reschedule')}
-                                                    </Button>
+                                                    </Button> */}
                                                     <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'decline')}
                                                         className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white"

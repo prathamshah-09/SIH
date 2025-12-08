@@ -349,10 +349,11 @@ const AdminDashboard = () => {
     ? window.localStorage.getItem("sensee_user_id") 
     : null;
   const [conversationId, setConversationId] = useState(null);
+  const [shouldLoadMessages, setShouldLoadMessages] = useState(true);
 
   // Load current conversation messages from backend
   useEffect(() => {
-    console.log('[AdminDashboard] Loading messages - userId:', userId, 'conversationId:', conversationId);
+    console.log('[AdminDashboard] Loading messages - userId:', userId, 'conversationId:', conversationId, 'shouldLoad:', shouldLoadMessages);
     
     if (!userId || !conversationId) {
       // Show welcome message if no conversation
@@ -366,6 +367,14 @@ const AdminDashboard = () => {
       ];
       console.log('[AdminDashboard] Setting welcome message:', welcomeMsg);
       setMessages(welcomeMsg);
+      setShouldLoadMessages(true);
+      return;
+    }
+
+    // Don't reload if we just sent a message
+    if (!shouldLoadMessages) {
+      console.log('[AdminDashboard] Skipping message reload after send');
+      setShouldLoadMessages(true);
       return;
     }
 
@@ -407,7 +416,7 @@ const AdminDashboard = () => {
     };
 
     loadMessages();
-  }, [conversationId, userId, backendUrl]);
+  }, [conversationId, userId, backendUrl, shouldLoadMessages]);
 
   // Function to refresh conversation list
   const refreshConversations = async () => {
@@ -614,8 +623,9 @@ You are not alone, and there are people who want to help. Please reach out to on
       setBotIsTyping(false);
       setIsUsingChatGPT(true);
 
-      // Update conversationId if backend returns one
+      // Update conversationId if backend returns one (but don't reload messages)
       if (data.conversationId && data.conversationId !== conversationId) {
+        setShouldLoadMessages(false); // Prevent reload after setting conversationId
         setConversationId(data.conversationId);
       }
 
@@ -705,7 +715,16 @@ You are not alone, and there are people who want to help. Please reach out to on
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, botMsg]);
+    // Only add bot message if it's not already in the messages array
+    setMessages(prev => {
+      const alreadyExists = prev.some(msg => msg.text === reply && msg.isBot && 
+        Math.abs(new Date(msg.timestamp).getTime() - Date.now()) < 5000);
+      if (alreadyExists) {
+        console.log('[AdminDashboard] Duplicate bot message prevented');
+        return prev;
+      }
+      return [...prev, botMsg];
+    });
     setBotIsTyping(false);
     setIsLoading(false);
     
@@ -1210,6 +1229,10 @@ You are not alone, and there are people who want to help. Please reach out to on
                   {isLoading ? <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </button>
               </div>
+              <div className="text-center text-xs text-gray-500 dark:text-gray-400 pt-2 px-4">
+                <p className="mb-1">💡 Our chatbot can make mistakes</p>
+                <p>🔒 To keep your chats private, turn on incognito mode</p>
+              </div>
             </div>
           </TabsContent>
 
@@ -1218,35 +1241,45 @@ You are not alone, and there are people who want to help. Please reach out to on
           </TabsContent>
 
           <TabsContent value="history" className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto pt-4 px-4">
+            <div className="h-full overflow-y-auto pt-4 px-4 max-w-4xl mx-auto">
               {conversationHistory.length === 0 ? (
-                <p className="text-center text-gray-500 mt-10">
-                  No previous chats yet.
-                </p>
+                <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                  <p className="text-gray-500 dark:text-gray-400 mb-2 text-lg">📜 No previous chats yet</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm">Start a conversation to see your history here</p>
+                </div>
               ) : (
-                conversationHistory.map(chat => (
-                  <div
-                    key={chat.id}
-                    onClick={() => loadChat(chat)}
-                    className="p-4 border rounded-lg mb-3 cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex justify-between">
-                      <p className="font-semibold text-sm">{chat.date}</p>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          deleteHistory(chat.id);
-                        }}
-                        className="text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                <div className="space-y-3">
+                  {conversationHistory.map(chat => (
+                    <div
+                      key={chat.id}
+                      onClick={() => loadChat(chat)}
+                      className={`p-4 border rounded-xl mb-3 cursor-pointer transition-all hover:shadow-md ${
+                        theme.currentTheme === 'midnight' 
+                          ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' 
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold text-sm mb-1 ${
+                            theme.currentTheme === 'midnight' ? 'text-gray-200' : 'text-gray-800'
+                          }`}>{chat.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{chat.date}</p>
+                        </div>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            deleteHistory(chat.id);
+                          }}
+                          className="ml-3 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Delete conversation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-600 truncate">
-                      {chat.title}
-                    </p>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </TabsContent>
