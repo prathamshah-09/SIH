@@ -62,7 +62,8 @@ import {
 } from '@services/socketService';
 
 const DirectMessages = ({ userRole = 'student' }) => {
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
+  const isDark = currentTheme === 'midnight';
   const { t } = useLanguage();
   const { user } = useAuth();
 
@@ -624,7 +625,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
         {/* Messages Area */}
         <Card className={`${theme.colors.card} border-0 shadow-lg flex-1 flex flex-col overflow-hidden min-h-0`}>
           <CardContent className="chat-panel p-0">
-            <div className={`chat-messages ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900'}`}>
+            <div className={`chat-messages ${isDark ? 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50'}`}>
               {messagesLoading ? (
                 <div className="flex items-center justify-center h-full min-h-60">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -679,7 +680,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
               {/* Typing indicator */}
               {isOtherUserTyping && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg px-3 py-2">
+                  <div className={`${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-gray-200'} rounded-lg px-3 py-2`}>
                     <div className="flex space-x-1">
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></div>
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -691,7 +692,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
             </div>
 
             {/* Input Area */}
-            <div className="chat-input-bar bg-white dark:bg-gray-900">
+            <div className={`chat-input-bar ${isDark ? 'bg-slate-900 border-t border-slate-800' : 'bg-white'}`}>
               <div className="chat-input-inner">
                 <Textarea
                   value={messageText}
@@ -700,7 +701,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
                     handleTyping();
                   }}
                   placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
-                  className="flex-1 min-h-[40px] max-h-[120px] resize-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base py-2 sm:py-3"
+                  className={`flex-1 min-h-[40px] max-h-[120px] resize-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base py-2 sm:py-3 ${isDark ? 'bg-slate-800 text-slate-100 placeholder-slate-400 border border-slate-700' : ''}`}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
