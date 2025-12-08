@@ -44,7 +44,28 @@ const FormManagement = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
 
-  // Demo forms
+  // Theme detection helpers (detect 'midnight' / 'ocean' style)
+  const [isDarkLike, setIsDarkLike] = useState(false);
+  const [isOceanLike, setIsOceanLike] = useState(false);
+  useEffect(() => {
+    try {
+      const themeName = (theme?.name || theme?.id || '').toString().toLowerCase();
+      const docTheme = typeof document !== 'undefined' ? (document.documentElement.getAttribute('data-theme') || '').toLowerCase() : '';
+      const docClassList = typeof document !== 'undefined' ? Array.from(document.documentElement.classList) : [];
+      const combined = [themeName, docTheme, ...docClassList].join(' ').toLowerCase();
+
+      const midnightMatch = /midnight|midnight-calm|dark/.test(combined);
+      const oceanMatch = /ocean|breeze|ocean-breeze/.test(combined);
+
+      setIsDarkLike(Boolean(midnightMatch));
+      setIsOceanLike(Boolean(oceanMatch && !midnightMatch));
+    } catch (e) {
+      setIsDarkLike(Boolean(theme?.currentTheme === 'dark'));
+      setIsOceanLike(false);
+    }
+  }, [theme]);
+
+  // Demo forms (unchanged)
   const demoForms = [
     {
       id: 1,
@@ -156,7 +177,7 @@ const FormManagement = () => {
     },
   ];
 
-  // Demo form submissions for testing
+  // Demo submissions (unchanged)
   const demoSubmissions = [
     {
       id: 1001,
@@ -451,10 +472,12 @@ const FormManagement = () => {
                       <FileText className="w-6 h-6 sm:w-6.5 sm:h-6.5 lg:w-7 lg:h-7 text-white animate-pulse" />
                     </div>
                     <div className="flex-1">
-                      <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold ${theme.colors.cardText}`}>
+                      {/* Title: force white for midnight calm */}
+                      <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold ${isDarkLike ? 'text-white' : theme.colors.cardText}`}>
                         Create New Form
                       </CardTitle>
-                      <p className={`text-xs sm:text-sm ${theme.colors.muted} mt-1`}>
+                      {/* Subtitle: force black for ocean breeze */}
+                      <p className={`text-xs sm:text-sm ${isOceanLike ? 'text-black' : theme.colors.muted} mt-1`}>
                         Design wellness forms to understand your students
                       </p>
                     </div>

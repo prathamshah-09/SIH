@@ -31,6 +31,27 @@ const AnnouncementManagement = () => {
   const { announcements, addAnnouncement, updateAnnouncement, deleteAnnouncement } = useAnnouncements();
   const { toast } = useToast();
 
+  // Theme detection (ocean / dark) — lightweight and robust
+  const [isDarkLike, setIsDarkLike] = useState(false);
+  const [isOceanLike, setIsOceanLike] = useState(false);
+  useEffect(() => {
+    try {
+      const themeName = (theme?.name || theme?.id || '').toString().toLowerCase();
+      const docTheme = typeof document !== 'undefined' ? (document.documentElement.getAttribute('data-theme') || '').toLowerCase() : '';
+      const docClassList = typeof document !== 'undefined' ? Array.from(document.documentElement.classList) : [];
+      const combined = [themeName, docTheme, ...docClassList].join(' ').toLowerCase();
+
+      const midnightMatch = /midnight|midnight-calm|dark/.test(combined);
+      const oceanMatch = /ocean|breeze|ocean-breeze/.test(combined);
+
+      setIsDarkLike(Boolean(midnightMatch));
+      setIsOceanLike(Boolean(oceanMatch && !midnightMatch));
+    } catch (e) {
+      setIsDarkLike(Boolean(theme?.currentTheme === 'dark'));
+      setIsOceanLike(false);
+    }
+  }, [theme]);
+
   // Persist sheet state to localStorage
   useEffect(() => {
     try {
@@ -106,10 +127,23 @@ const AnnouncementManagement = () => {
               <Megaphone className="w-6 h-6 sm:w-6.5 sm:h-6.5 lg:w-7 lg:h-7 text-white animate-pulse" />
             </div>
             <div className="flex-1">
-              <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold ${theme.colors.cardText}`}>
+              {/* Title: force visible in Midnight Calm (dark) */}
+              <CardTitle
+                className={`text-lg sm:text-xl lg:text-2xl font-bold ${
+                  isDarkLike ? 'text-white' : theme.colors.cardText
+                }`}
+              >
                 {t('createNewAnnouncement')}
               </CardTitle>
-              <p className={`text-xs sm:text-sm ${theme.colors.muted} mt-1`}>Share important updates with students</p>
+
+              {/* Subtitle: force darker muted text for Ocean Breeze (light) */}
+              <p
+                className={`text-xs sm:text-sm mt-1 ${
+                  isOceanLike ? 'text-gray-700' : theme.colors.muted
+                }`}
+              >
+                Share important updates with students
+              </p>
             </div>
           </div>
         </CardHeader>
