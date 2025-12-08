@@ -303,8 +303,12 @@ const TypingDots = () => {
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const { t, isRTL } = useLanguage();
+
+  // Theme helpers for conditional styling
+  const isDarkLike = currentTheme === 'midnight';
+  const isOceanLike = currentTheme === 'ocean';
 
   // ==== CHATBOT STATE (from StudentDashboard) ====
   const [messages, setMessages] = useState([]);
@@ -991,46 +995,6 @@ You are not alone, and there are people who want to help. Please reach out to on
     </nav>
   );
 
-    const loadChat = chat => {
-      const restored = chat.messages.map(m => ({
-        ...m,
-        timestamp: new Date(m.timestamp)
-      }));
-      setMessages(restored);
-      localStorage.setItem("sensee_admin_chat", JSON.stringify(restored));
-      setChatTab("chat");
-    };
-
-    const deleteHistory = id => {
-      const next = conversationHistory.filter(h => h.id !== id);
-      setConversationHistory(next);
-      localStorage.setItem("sensee_admin_conversation_history", JSON.stringify(next));
-    };
-
-    const renderChatMessage = message => (
-      <div
-        key={message.id}
-        className={`flex items-start space-x-3 ${
-          message.isBot ? "justify-start" : "justify-end"
-        } message-row`}
-      >
-        <div className="max-w-md animate-message-in">
-          <div
-            className={`p-4 rounded-2xl shadow-md ${
-              message.isBot
-                ? `${theme.colors.card} ${theme.colors.text}`
-                : theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
-            }`}
-          >
-            {message.text}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Activity & Alerts removed per request */}
-    </div>
-  );
-
   const renderChatbot = () => (
     <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
       <CardHeader className="flex-shrink-0">
@@ -1038,7 +1002,7 @@ You are not alone, and there are people who want to help. Please reach out to on
             <div className="flex items-center">
             <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
             <CardTitle className={theme.colors.text}>
-              SensEase AI Companion
+              {t('aiCompanionTitle') || 'SensEase AI Companion'}
             </CardTitle>
             <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
             {incognitoMode && (
@@ -1111,7 +1075,7 @@ You are not alone, and there are people who want to help. Please reach out to on
             </div>
 
             <Button onClick={startNewChat} variant="outline">
-              <Plus className="w-4 h-4 mr-1" /> New
+              <Plus className="w-4 h-4 mr-1" /> {t('newChat') || 'New'}
             </Button>
 
             <Badge
@@ -1119,7 +1083,9 @@ You are not alone, and there are people who want to help. Please reach out to on
                 isUsingChatGPT ? "bg-green-500" : "bg-orange-500"
               } text-white`}
             >
-              {isUsingChatGPT ? "🤖 ChatGPT Active" : "⚡ Local Mode"}
+              {isUsingChatGPT
+                ? t('chatgptActive') || "🤖 ChatGPT Active"
+                : t('localMode') || "⚡ Local Mode"}
             </Badge>
           </div>
         </div>
@@ -1129,9 +1095,9 @@ You are not alone, and there are people who want to help. Please reach out to on
         <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
 
           <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="chat">💬 Chat</TabsTrigger>
-            <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
-            <TabsTrigger value="history">📜 History</TabsTrigger>
+            <TabsTrigger value="chat">💬 {t('chatTab') || 'Chat'}</TabsTrigger>
+            <TabsTrigger value="voice">🎙️ {t('voiceTab') || 'Voice'}</TabsTrigger>
+            <TabsTrigger value="history">📜 {t('historyTab') || 'History'}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="chat-panel">
@@ -1168,7 +1134,9 @@ You are not alone, and there are people who want to help. Please reach out to on
                   value={input + (liveTranscript ? ' ' + liveTranscript : '')}
                   onChange={e => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={isLiveTranscribing ? "Listening... Speak now" : "Type your message..."}
+                  placeholder={isLiveTranscribing
+                    ? t('listeningPlaceholder') || "Listening... Speak now"
+                    : t('typeMessagePlaceholder') || "Type your message..."}
                   className="flex-1 p-2 sm:p-3 border rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base"
                   rows={1}
                   style={{ minHeight: '40px', maxHeight: '120px' }}
@@ -1287,46 +1255,48 @@ You are not alone, and there are people who want to help. Please reach out to on
     </Card>
   );
 
-        {/* Platform Analytics */}
-        <Card className={`${isDarkLike ? 'bg-transparent border border-white/20' : 'bg-white border border-gray-200'} shadow-xl hover:shadow-2xl transition-shadow`}>
-          <CardHeader>
-            <CardTitle className={`flex items-center ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')}`}>
-              <BarChart3 className="w-6 h-6 mr-3 text-blue-500" />
-              {t('platformAnalytics')}
-              <Badge className="ml-3 bg-green-100 text-green-800">{t('liveData')}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h4 className={`${isDarkLike ? 'font-semibold text-white mb-4' : (isOceanLike ? 'font-semibold text-black mb-4' : 'font-semibold mb-4')}`}>{t('mostUsedFeatures')}</h4>
-                <div className="space-y-4">
-                  {mockAnalytics.mostUsedFeatures.map((feature, index) => (
-                    <div key={index} className={`${isDarkLike ? 'flex items-center justify-between p-4 rounded-lg border border-white/10 hover:shadow-md transition-shadow' : 'flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:shadow-md transition-shadow'}`}>
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 bg-gradient-to-r ${theme.colors.primary} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
-                          {index + 1}
-                        </div>
-                        <span className={`${isDarkLike ? 'font-medium text-white' : (isOceanLike ? 'font-medium text-black' : 'font-medium')}`}>{feature.name}</span>
+  const renderOverview = () => (
+    <div className="space-y-8">
+      {/* Platform Analytics */}
+      <Card className={`${isDarkLike ? 'bg-transparent border border-white/20' : 'bg-white border border-gray-200'} shadow-xl hover:shadow-2xl transition-shadow`}>
+        <CardHeader>
+          <CardTitle className={`flex items-center ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')}`}>
+            <BarChart3 className="w-6 h-6 mr-3 text-blue-500" />
+            {t('platformAnalytics')}
+            <Badge className="ml-3 bg-green-100 text-green-800">{t('liveData')}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div>
+              <h4 className={`${isDarkLike ? 'font-semibold text-white mb-4' : (isOceanLike ? 'font-semibold text-black mb-4' : 'font-semibold mb-4')}`}>{t('mostUsedFeatures')}</h4>
+              <div className="space-y-4">
+                {mockAnalytics.mostUsedFeatures.map((feature, index) => (
+                  <div key={index} className={`${isDarkLike ? 'flex items-center justify-between p-4 rounded-lg border border-white/10 hover:shadow-md transition-shadow' : 'flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:shadow-md transition-shadow'}`}>
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-8 h-8 bg-gradient-to-r ${theme.colors.primary} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
+                        {index + 1}
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-32 bg-white/10 rounded-full h-3">
-                          <div 
-                            className={`bg-gradient-to-r ${theme.colors.primary} h-3 rounded-full transition-all duration-500`}
-                            style={{ width: `${feature.usage}%` }}
-                          ></div>
-                        </div>
-                        <span className={`text-sm font-semibold ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')} min-w-[3rem]`}>{feature.usage}%</span>
-                      </div>
+                      <span className={`${isDarkLike ? 'font-medium text-white' : (isOceanLike ? 'font-medium text-black' : 'font-medium')}`}>{feature.name}</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-32 bg-white/10 rounded-full h-3">
+                        <div 
+                          className={`bg-gradient-to-r ${theme.colors.primary} h-3 rounded-full transition-all duration-500`}
+                          style={{ width: `${feature.usage}%` }}
+                        ></div>
+                      </div>
+                      <span className={`text-sm font-semibold ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')} min-w-[3rem]`}>{feature.usage}%</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
     const renderContent = () => {
       switch (activeTab) {
