@@ -757,7 +757,7 @@
           { key: 'users', icon: Users, label: t('userManagement'), color: 'text-indigo-500' },
           { key: 'community', icon: Shield, label: t('communityManagement'), color: 'text-orange-500' },
           { key: 'announcements', icon: Bell, label: t('announcements'), color: 'text-pink-500' },
-          { key: 'forms', icon: FileText, label: 'Form Creation', color: 'text-cyan-500' },
+          { key: 'forms', icon: FileText, label: t('formCreation'), color: 'text-cyan-500' },
         ].map(({ key, icon: Icon, label, color }) => (
           <Button
             key={key}
@@ -927,7 +927,7 @@
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
-                    Form Creation Hub
+                    {t('formCreationHub')}
                     <FileText className="w-8 h-8 ml-3 text-cyan-500 animate-pulse" />
                   </h2>
                 </div>

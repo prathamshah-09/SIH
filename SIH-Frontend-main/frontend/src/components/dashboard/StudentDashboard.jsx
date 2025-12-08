@@ -621,7 +621,7 @@ className={`chat-messages border rounded-xl ${
               </div>
             </div>
 
-            <div className={`chat-input-bar ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-slate-800'}`}>
+            <div className={`chat-input-bar ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-white'}`}>
               <div className="chat-input-inner">
                 <textarea
                   value={input}
@@ -709,11 +709,11 @@ className={`chat-messages border rounded-xl ${
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
-            Welcome to SensEase
+            {t('welcomeToSensEase')}
             <Sparkles className="w-8 h-8 ml-2 text-yellow-500 animate-spin" style={{ animationDuration: "3s" }} />
           </h2>
           <p className={`${theme.colors.muted} mt-2 text-lg`}>
-            Your personal wellness companion - how are you feeling?
+            {t('personalWellnessCompanion')}
           </p>
         </div>
       </div>
@@ -721,7 +721,7 @@ className={`chat-messages border rounded-xl ${
       <Card className={`${theme.colors.card} p-6 shadow-xl`}>
         <CardHeader>
           <CardTitle className={`flex items-center ${theme.colors.text}`}>
-            Recent Updates
+            {t('recentUpdates')}
           </CardTitle>
         </CardHeader>
         <CardContent>

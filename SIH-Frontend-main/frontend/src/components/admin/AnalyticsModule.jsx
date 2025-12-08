@@ -305,7 +305,7 @@ const AnalyticsModule = () => {
               : theme.colors.muted
           }`}
         >
-          Standard Assessments
+          {t('standardAssessments')}
         </button>
         <button
           onClick={() => setActiveTab('dynamic')}
@@ -315,7 +315,7 @@ const AnalyticsModule = () => {
               : theme.colors.muted
           }`}
         >
-          Dynamic Forms Analytics
+          {t('dynamicFormsAnalytics')}
         </button>
       </div>
 
