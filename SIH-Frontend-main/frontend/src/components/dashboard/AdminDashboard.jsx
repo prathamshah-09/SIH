@@ -303,8 +303,12 @@ const TypingDots = () => {
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const { t, isRTL } = useLanguage();
+
+  // Theme helpers for conditional styling
+  const isDarkLike = currentTheme === 'midnight';
+  const isOceanLike = currentTheme === 'ocean';
 
   // ==== CHATBOT STATE (from StudentDashboard) ====
   const [messages, setMessages] = useState([]);
@@ -345,10 +349,11 @@ const AdminDashboard = () => {
     ? window.localStorage.getItem("sensee_user_id") 
     : null;
   const [conversationId, setConversationId] = useState(null);
+  const [shouldLoadMessages, setShouldLoadMessages] = useState(true);
 
   // Load current conversation messages from backend
   useEffect(() => {
-    console.log('[AdminDashboard] Loading messages - userId:', userId, 'conversationId:', conversationId);
+    console.log('[AdminDashboard] Loading messages - userId:', userId, 'conversationId:', conversationId, 'shouldLoad:', shouldLoadMessages);
     
     if (!userId || !conversationId) {
       // Show welcome message if no conversation
@@ -362,6 +367,14 @@ const AdminDashboard = () => {
       ];
       console.log('[AdminDashboard] Setting welcome message:', welcomeMsg);
       setMessages(welcomeMsg);
+      setShouldLoadMessages(true);
+      return;
+    }
+
+    // Don't reload if we just sent a message
+    if (!shouldLoadMessages) {
+      console.log('[AdminDashboard] Skipping message reload after send');
+      setShouldLoadMessages(true);
       return;
     }
 
@@ -403,7 +416,7 @@ const AdminDashboard = () => {
     };
 
     loadMessages();
-  }, [conversationId, userId, backendUrl]);
+  }, [conversationId, userId, backendUrl, shouldLoadMessages]);
 
   // Function to refresh conversation list
   const refreshConversations = async () => {
@@ -610,8 +623,9 @@ You are not alone, and there are people who want to help. Please reach out to on
       setBotIsTyping(false);
       setIsUsingChatGPT(true);
 
-      // Update conversationId if backend returns one
+      // Update conversationId if backend returns one (but don't reload messages)
       if (data.conversationId && data.conversationId !== conversationId) {
+        setShouldLoadMessages(false); // Prevent reload after setting conversationId
         setConversationId(data.conversationId);
       }
 
@@ -701,7 +715,16 @@ You are not alone, and there are people who want to help. Please reach out to on
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, botMsg]);
+    // Only add bot message if it's not already in the messages array
+    setMessages(prev => {
+      const alreadyExists = prev.some(msg => msg.text === reply && msg.isBot && 
+        Math.abs(new Date(msg.timestamp).getTime() - Date.now()) < 5000);
+      if (alreadyExists) {
+        console.log('[AdminDashboard] Duplicate bot message prevented');
+        return prev;
+      }
+      return [...prev, botMsg];
+    });
     setBotIsTyping(false);
     setIsLoading(false);
     
@@ -991,46 +1014,6 @@ You are not alone, and there are people who want to help. Please reach out to on
     </nav>
   );
 
-    const loadChat = chat => {
-      const restored = chat.messages.map(m => ({
-        ...m,
-        timestamp: new Date(m.timestamp)
-      }));
-      setMessages(restored);
-      localStorage.setItem("sensee_admin_chat", JSON.stringify(restored));
-      setChatTab("chat");
-    };
-
-    const deleteHistory = id => {
-      const next = conversationHistory.filter(h => h.id !== id);
-      setConversationHistory(next);
-      localStorage.setItem("sensee_admin_conversation_history", JSON.stringify(next));
-    };
-
-    const renderChatMessage = message => (
-      <div
-        key={message.id}
-        className={`flex items-start space-x-3 ${
-          message.isBot ? "justify-start" : "justify-end"
-        } message-row`}
-      >
-        <div className="max-w-md animate-message-in">
-          <div
-            className={`p-4 rounded-2xl shadow-md ${
-              message.isBot
-                ? `${theme.colors.card} ${theme.colors.text}`
-                : theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
-            }`}
-          >
-            {message.text}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Activity & Alerts removed per request */}
-    </div>
-  );
-
   const renderChatbot = () => (
     <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
       <CardHeader className="flex-shrink-0">
@@ -1038,7 +1021,7 @@ You are not alone, and there are people who want to help. Please reach out to on
             <div className="flex items-center">
             <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
             <CardTitle className={theme.colors.text}>
-              SensEase AI Companion
+              {t('aiCompanionTitle') || 'SensEase AI Companion'}
             </CardTitle>
             <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
             {incognitoMode && (
@@ -1111,7 +1094,7 @@ You are not alone, and there are people who want to help. Please reach out to on
             </div>
 
             <Button onClick={startNewChat} variant="outline">
-              <Plus className="w-4 h-4 mr-1" /> New
+              <Plus className="w-4 h-4 mr-1" /> {t('newChat') || 'New'}
             </Button>
 
             <Badge
@@ -1119,7 +1102,9 @@ You are not alone, and there are people who want to help. Please reach out to on
                 isUsingChatGPT ? "bg-green-500" : "bg-orange-500"
               } text-white`}
             >
-              {isUsingChatGPT ? "🤖 ChatGPT Active" : "⚡ Local Mode"}
+              {isUsingChatGPT
+                ? t('chatgptActive') || "🤖 ChatGPT Active"
+                : t('localMode') || "⚡ Local Mode"}
             </Badge>
           </div>
         </div>
@@ -1129,9 +1114,9 @@ You are not alone, and there are people who want to help. Please reach out to on
         <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
 
           <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="chat">💬 Chat</TabsTrigger>
-            <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
-            <TabsTrigger value="history">📜 History</TabsTrigger>
+            <TabsTrigger value="chat">💬 {t('chatTab') || 'Chat'}</TabsTrigger>
+            <TabsTrigger value="voice">🎙️ {t('voiceTab') || 'Voice'}</TabsTrigger>
+            <TabsTrigger value="history">📜 {t('historyTab') || 'History'}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="chat-panel">
@@ -1168,7 +1153,9 @@ You are not alone, and there are people who want to help. Please reach out to on
                   value={input + (liveTranscript ? ' ' + liveTranscript : '')}
                   onChange={e => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={isLiveTranscribing ? "Listening... Speak now" : "Type your message..."}
+                  placeholder={isLiveTranscribing
+                    ? t('listeningPlaceholder') || "Listening... Speak now"
+                    : t('typeMessagePlaceholder') || "Type your message..."}
                   className="flex-1 p-2 sm:p-3 border rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base"
                   rows={1}
                   style={{ minHeight: '40px', maxHeight: '120px' }}
@@ -1242,6 +1229,10 @@ You are not alone, and there are people who want to help. Please reach out to on
                   {isLoading ? <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </button>
               </div>
+              <div className="text-center text-xs text-gray-500 dark:text-gray-400 pt-2 px-4">
+                <p className="mb-1">💡 Our chatbot can make mistakes</p>
+                <p>🔒 To keep your chats private, turn on incognito mode</p>
+              </div>
             </div>
           </TabsContent>
 
@@ -1250,35 +1241,45 @@ You are not alone, and there are people who want to help. Please reach out to on
           </TabsContent>
 
           <TabsContent value="history" className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto pt-4 px-4">
+            <div className="h-full overflow-y-auto pt-4 px-4 max-w-4xl mx-auto">
               {conversationHistory.length === 0 ? (
-                <p className="text-center text-gray-500 mt-10">
-                  No previous chats yet.
-                </p>
+                <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                  <p className="text-gray-500 dark:text-gray-400 mb-2 text-lg">📜 No previous chats yet</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm">Start a conversation to see your history here</p>
+                </div>
               ) : (
-                conversationHistory.map(chat => (
-                  <div
-                    key={chat.id}
-                    onClick={() => loadChat(chat)}
-                    className="p-4 border rounded-lg mb-3 cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex justify-between">
-                      <p className="font-semibold text-sm">{chat.date}</p>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          deleteHistory(chat.id);
-                        }}
-                        className="text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                <div className="space-y-3">
+                  {conversationHistory.map(chat => (
+                    <div
+                      key={chat.id}
+                      onClick={() => loadChat(chat)}
+                      className={`p-4 border rounded-xl mb-3 cursor-pointer transition-all hover:shadow-md ${
+                        theme.currentTheme === 'midnight' 
+                          ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' 
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold text-sm mb-1 ${
+                            theme.currentTheme === 'midnight' ? 'text-gray-200' : 'text-gray-800'
+                          }`}>{chat.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{chat.date}</p>
+                        </div>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            deleteHistory(chat.id);
+                          }}
+                          className="ml-3 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Delete conversation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-600 truncate">
-                      {chat.title}
-                    </p>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </TabsContent>
@@ -1287,46 +1288,48 @@ You are not alone, and there are people who want to help. Please reach out to on
     </Card>
   );
 
-        {/* Platform Analytics */}
-        <Card className={`${isDarkLike ? 'bg-transparent border border-white/20' : 'bg-white border border-gray-200'} shadow-xl hover:shadow-2xl transition-shadow`}>
-          <CardHeader>
-            <CardTitle className={`flex items-center ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')}`}>
-              <BarChart3 className="w-6 h-6 mr-3 text-blue-500" />
-              {t('platformAnalytics')}
-              <Badge className="ml-3 bg-green-100 text-green-800">{t('liveData')}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h4 className={`${isDarkLike ? 'font-semibold text-white mb-4' : (isOceanLike ? 'font-semibold text-black mb-4' : 'font-semibold mb-4')}`}>{t('mostUsedFeatures')}</h4>
-                <div className="space-y-4">
-                  {mockAnalytics.mostUsedFeatures.map((feature, index) => (
-                    <div key={index} className={`${isDarkLike ? 'flex items-center justify-between p-4 rounded-lg border border-white/10 hover:shadow-md transition-shadow' : 'flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:shadow-md transition-shadow'}`}>
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 bg-gradient-to-r ${theme.colors.primary} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
-                          {index + 1}
-                        </div>
-                        <span className={`${isDarkLike ? 'font-medium text-white' : (isOceanLike ? 'font-medium text-black' : 'font-medium')}`}>{feature.name}</span>
+  const renderOverview = () => (
+    <div className="space-y-8">
+      {/* Platform Analytics */}
+      <Card className={`${isDarkLike ? 'bg-transparent border border-white/20' : 'bg-white border border-gray-200'} shadow-xl hover:shadow-2xl transition-shadow`}>
+        <CardHeader>
+          <CardTitle className={`flex items-center ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')}`}>
+            <BarChart3 className="w-6 h-6 mr-3 text-blue-500" />
+            {t('platformAnalytics')}
+            <Badge className="ml-3 bg-green-100 text-green-800">{t('liveData')}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div>
+              <h4 className={`${isDarkLike ? 'font-semibold text-white mb-4' : (isOceanLike ? 'font-semibold text-black mb-4' : 'font-semibold mb-4')}`}>{t('mostUsedFeatures')}</h4>
+              <div className="space-y-4">
+                {mockAnalytics.mostUsedFeatures.map((feature, index) => (
+                  <div key={index} className={`${isDarkLike ? 'flex items-center justify-between p-4 rounded-lg border border-white/10 hover:shadow-md transition-shadow' : 'flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:shadow-md transition-shadow'}`}>
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-8 h-8 bg-gradient-to-r ${theme.colors.primary} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
+                        {index + 1}
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-32 bg-white/10 rounded-full h-3">
-                          <div 
-                            className={`bg-gradient-to-r ${theme.colors.primary} h-3 rounded-full transition-all duration-500`}
-                            style={{ width: `${feature.usage}%` }}
-                          ></div>
-                        </div>
-                        <span className={`text-sm font-semibold ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')} min-w-[3rem]`}>{feature.usage}%</span>
-                      </div>
+                      <span className={`${isDarkLike ? 'font-medium text-white' : (isOceanLike ? 'font-medium text-black' : 'font-medium')}`}>{feature.name}</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-32 bg-white/10 rounded-full h-3">
+                        <div 
+                          className={`bg-gradient-to-r ${theme.colors.primary} h-3 rounded-full transition-all duration-500`}
+                          style={{ width: `${feature.usage}%` }}
+                        ></div>
+                      </div>
+                      <span className={`text-sm font-semibold ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')} min-w-[3rem]`}>{feature.usage}%</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
     const renderContent = () => {
       switch (activeTab) {
