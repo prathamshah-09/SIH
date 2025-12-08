@@ -598,11 +598,11 @@ const CounsellorAppointments = () => {
                                                     
                                                     <div>
                                                         <div className="flex items-center justify-between mb-2">
-                                                            <h4 className={`font-semibold ${theme.colors.text}`}>{t('suggestedActionPlan')}</h4>
+                                                            <h4 className={`font-semibold ${isDark ? 'text-white' : theme.colors.text}`}>{t('suggestedActionPlan')}</h4>
                                                         </div>
-                                                        <div className={`space-y-2 p-3 bg-gradient-to-r ${theme.colors.secondary} rounded-lg border h-40 overflow-y-auto`}>
+                                                        <div className={`space-y-2 p-3 rounded-lg border h-40 overflow-y-auto ${isDark ? 'bg-slate-800 border-slate-700' : `bg-gradient-to-r ${theme.colors.secondary}`}`}>
                                                             {app.actionItems.length > 0 ? app.actionItems.map(item => (
-                                                                <div key={item.id} className="flex items-start justify-between group hover:bg-opacity-80 p-2 rounded transition-all">
+                                                                <div key={item.id} className={`flex items-start justify-between group p-2 rounded transition-all ${isDark ? 'hover:bg-slate-700' : 'hover:bg-opacity-80'}`}>
                                                                     <div className="flex items-start flex-1">
                                                                         <span className="text-cyan-500 mr-2 mt-0.5">•</span>
                                                                         {editingActionItem?.itemId === item.id && editingActionItem?.appointmentId === app.id ? (
@@ -610,10 +610,10 @@ const CounsellorAppointments = () => {
                                                                                 type="text"
                                                                                 value={editingActionText}
                                                                                 onChange={(e) => setEditingActionText(e.target.value)}
-                                                                                className={`flex-1 p-1 rounded border border-cyan-400 focus:ring-2 focus:ring-cyan-500 ${theme.colors.card}`}
+                                                                                className={`flex-1 p-1 rounded border border-cyan-400 focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-slate-700 text-white' : theme.colors.card}`}
                                                                             />
                                                                         ) : (
-                                                                            <p className={`${theme.colors.text} text-sm flex-1`}>{item.text}</p>
+                                                                            <p className={`text-sm flex-1 ${isDark ? 'text-white' : theme.colors.text}`}>{item.text}</p>
                                                                         )}
                                                                     </div>
                                                                     <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -674,7 +674,8 @@ const CounsellorAppointments = () => {
                                                                 type="text"
                                                                 value={newActionText[app.id] || ''}
                                                                 onChange={(e) => setNewActionText(prev => ({ ...prev, [app.id]: e.target.value }))}
-                                                                className={`flex-grow p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
+                                                                className={`flex-grow p-2 rounded-lg border focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${isDark ? 'bg-slate-700 text-white border-slate-600' : `border-gray-300 ${theme.colors.card}`}`}
+                                                                placeholder={isDark ? 'Add action item...' : ''}
                                                             />
                                                             <Button onClick={() => handleAddActionItem(app.id)} size="sm" className="bg-cyan-500 text-white">
                                                                 {t('addButton') || 'Add'}

@@ -11,7 +11,7 @@ import { generateHistoryTitle } from '@lib/utils';
 
 const AICompanion = () => {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [showChatsPanel, setShowChatsPanel] = useState(false);
@@ -154,26 +154,36 @@ const AICompanion = () => {
     }
   };
 
+  const isMidnight = (theme?.name || currentTheme || '').toLowerCase().includes('midnight');
+
+  const barStyle = isMidnight
+    ? { backgroundColor: '#0f172a', borderTop: '1px solid #1f2937', boxShadow: '0 -2px 18px rgba(0, 0, 0, 0.35)' }
+    : { backgroundColor: '#ffffff', borderTop: '1px solid #e5e7eb', boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)' };
+
+  const innerStyle = isMidnight
+    ? { backgroundColor: '#0b1221', border: '1px solid #1f2937', boxShadow: '0 6px 24px rgba(0, 0, 0, 0.25)' }
+    : { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.08)' };
+
   return (
     <div className={`chat-shell ${theme.colors.background} ${theme.colors.card}`}>
       {/* Header - fixed */}
-      <div className="flex-shrink-0 p-4 sm:p-6 border-b">
+      <div className={`flex-shrink-0 p-4 sm:p-6 border-b ${isMidnight ? 'bg-slate-900/80 border-slate-800' : 'bg-gradient-to-r from-blue-50 to-cyan-50'}`}>
         <div className="flex items-center justify-between">
           <h2 className={`text-xl font-semibold ${theme.colors.text}`}>{t('aiCompanion') || 'AI Companion'}</h2>
           <div className="flex items-center space-x-2">
-            <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewChat} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
+            <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewChat} className={`p-2 rounded-md ${isMidnight ? 'hover:bg-slate-800' : 'hover:bg-blue-100'}`}>
               <Plus className="w-5 h-5" />
             </button>
 
-            <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowChatsPanel(s => !s)} className="p-2 rounded-md border hover:bg-gray-100 dark:hover:bg-gray-800 relative">
+            <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowChatsPanel(s => !s)} className={`p-2 rounded-md border ${isMidnight ? 'hover:bg-slate-800 border-slate-700' : 'hover:bg-blue-100 border-gray-300'} relative`}>
               <ChevronDown className="w-5 h-5" />
 
               {showChatsPanel && (
-                <div className="absolute right-0 mt-2 w-64 max-h-72 overflow-auto bg-white dark:bg-gray-800 shadow-lg border rounded-md p-2 z-40">
-                  {chats.length === 0 && <div className="p-2 text-sm text-gray-500">{t('noConversationsFound') || 'No conversations found'}</div>}
+                <div className={`absolute right-0 mt-2 w-64 max-h-72 overflow-auto shadow-lg border rounded-md p-2 z-40 ${isMidnight ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+                  {chats.length === 0 && <div className={`p-2 text-sm ${theme.colors.muted}`}>{t('noConversationsFound') || 'No conversations found'}</div>}
                   {chats.map(c => (
                     <div key={c.id} className="w-full flex items-center justify-between p-1 rounded">
-                      <button onClick={() => handleSelectChat(c.id)} className="flex-1 text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <button onClick={() => handleSelectChat(c.id)} className={`flex-1 text-left p-2 rounded ${isMidnight ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
                         <div className="text-sm font-medium truncate" title={c.title}>{c.title}</div>
                         <div className="text-[11px] text-gray-500 truncate">{c.messages[c.messages.length - 1]?.text || (c.messages[c.messages.length - 1]?.type === 'audio' ? 'Voice message' : '')}</div>
                       </button>
@@ -197,11 +207,11 @@ const AICompanion = () => {
       </div>
 
       {/* Messages container - scrollable with fixed height, cyan/blue background */}
-      <div ref={messagesContainerRef} className="chat-messages bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900">
+      <div ref={messagesContainerRef} className={`chat-messages ${isMidnight ? 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50'}`}>
         <div className="space-y-4 max-w-3xl mx-auto w-full px-2 sm:px-4">
           {currentChat?.messages?.map(msg => (
             <div key={msg.id} className={`max-w-[85%] ${msg.role === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}>
-              <div className={`chat-bubble inline-block px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'}`}>
+              <div className={`chat-bubble inline-block px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : isMidnight ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900 border border-gray-200'}`}>
                 {msg.type === 'audio' ? (
                   <audio controls className="w-56 sm:w-96">
                     <source src={msg.audioUrl} />
@@ -220,15 +230,17 @@ const AICompanion = () => {
       </div>
 
       {/* Input bar — fixed at bottom */}
-      <div className="chat-input-bar bg-white dark:bg-gray-900">
-        <div className="chat-input-inner">
-          <Input
-            placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="flex-1 text-sm sm:text-base h-10"
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-          />
+      <div className={`flex-shrink-0 sticky bottom-0 left-0 right-0 w-full p-2 sm:p-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] z-20 ${isMidnight ? 'bg-slate-900 border-t border-slate-800' : 'bg-white border-t border-gray-200'}`}>
+        <div className="max-w-[72rem] mx-auto flex items-end gap-2 sm:gap-3 w-full">
+          <div className={`flex-1 flex items-center rounded-xl border transition-all px-3 sm:px-4 ${isMidnight ? 'bg-slate-800 border-slate-700 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-900' : 'bg-white border-gray-300 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200'}`}>
+            <Input
+              placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className={`flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-2 sm:py-3 text-sm sm:text-base h-10 ${isMidnight ? 'text-slate-100 placeholder-slate-400' : ''}`}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            />
+          </div>
           <div className="flex items-center space-x-2">
             <button 
               onClick={handleSend} 
@@ -241,10 +253,10 @@ const AICompanion = () => {
             <button
               aria-label={isRecording ? 'Stop recording' : 'Voice message'}
               onClick={() => { isRecording ? stopRecording() : startRecording(); }}
-              className={`icon-tap rounded-full w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center transition-all hover:shadow-lg ${isRecording ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              className={`icon-tap rounded-full w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center transition-all ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl' : isMidnight ? 'bg-slate-700 hover:bg-slate-600 text-blue-400 shadow-sm hover:shadow-md' : 'bg-gray-200 hover:bg-gray-300 text-blue-600 shadow-sm hover:shadow-md'}`}
               title={isRecording ? 'Stop recording' : 'Voice message'}
             >
-              <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'text-white' : 'text-blue-600'}`} />
+              <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'animate-pulse' : ''}`} />
             </button>
           </div>
         </div>
