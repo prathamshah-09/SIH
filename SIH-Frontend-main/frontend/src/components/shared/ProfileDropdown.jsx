@@ -232,7 +232,7 @@ const ProfileDropdown = () => {
 
       {/* Username Generation Dialog */}
       <Dialog open={isUsernameDialogOpen} onOpenChange={setIsUsernameDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <User className="w-5 h-5 mr-2 text-blue-500" />
@@ -301,7 +301,7 @@ const ProfileDropdown = () => {
 
       {/* Profile Dialog */}
       <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
-        <DialogContent className="sm:max-w-[460px]">
+        <DialogContent className="sm:max-w-[460px] bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-blue-500" />
@@ -356,7 +356,7 @@ const ProfileDropdown = () => {
 
       {/* Change Password Dialog */}
       <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] bg-white">
           <DialogHeader>
             <DialogTitle>Change Password</DialogTitle>
             <DialogDescription>Update your account password (local only, no backend).</DialogDescription>

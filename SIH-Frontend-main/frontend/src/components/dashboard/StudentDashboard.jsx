@@ -32,11 +32,13 @@ import {
   Phone,
   PhoneOff,
   Smile,
-  Settings
+  Settings,
+  Image
 } from "lucide-react";
 import { useAnnouncements } from "@context/AnnouncementContext";
 import WellnessTools from "@components/wellness/WellnessTools";
 import JournalWithThemeNew from "@components/wellness/JournalWithThemeNew";
+import MemoryWall from "@components/wellness/MemoryWall";
 import StudentAppointments from "@components/appointments/StudentAppointments";
 import CommunityView from "@components/community/CommunityView";
 import AudioSection from "@components/wellness/AudioSection";
@@ -1241,7 +1243,8 @@ className={`chat-messages border rounded-xl ${
         { key: "journaling", icon: PenTool, label: t("journaling") },
         { key: "assessments", icon: FileText, label: t("assessments") },
         { key: "audios", icon: Activity, label: t("Audios") },
-        { key: "resources", icon: Brain, label: t("wellnessTools") }
+        { key: "resources", icon: Brain, label: t("wellnessTools") },
+        { key: "memorywall", icon: Image, label: "Memory Wall" }
       ].map(({ key, icon: Icon, label }) => (
         <Button
           key={key}
@@ -1275,6 +1278,7 @@ className={`chat-messages border rounded-xl ${
         <AssessmentDashboard userRole="student" />
       )}
       {activeTab === "messages" && <DirectMessages userRole="student" />}
+      {activeTab === "memorywall" && <MemoryWall />}
     </DashboardLayout>
   );
 };

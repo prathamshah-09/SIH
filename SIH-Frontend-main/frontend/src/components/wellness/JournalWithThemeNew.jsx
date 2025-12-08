@@ -442,7 +442,7 @@ const JournalWithTheme = () => {
 
       {/* Calendar Popup for Mobile/iPad */}
       <Dialog open={showMobileCalendar} onOpenChange={setShowMobileCalendar}>
-        <DialogContent className="max-w-sm md:max-w-md">
+        <DialogContent className="max-w-sm md:max-w-md bg-white">
           <DialogHeader>
             <DialogTitle>Select Date</DialogTitle>
           </DialogHeader>
