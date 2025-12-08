@@ -757,7 +757,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
                 {t('new') || 'New'}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] bg-white">
               <DialogHeader>
                 <DialogTitle className="flex items-center">
                   <User className="w-5 h-5 mr-2 text-blue-500" />

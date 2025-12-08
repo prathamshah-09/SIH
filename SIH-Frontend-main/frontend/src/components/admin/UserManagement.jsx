@@ -405,7 +405,7 @@ const UserManagement = () => {
                 {t('addStudent')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] bg-white">
               <DialogHeader>
                 <DialogTitle>{t('addNewStudentTitle')}</DialogTitle>
                 <DialogDescription>{t('addNewStudentDesc')}</DialogDescription>
@@ -500,7 +500,7 @@ const UserManagement = () => {
                 {t('addCounsellor')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] bg-white">
               <DialogHeader>
                 <DialogTitle>{t('addNewCounsellorTitle')}</DialogTitle>
                 <DialogDescription>{t('addNewCounsellorDesc')}</DialogDescription>
@@ -679,7 +679,7 @@ const UserManagement = () => {
 
         {/* User Details Dialog */}
         <Dialog open={showUserDetails} onOpenChange={setShowUserDetails}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] bg-white">
             <DialogHeader>
               <DialogTitle>User Details</DialogTitle>
               <DialogDescription>View user information</DialogDescription>
@@ -742,7 +742,7 @@ const UserManagement = () => {
 
         {/* Reset Password Dialog */}
         <Dialog open={showResetPassword} onOpenChange={setShowResetPassword}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] bg-white">
             <DialogHeader>
               <DialogTitle>Reset Password for {selectedUser?.name}</DialogTitle>
               <DialogDescription>Set a new password for this user</DialogDescription>

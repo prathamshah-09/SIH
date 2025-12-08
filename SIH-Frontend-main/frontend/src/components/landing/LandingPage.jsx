@@ -26,7 +26,7 @@ const LandingPage = () => {
 
       {/* Login Modal */}
       <Dialog open={isLoginModalOpen} onOpenChange={setIsLoginModalOpen}>
-        <DialogContent className="sm:max-w-md md:max-w-lg p-6 border-0 overflow-hidden bg-white/10 shadow-2xl rounded-2xl backdrop-blur-md">
+        <DialogContent className="sm:max-w-md md:max-w-lg p-6 border-0 overflow-hidden bg-white shadow-2xl rounded-2xl">
           <DialogTitle className="sr-only">Login</DialogTitle>
           <Login onLoginSuccess={() => setIsLoginModalOpen(false)} isModal={true} />
         </DialogContent>
