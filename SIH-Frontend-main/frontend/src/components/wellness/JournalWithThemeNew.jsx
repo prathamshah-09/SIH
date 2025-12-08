@@ -39,6 +39,7 @@ import {
 
 const JournalWithTheme = () => {
   const { theme, currentTheme } = useTheme();
+  const isDarkTheme = (currentTheme || '').toLowerCase().includes('midnight');
   const { t } = useLanguage();
 
   // State management
@@ -271,8 +272,8 @@ const JournalWithTheme = () => {
             : isTodayDate
               ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold hover:shadow-md'
               : isFuture
-                ? `${currentTheme === 'ocean' ? 'text-gray-900' : 'text-white'} hover:shadow-md`
-                : `${currentTheme === 'ocean' ? 'text-gray-900' : 'text-slate-400'} hover:shadow-md`
+                ? `${isDarkTheme ? 'text-white' : 'text-slate-700'} hover:shadow-md`
+                : 'text-slate-400 hover:shadow-md'
             }
             ${hasEntry && !isSelected ? 'border-2 border-purple-300' : ''}
           `}
@@ -452,8 +453,9 @@ const JournalWithTheme = () => {
                 onClick={handlePrevMonth}
                 variant="outline"
                 size="sm"
+                className={`border text-sm px-3 ${isDarkTheme ? 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-50'}`}
               >
-                <ChevronLeft className="w-4 h-4 text-white" />
+                <ChevronLeft className="w-4 h-4" />
               </Button>
 
               <h3 className={`font-bold text-lg ${theme.colors.text}`}>
@@ -464,8 +466,9 @@ const JournalWithTheme = () => {
                 onClick={handleNextMonth}
                 variant="outline"
                 size="sm"
+                className={`border text-sm px-3 ${isDarkTheme ? 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-50'}`}
               >
-                <ChevronRight className="w-4 h-4 text-white" />
+                <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
 
@@ -517,9 +520,9 @@ const JournalWithTheme = () => {
                 onClick={handlePrevMonth}
                 variant="outline"
                 size="sm"
-                className="hover:scale-105 transition-transform"
+                className={`hover:scale-105 transition-transform border text-sm px-3 ${isDarkTheme ? 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-50'}`}
               >
-                <ChevronLeft className="w-4 h-4 text-white" />
+                <ChevronLeft className="w-4 h-4" />
               </Button>
 
               <h3 className={`font-bold text-lg ${theme.colors.text}`}>
@@ -530,9 +533,9 @@ const JournalWithTheme = () => {
                 onClick={handleNextMonth}
                 variant="outline"
                 size="sm"
-                className="hover:scale-105 transition-transform"
+                className={`hover:scale-105 transition-transform border text-sm px-3 ${isDarkTheme ? 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-50'}`}
               >
-                <ChevronRight className="w-4 h-4 text-white" />
+                <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
 

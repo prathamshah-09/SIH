@@ -77,7 +77,8 @@ const CommunityView = ({ userRole = 'student' }) => {
   const streamRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
+  const isDark = currentTheme === 'midnight';
   const { t } = useLanguage();
   const { user } = useAuth();
 
@@ -282,7 +283,7 @@ const CommunityView = ({ userRole = 'student' }) => {
   if (selectedCommunity) {
     return (
       <div className={`chat-shell ${theme.colors.background}`}>
-        <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700">
+        <div className={`flex-shrink-0 p-4 sm:p-6 border-b ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-gradient-to-r from-blue-50 to-cyan-50'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 min-w-0">
               <Button
@@ -300,7 +301,7 @@ const CommunityView = ({ userRole = 'student' }) => {
                 </h2>
                 <p className={`text-xs ${theme.colors.muted} flex items-center space-x-1 mt-1`}>
                   <Users className="w-3 h-3" />
-                  <span>{selectedCommunity.total_members} {t('members') || 'members'}</span>
+                  <span>{selectedCommunity.total_members || 0} members</span>
                 </p>
               </div>
             </div>
@@ -315,7 +316,7 @@ const CommunityView = ({ userRole = 'student' }) => {
           </div>
         </div>
 
-        <div ref={messagesContainerRef} className={`chat-messages ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900'}`}>
+        <div ref={messagesContainerRef} className={`chat-messages ${isDark ? 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50'}`}>
           <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-full min-h-64">
@@ -385,14 +386,14 @@ const CommunityView = ({ userRole = 'student' }) => {
           </div>
         </div>
 
-        <div className="chat-input-bar bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
-          <div className="chat-input-inner">
-            <div className="flex-1 flex items-center bg-white dark:bg-gray-700 rounded-xl border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-900 transition-all px-3 sm:px-4">
+        <div className={`flex-shrink-0 sticky bottom-0 left-0 right-0 w-full p-2 sm:p-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] z-20 ${isDark ? 'bg-slate-900 border-t border-slate-800' : 'bg-gradient-to-r from-white to-gray-50'}`}>
+          <div className="max-w-[72rem] mx-auto flex items-end gap-2 sm:gap-3 w-full">
+            <div className={`flex-1 flex items-center rounded-xl border transition-all px-3 sm:px-4 ${isDark ? 'bg-slate-800 border-slate-700 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-900' : 'bg-white border-gray-300 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200'}`}>
               <Input
                 placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
                 value={newMessage}
                 onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-                className="flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-2 sm:py-3 text-sm sm:text-base h-10"
+                className={`flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-2 sm:py-3 text-sm sm:text-base h-10 ${isDark ? 'text-slate-100 placeholder-slate-400' : ''}`}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
               />
             </div>
@@ -438,9 +439,10 @@ const CommunityView = ({ userRole = 'student' }) => {
 
       {joinedCommunities.length > 0 && (
         <div className="space-y-4">
-          <h3 className={`text-xl font-semibold ${theme.colors.text} flex items-center`}>
-            <Users className="w-5 h-5 mr-2 text-blue-500" />
-            {t('joinedCommunitiesCount')} ({joinedCommunities.length})
+          <h3 className={`text-2xl font-bold ${theme.colors.text} flex items-center pt-2`}>
+            <Users className="w-6 h-6 mr-3 text-blue-500" />
+            <span>Joined Communities</span>
+            <span className="ml-2 text-lg font-semibold text-blue-500">({joinedCommunities.length})</span>
           </h3>
           <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {joinedCommunities.map(community => (
@@ -456,14 +458,14 @@ const CommunityView = ({ userRole = 'student' }) => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <Badge className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs">
+                    <Badge className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs py-1 px-2.5">
                       <Users className="w-3 h-3 mr-1" />
-                      {community.total_members} {t('members') || 'members'}
+                      {community.total_members || 0}
                     </Badge>
                   </div>
-                  <Button variant="animated" className="w-full text-sm py-2" onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }}>
+                  <Button className="w-full text-sm py-2.5 font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all hover:scale-105 active:scale-95" onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }}>
                     <MessageCircle className="w-4 h-4 mr-2" />
-                    {t('openChat') || 'Open Chat'}
+                    OPEN
                   </Button>
                 </CardContent>
               </Card>
@@ -475,9 +477,9 @@ const CommunityView = ({ userRole = 'student' }) => {
               <div key={community.id} className={`w-full flex items-center justify-between p-4 rounded-lg ${theme.colors.card} shadow-sm border border-l-4 border-l-blue-500`}>
                 <div className="min-w-0">
                   <div className="font-medium text-sm truncate">{community.title}</div>
-                  <div className="text-[11px] text-gray-500">{community.total_members} {t('members') || 'members'}</div>
+                  <div className="text-[11px] text-gray-500">{community.total_members || 0} members</div>
                 </div>
-                <Button variant="animated" className="px-3 py-1 text-sm ml-2 flex-shrink-0" onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }}>
+                <Button className="px-4 py-1.5 text-sm ml-2 flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all hover:shadow-md" onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }}>
                   {t('chat') || 'Chat'}
                 </Button>
               </div>
@@ -489,9 +491,10 @@ const CommunityView = ({ userRole = 'student' }) => {
       {joinedCommunities.length > 0 && <div className="border-t border-gray-200 pt-8"></div>}
 
       <div className="space-y-4">
-        <h3 className={`text-xl font-semibold ${theme.colors.text} flex items-center`}>
-          <Users className="w-5 h-5 mr-2 text-blue-500" />
-          {t('allCommunities') || 'All Communities'} ({allCommunities.length})
+        <h3 className={`text-2xl font-bold ${theme.colors.text} flex items-center pt-2`}>
+          <Users className="w-6 h-6 mr-3 text-blue-500" />
+          <span>{t('allCommunities') || 'All Communities'}</span>
+          <span className="ml-2 text-lg font-semibold text-blue-500">({allCommunities.length})</span>
         </h3>
         {allCommunities.length === 0 ? (
           <Card className={`${theme.colors.card} border-2 border-dashed border-gray-300 p-8`}>
@@ -514,17 +517,17 @@ const CommunityView = ({ userRole = 'student' }) => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs w-fit">
+                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs w-fit py-1 px-2.5">
                         <Users className="w-3 h-3 mr-1" />
-                        {community.total_members} {t('members') || 'members'}
+                        {community.total_members || 0}
                       </Badge>
                       {isJoined ? (
-                        <Button variant="animated" className="w-full text-sm py-2" onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }}>
+                        <Button className="w-full text-sm py-2.5 font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all hover:scale-105 active:scale-95" onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }}>
                           <MessageCircle className="w-4 h-4 mr-2" />
-                          {t('openChat') || 'Open Chat'}
+                          OPEN
                         </Button>
                       ) : (
-                        <Button variant="animated" className="w-full text-sm py-2" onClick={() => { setCommunityToJoin(community); setIsJoinDialogOpen(true); }}>
+                        <Button className="w-full text-sm py-2.5 font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all hover:scale-105 active:scale-95" onClick={() => { setCommunityToJoin(community); setIsJoinDialogOpen(true); }}>
                           <UserPlus className="w-4 h-4 mr-2" />
                           {t('joinCommunity') || 'Join'}
                         </Button>
@@ -542,14 +545,14 @@ const CommunityView = ({ userRole = 'student' }) => {
                   <div key={community.id} className={`w-full flex items-start justify-between p-4 rounded-lg ${theme.colors.card} shadow-sm border border-l-4 border-l-blue-500`}>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{community.title}</div>
-                      <div className="text-[11px] text-gray-500">{community.total_members} {t('members') || 'members'}</div>
+                      <div className="text-[11px] text-gray-500">{community.total_members || 0} members</div>
                     </div>
                     {isJoined ? (
-                      <Button variant="animated" className="px-3 py-1 text-sm ml-2 flex-shrink-0" onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }}>
+                      <Button className="px-4 py-1.5 text-sm ml-2 flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all" onClick={() => { setSelectedCommunity(community); fetchMessages(community.id); }}>
                         {t('chat') || 'Chat'}
                       </Button>
                     ) : (
-                      <Button variant="animated" className="px-3 py-1 text-sm ml-2 flex-shrink-0" onClick={() => { setCommunityToJoin(community); setIsJoinDialogOpen(true); }}>
+                      <Button className="px-4 py-1.5 text-sm ml-2 flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all" onClick={() => { setCommunityToJoin(community); setIsJoinDialogOpen(true); }}>
                         {t('join') || 'Join'}
                       </Button>
                     )}
@@ -575,7 +578,7 @@ const CommunityView = ({ userRole = 'student' }) => {
                   <div className={`text-sm break-words line-clamp-3 ${theme.colors.muted}`}>{communityToJoin.description}</div>
                   <div className="text-xs sm:text-sm text-gray-400 break-words">
                     <Users className="w-3 h-3 inline mr-1" />
-                    {communityToJoin.total_members} {t('members') || 'members'}
+                    {communityToJoin.total_members || 0} members
                   </div>
                 </div>
               ) : null}

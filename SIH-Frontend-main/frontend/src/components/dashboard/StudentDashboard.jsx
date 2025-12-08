@@ -780,7 +780,7 @@ className={`chat-messages border rounded-xl ${
       {activeTab === "journaling" && (
         <JournalWithThemeNew onBack={() => setActiveTab("overview")} />
       )}
-      {activeTab === "resources" && <WellnessTools />}
+      {activeTab === "resources" && <WellnessTools onNavigateToJournaling={() => setActiveTab("journaling")} />}
       {activeTab === "audios" && <AudioSection />}
       {activeTab === "assessments" && (
         <AssessmentDashboard userRole="student" />

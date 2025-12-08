@@ -151,7 +151,7 @@ const ProfileDropdown = () => {
           <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:scale-110 transition-transform">
             <Avatar className="h-10 w-10 ring-2 ring-white/50 shadow-lg">
               <AvatarImage src={user?.avatar} alt={user?.name} />
-              <AvatarFallback className={`bg-gradient-to-br ${theme.colors.primary} text-white text-sm font-bold`}>
+              <AvatarFallback className={`text-sm font-bold ${theme.currentTheme === 'midnight' ? 'bg-white text-slate-900' : `bg-gradient-to-br ${theme.colors.primary} text-white`}`}>
                 {user?.name?.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
