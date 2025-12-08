@@ -551,7 +551,7 @@ const AdminDashboard = () => {
           className={`p-4 rounded-2xl shadow-md ${
             message.isBot
               ? `${theme.colors.card} ${theme.colors.text}`
-              : theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
+              : theme.currentTheme === 'midnight' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
           }`}
         >
           {message.text}
@@ -598,18 +598,18 @@ const AdminDashboard = () => {
         <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
 <TabsList 
   className="grid grid-cols-3 w-full"
-  style={theme.currentTheme === 'dark' ? { backgroundColor: 'rgb(30 41 59)' } : {}}
+  style={theme.currentTheme === 'midnight' ? { backgroundColor: 'rgb(30 41 59)' } : {}}
 >
 
             <TabsTrigger value="chat">💬 Chat</TabsTrigger>
-            <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
+            <TabsTrigger value="voice">🎙 Voice</TabsTrigger>
             <TabsTrigger value="history">📜 History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="chat-panel">
             <div
               ref={messagesContainerRef}
-              className={`chat-messages border rounded-xl ${theme.currentTheme === 'dark' ? 'bg-slate-800' : `bg-gradient-to-br ${theme.colors.secondary}`}`}
+              className={`chat-messages border rounded-xl ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : `bg-gradient-to-br ${theme.colors.secondary}`}`}
             >
               <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
                 {messages.map(m => renderChatMessage(m))}
@@ -627,14 +627,14 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className={`chat-input-bar ${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
+            <div className={`chat-input-bar ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-slate-800'}`}>
               <div className="chat-input-inner">
                 <textarea
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Type your message..."
-                  className={`flex-1 p-2 sm:p-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base ${theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-white'}`}
+                  className={`flex-1 p-2 sm:p-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base ${theme.currentTheme === 'midnight' ? 'bg-slate-700 text-white' : 'bg-white'}`}
                   rows={1}
                   style={{ minHeight: '40px', maxHeight: '120px' }}
                   onInput={(e) => {
@@ -672,7 +672,7 @@ const AdminDashboard = () => {
             <RealtimeVoice onAddMessage={addMessageFromVoice} theme={theme} />
           </TabsContent>
 
-          <TabsContent value="history" className={`flex-1 overflow-hidden ${theme.currentTheme === 'dark' ? 'bg-slate-800' : ''}`}>
+          <TabsContent value="history" className={`flex-1 overflow-hidden ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : ''}`}>
             <div className="h-full overflow-y-auto pt-4 px-4">
               {conversationHistory.length === 0 ? (
                 <p className="text-center text-gray-500 mt-10">
@@ -767,48 +767,71 @@ const AdminDashboard = () => {
       {/* Enhanced System Metrics (4 in laptop, 2x2 in mobile/tablet) */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
         {[
-          { 
-            key: 'totalUsers', 
-            value: mockAnalytics.totalUsers.toLocaleString(), 
-            icon: Users, 
-            color: 'from-blue-500 to-cyan-500', 
-            bgColor: 'from-blue-50 to-cyan-50',
+          {
+            key: 'totalUsers',
+            value: mockAnalytics.totalUsers.toLocaleString(),
+            icon: Users,
+            color: 'from-blue-400 to-cyan-400',
+            bgColor: 'bg-transparent',
+            borderColor: 'border border-white/20',
             change: '+12%',
-            changeColor: 'text-green-600'
+            changeColor: 'text-green-600',
+            textColor: 'text-white'
           },
           { 
             key: 'activeUsers', 
             value: mockAnalytics.activeUsers.toLocaleString(), 
             icon: Activity, 
             color: 'from-green-500 to-emerald-500', 
-            bgColor: 'from-green-50 to-emerald-50',
+            bgColor: 'bg-transparent',
+            borderColor: 'border border-white/20',
             change: '71% engagement',
-            changeColor: 'text-green-600'
+            changeColor: 'text-green-600',
+            textColor: 'text-white'
           },
           { 
             key: 'totalSessions', 
             value: mockAnalytics.totalSessions.toLocaleString(), 
             icon: TrendingUp, 
             color: 'from-purple-500 to-violet-500', 
-            bgColor: 'from-purple-50 to-violet-50',
+            bgColor: 'bg-transparent',
+            borderColor: 'border border-white/20',
             change: '+8% this week',
-            changeColor: 'text-green-600'
+            changeColor: 'text-green-600',
+            textColor: 'text-white'
           },
           { 
             key: 'avgSession', 
             value: mockAnalytics.averageSessionDuration, 
             icon: Clock, 
             color: 'from-orange-500 to-pink-500', 
-            bgColor: 'from-orange-50 to-pink-50',
+            bgColor: 'bg-transparent',
+            borderColor: 'border border-white/20',
             change: '+3 min increase',
-            changeColor: 'text-green-600'
+            changeColor: 'text-green-600',
+            textColor: 'text-white'
           }
-        ].map(({ key, value, icon: Icon, color, bgColor, change, changeColor }) => (
-          <Card key={key} className={`bg-gradient-to-r ${bgColor} border-0 hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group`}>
+        ].map(({ key, value, icon: Icon, color, bgColor, borderColor, change, changeColor, textColor }) => (
+          // Card wrapper: use bgColor (transparent) + borderColor (thin white). Keep hover effects as-is.
+          <Card
+            key={key}
+            className={`bg-gradient-to-r ${bgColor} ${borderColor} hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group`}
+          >
             <CardContent className="p-4 md:p-6 lg:p-8">
               <div>
-                <p className={`text-sm font-semibold ${theme.colors.muted} mb-2`}>{t(key)}</p>
-                <p className="text-3xl font-bold text-gray-800 group-hover:scale-105 transition-transform">{value}</p>
+                {/* Label - conditional text color with inline style override */}
+                <p 
+                  style={{ color: theme.currentTheme === 'midnight' ? 'white' : 'black' }}
+                  className={`text-sm font-semibold opacity-70 mb-2 ${theme.currentTheme === 'midnight' ? 'text-white' : 'text-black'}`}
+                >{t(key)}</p>
+
+                {/* Value - conditional text color with inline style override */}
+                <p 
+                  style={{ color: theme.currentTheme === 'midnight' ? 'white' : 'black' }}
+                  className={`text-3xl font-bold ${theme.currentTheme === 'midnight' ? 'text-white' : 'text-black'} group-hover:scale-105 transition-transform`}
+                >{value}</p>
+
+                {/* Change - keep green as-is */}
                 <p className={`text-xs ${changeColor} mt-2 font-medium`}>{change}</p>
               </div>
             </CardContent>
@@ -817,9 +840,10 @@ const AdminDashboard = () => {
       </div>
 
       {/* Platform Analytics — keep Most Used Features only */}
-      <Card className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-shadow`}>
+      {/* Make this card transparent with thin white border, text inside white */}
+      <Card className={`bg-transparent border border-white/20 shadow-xl hover:shadow-2xl transition-shadow`}>
         <CardHeader>
-          <CardTitle className={`flex items-center ${theme.colors.text}`}>
+          <CardTitle className={`flex items-center ${theme.currentTheme === 'midnight' ? 'text-white' : 'text-black'}`}>
             <BarChart3 className="w-6 h-6 mr-3 text-blue-500" />
             {t('platformAnalytics')}
             <Badge className="ml-3 bg-green-100 text-green-800">{t('liveData')}</Badge>
@@ -828,24 +852,25 @@ const AdminDashboard = () => {
         <CardContent>
           <div className="space-y-6">
             <div>
-              <h4 className={`font-semibold ${theme.colors.text} mb-4`}>{t('mostUsedFeatures')}</h4>
+              <h4 className={`font-semibold ${theme.currentTheme === 'midnight' ? 'text-white' : 'text-black'} mb-4`}>{t('mostUsedFeatures')}</h4>
               <div className="space-y-4">
                 {mockAnalytics.mostUsedFeatures.map((feature, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
+                  // Feature row: removed bg-gray-50; replaced with border and transparent bg.
+                  <div key={index} className="flex items-center justify-between p-4 rounded-lg border border-white/10 hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-3">
                       <div className={`w-8 h-8 bg-gradient-to-r ${theme.colors.primary} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
                         {index + 1}
                       </div>
-                      <span className={`font-medium ${theme.colors.text}`}>{feature.name}</span>
+                      <span className={`font-medium ${theme.currentTheme === 'midnight' ? 'text-white' : 'text-black'}`}>{feature.name}</span>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <div className="w-32 bg-gray-200 rounded-full h-3">
+                      <div className="w-32 bg-white/10 rounded-full h-3">
                         <div 
                           className={`bg-gradient-to-r ${theme.colors.primary} h-3 rounded-full transition-all duration-500`}
                           style={{ width: `${feature.usage}%` }}
                         ></div>
                       </div>
-                      <span className={`text-sm font-semibold ${theme.colors.text} min-w-[3rem]`}>{feature.usage}%</span>
+                      <span className={`text-sm font-semibold ${theme.currentTheme === 'midnight' ? 'text-white' : 'text-black'} min-w-[3rem]`}>{feature.usage}%</span>
                     </div>
                   </div>
                 ))}

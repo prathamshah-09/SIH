@@ -460,7 +460,7 @@ const AudioSection = () => {
           <div className="flex items-center space-x-3">
            <Badge
   className={`${
-    theme.currentTheme === 'dark'
+    theme.currentTheme === 'midnight'
       ? ' bg-slate-800 text-white'
       : 'bg-blue-500 text-white'
   }`}
@@ -495,7 +495,7 @@ const AudioSection = () => {
           return (
             <Card 
               key={audio.id} 
-              className={`${theme.colors.card} ${theme.currentTheme === 'dark' ? 'bg-slate-800' : ''} hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border-0 group overflow-hidden ${
+              className={`${theme.colors.card} ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : ''} hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border-0 group overflow-hidden ${
                 currentState.isPlaying ? 'ring-2 ring-green-400 shadow-green-100' : ''
               }`}
             >
@@ -545,7 +545,7 @@ const AudioSection = () => {
                         onValueChange={([value]) => adjustVolume(audio.id, value)}
                         max={100}
                         step={1}
-                        className="w-full"
+                        className={`w-full ${theme.currentTheme === 'midnight' ? 'bg-slate-700 text-white' : ''}`}
                         aria-label={`${t('audio_' + audio.id.replace(/-/g, '_') + '_title')} volume`}
                       />
                     </div>
@@ -554,10 +554,12 @@ const AudioSection = () => {
                       aria-label={currentState.volume > 0 ? 'Mute' : 'Unmute'}
                       variant="outline"
                       size="sm"
-                      className="p-1 h-8 w-8 flex items-center justify-center flex-shrink-0"
+                      className={`p-1 h-8 w-8 flex items-center justify-center flex-shrink-0 ${
+                        theme.currentTheme === 'midnight' ? 'text-white' : ''
+                      }`}
                       title={currentState.volume > 0 ? t('mute') || 'Mute' : t('unmute') || 'Unmute'}
                     >
-                      {currentState.volume > 0 ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                      {currentState.volume > 0 ? <Volume2 className={`w-3 h-3 ${theme.currentTheme === 'midnight' ? 'text-white' : ''}`} /> : <VolumeX className={`w-3 h-3 ${theme.currentTheme === 'midnight' ? 'text-white' : ''}`} />}
                     </Button>
                   </div>
 

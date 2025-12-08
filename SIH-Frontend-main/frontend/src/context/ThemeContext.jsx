@@ -23,8 +23,8 @@ export const themes = {
       muted: 'text-cyan-600'
     }
   },
-  dark: {
-    name: 'Midnight Calm',
+  midnight: {
+    name: 'Midnight',
     colors: {
       primary: 'from-slate-600 to-gray-700',
       secondary: 'from-slate-800 to-gray-800',

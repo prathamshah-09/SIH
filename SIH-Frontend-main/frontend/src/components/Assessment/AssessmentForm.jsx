@@ -298,12 +298,12 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
                   onClick={() => handleResponse(currentQuestionData.id, option.value)}
                   className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
                     responses[currentQuestionData.id] === option.value
-                      ? `border-cyan-500 bg-gradient-to-r from-cyan-50 to-blue-50 shadow-lg ${theme.currentTheme === 'dark' ? 'text-black' : ''}`
+                      ? `border-cyan-500 bg-gradient-to-r from-cyan-50 to-blue-50 shadow-lg ${theme.currentTheme === 'midnight' ? 'text-black' : ''}`
                       : `border-gray-200 hover:border-cyan-300 hover:bg-gradient-to-r hover:from-cyan-25 hover:to-blue-25 ${theme.colors.card}`
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`font-medium ${responses[currentQuestionData.id] === option.value && theme.currentTheme === 'dark' ? 'text-black' : theme.colors.text}`}>
+                    <span className={`font-medium ${responses[currentQuestionData.id] === option.value && theme.currentTheme === 'midnight' ? 'text-black' : theme.colors.text}`}>
                       {option.label}
                     </span>
                     <div className={`w-5 h-5 rounded-full border-2 ${
