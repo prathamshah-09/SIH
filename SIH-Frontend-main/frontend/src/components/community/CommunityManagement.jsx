@@ -501,7 +501,7 @@ const CommunityManagement = () => {
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
-          {t('addCommunity') || 'Add Community'}
+          {t('addCommunity')}
         </Button>
       </div>
 
@@ -546,7 +546,7 @@ const CommunityManagement = () => {
           <Card className={`${communityCardBg} ${communityCardBorder} border-0 shadow-sm`}>
             <CardHeader className="pb-2">
               <CardTitle className={`text-sm font-medium ${cardDescClass}`}>
-                {t('mostActive') || 'Most Active'}
+                {t('mostActive')}
               </CardTitle>
             </CardHeader>
             <CardContent>

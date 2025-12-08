@@ -433,11 +433,11 @@ const FormManagement = () => {
           }`}>
             <TabsTrigger value="create" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
               <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
-              <span className="truncate font-medium">Create Form</span>
+              <span className="truncate font-medium">{t('createForm')}</span>
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
-              <span className="truncate font-medium">Form History</span>
+              <span className="truncate font-medium">{t('formHistory')}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -452,10 +452,10 @@ const FormManagement = () => {
                     </div>
                     <div className="flex-1">
                       <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold ${theme.colors.cardText}`}>
-                        Create New Form
+                        {t('createNewForm')}
                       </CardTitle>
                       <p className={`text-xs sm:text-sm ${theme.colors.muted} mt-1`}>
-                        Design wellness forms to understand your students
+                        {t('designWellnessForms')}
                       </p>
                     </div>
                   </div>
@@ -464,27 +464,27 @@ const FormManagement = () => {
                   {/* Form Title */}
                   <div className="space-y-2">
                     <label className={`text-sm sm:text-base font-semibold ${theme.colors.text}`}>
-                      Form Title
+                      {t('formTitle')}
                     </label>
                     <Input
-                      placeholder="e.g., Weekly Wellness Check-in"
+                      placeholder={t('formTitlePlaceholder')}
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
                       maxLength={100}
                       className={`text-sm sm:text-base py-2.5 sm:py-3 px-3 sm:px-4 border-2 border-gray-200 hover:border-cyan-300 focus:border-cyan-500 transition-all duration-200 rounded-lg ${theme.colors.card}`}
                     />
                     <p className={`text-xs sm:text-sm ${theme.colors.muted}`}>
-                      {formTitle.length}/100 characters
+                      {formTitle.length}/100 {t('characters')}
                     </p>
                   </div>
 
                   {/* Form Description */}
                   <div className="space-y-2">
                     <label className={`text-sm sm:text-base font-semibold ${theme.colors.text}`}>
-                      Description (Optional)
+                      {t('descriptionOptional')}
                     </label>
                     <Textarea
-                      placeholder="Add a brief description about this form..."
+                      placeholder={t('descriptionPlaceholder')}
                       value={formDescription}
                       onChange={(e) => setFormDescription(e.target.value)}
                       maxLength={300}
@@ -492,7 +492,7 @@ const FormManagement = () => {
                       className={`text-sm sm:text-base py-2.5 sm:py-3 px-3 sm:px-4 border-2 border-gray-200 hover:border-cyan-300 focus:border-cyan-500 transition-all duration-200 resize-none rounded-lg ${theme.colors.card}`}
                     />
                     <p className={`text-xs sm:text-sm ${theme.colors.muted}`}>
-                      {formDescription.length}/300 characters
+                      {formDescription.length}/300 {t('characters')}
                     </p>
                   </div>
 
@@ -502,14 +502,14 @@ const FormManagement = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className={`text-base sm:text-lg font-semibold ${theme.colors.text}`}>
-                        Questions ({questions.length})
+                        {t('questions')} ({questions.length})
                       </h3>
                       <Button
                         onClick={addQuestion}
                         className={`bg-gradient-to-r ${theme.colors.primary} text-white hover:shadow-lg font-semibold py-2 px-4 text-sm rounded-lg hover:scale-105 transition-all duration-200`}
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Question
+                        {t('addQuestion')}
                       </Button>
                     </div>
 
@@ -517,7 +517,7 @@ const FormManagement = () => {
                       <div className={`text-center py-8 rounded-lg border-2 border-dashed ${theme.colors.muted}`}>
                         <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className={`${theme.colors.muted} text-sm`}>
-                          No questions added yet. Click "Add Question" to get started.
+                          {t('noQuestionsAdded')}
                         </p>
                       </div>
                     ) : (
@@ -672,7 +672,7 @@ const FormManagement = () => {
                       className={`bg-gradient-to-r ${theme.colors.primary} text-white hover:shadow-lg font-semibold px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base hover:scale-105 transition-all duration-200 rounded-lg disabled:opacity-50`}
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      Save Form
+                      {t('saveForm')}
                     </Button>
                   </div>
                 </CardContent>

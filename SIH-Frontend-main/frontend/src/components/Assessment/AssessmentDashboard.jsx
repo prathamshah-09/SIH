@@ -212,7 +212,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
           </TabsTrigger>
           <TabsTrigger value="admin" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
             <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
-            <span className="truncate font-medium">Admin Forms</span>
+            <span className="truncate font-medium">{t('adminForms')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -289,10 +289,10 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
               <CardContent className="p-8 sm:p-12 text-center">
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className={`text-lg font-semibold ${theme.colors.text} mb-2`}>
-                  No Admin Forms Yet
+                  {t('noAdminFormsYet')}
                 </h3>
                 <p className={`${theme.colors.muted} text-sm`}>
-                  Your instructors haven't created any custom forms yet.
+                  {t('noAdminFormsDesc')}
                 </p>
               </CardContent>
             </Card>
