@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@comp
 import { Button } from '@components/ui/button';
 import { Badge } from '@components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@components/ui/tabs';
+import { useToast } from '@hooks/use-toast';
 import {
   Calendar,
   Users,
@@ -299,6 +300,7 @@ const TypingDots = () => {
 
 const CounsellorResourcesSection = ({ theme }) => {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [resources, setResources] = useState([]);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [resourceName, setResourceName] = useState('');
@@ -337,7 +339,11 @@ const CounsellorResourcesSection = ({ theme }) => {
       // Validate file size (50MB max)
       const maxSize = 50 * 1024 * 1024; // 50MB in bytes
       if (file.size > maxSize) {
-        alert('File size exceeds 50MB limit');
+        toast({
+          title: "File Size Exceeded",
+          description: "File size exceeds 50MB limit. Please select a smaller file.",
+          variant: "destructive"
+        });
         return;
       }
       setSelectedFile(file);
@@ -347,7 +353,11 @@ const CounsellorResourcesSection = ({ theme }) => {
 
   const handleUpload = async () => {
     if (!resourceName.trim() || !selectedFile) {
-      alert('Please provide a resource name and select a file');
+      toast({
+        title: "Missing Information",
+        description: "Please provide a resource name and select a file.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -372,12 +382,20 @@ const CounsellorResourcesSection = ({ theme }) => {
         setFileName('');
         setShowUploadForm(false);
         
-        alert('Resource uploaded successfully!');
+        toast({
+          title: "Success",
+          description: "Resource uploaded successfully!",
+          variant: "default"
+        });
       }
     } catch (err) {
       console.error('Error uploading resource:', err);
       setError(err.message || 'Failed to upload resource');
-      alert(`Upload failed: ${err.message || 'Please try again'}`);
+      toast({
+        title: "Upload Failed",
+        description: err.message || 'Please try again.',
+        variant: "destructive"
+      });
     } finally {
       setIsUploading(false);
     }
@@ -393,11 +411,19 @@ const CounsellorResourcesSection = ({ theme }) => {
       if (response.success) {
         // Remove from local state
         setResources(resources.filter(r => r.id !== resourceId));
-        alert('Resource deleted successfully!');
+        toast({
+          title: "Success",
+          description: "Resource deleted successfully!",
+          variant: "default"
+        });
       }
     } catch (err) {
       console.error('Error deleting resource:', err);
-      alert(`Delete failed: ${err.message || 'Please try again'}`);
+      toast({
+        title: "Delete Failed",
+        description: err.message || 'Please try again.',
+        variant: "destructive"
+      });
     }
   };
 
@@ -410,7 +436,11 @@ const CounsellorResourcesSection = ({ theme }) => {
       }
     } catch (err) {
       console.error('Error viewing resource:', err);
-      alert(`View failed: ${err.message || 'Please try again'}`);
+      toast({
+        title: "View Failed",
+        description: err.message || 'Please try again.',
+        variant: "destructive"
+      });
     }
   };
 
@@ -425,10 +455,20 @@ const CounsellorResourcesSection = ({ theme }) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        toast({
+          title: "Success",
+          description: "Download started successfully!",
+          variant: "default"
+        });
       }
     } catch (err) {
       console.error('Error downloading resource:', err);
-      alert(`Download failed: ${err.message || 'Please try again'}`);
+      toast({
+        title: "Download Failed",
+        description: err.message || 'Please try again.',
+        variant: "destructive"
+      });
     }
   };
 
