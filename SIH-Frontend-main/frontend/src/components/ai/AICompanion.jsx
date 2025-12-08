@@ -11,7 +11,7 @@ import { generateHistoryTitle } from '@lib/utils';
 
 const AICompanion = () => {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [showChatsPanel, setShowChatsPanel] = useState(false);
@@ -220,7 +220,13 @@ const AICompanion = () => {
       </div>
 
       {/* Input bar — fixed at bottom */}
-      <div className="chat-input-bar bg-white dark:bg-gray-900">
+      <div
+        className="chat-input-bar"
+        style={{
+          backgroundColor: currentTheme === 'midnight' ? '#0f172a' : '#ffffff',
+          borderTop: `1px solid ${currentTheme === 'midnight' ? '#1f2937' : '#e0f2fe'}`
+        }}
+      >
         <div className="chat-input-inner">
           <Input
             placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
