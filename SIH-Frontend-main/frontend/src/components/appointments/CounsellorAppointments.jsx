@@ -151,12 +151,12 @@ const initialCounsellorAppointments = [
 
 // --- Main Component ---
 const CounsellorAppointments = () => {
-    const { theme } = useTheme();
+    const { theme, currentTheme } = useTheme();
     const { t } = useLanguage();
+    const isDark = currentTheme === 'midnight';
     
     const [view, setView] = useState('requests'); // 'requests', 'upcoming', 'past', 'availability'
     const [appointments, setAppointments] = useState(initialCounsellorAppointments);
-    const [isGeneratingPlan, setIsGeneratingPlan] = useState({});
     const [availability, setAvailability] = useState({
         [formatDateToKey(getFutureDate(2))]: ['09:00 AM', '10:00 AM', '11:00 AM'],
         [formatDateToKey(getFutureDate(4))]: ['02:00 PM', '03:00 PM'],
@@ -235,34 +235,6 @@ const CounsellorAppointments = () => {
         return () => clearInterval(interval);
     }, [appointments]);
 
-    const callEmergentAPI = async (prompt) => {
-        const apiKey = "sk-emergent-1C7AcEfAeFeCa44AaE";
-        const apiUrl = "https://api.emergentmind.com/v1/chat/completions";
-        
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: "gpt-4",
-                    messages: [{ role: "user", content: prompt }],
-                    max_tokens: 500
-                }),
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                return result.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response right now.";
-            }
-        } catch (error) {
-            console.error("Emergent API call error:", error);
-        }
-        return "Sorry, there was an issue connecting to the AI service.";
-    };
-
     const handleAppointmentAction = (appointmentId, action) => {
         const updatedAppointments = appointments.map(app => {
             if (app.id === appointmentId) {
@@ -283,28 +255,6 @@ const CounsellorAppointments = () => {
         setAppointments(updatedAppointments);
     };
 
-    const handleGenerateActionPlan = async (appointmentId) => {
-        const appointment = appointments.find(app => app.id === appointmentId);
-        if (!appointment || !appointment.postSessionNotes) return;
-
-        setIsGeneratingPlan({ ...isGeneratingPlan, [appointmentId]: true });
-
-        const prompt = `Act as a professional therapist creating a post-session plan. Based on the following session notes: "${appointment.postSessionNotes}". Generate a list of 3-4 simple, actionable steps for the student to take. Format the output as a simple list, with each step on a new line, starting with a hyphen. Do not add any introductory or concluding text.`;
-
-        const response = await callEmergentAPI(prompt);
-        const newActionItems = response.split('\n').filter(line => line.startsWith('- ')).map(line => ({ 
-            id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), 
-            text: line.substring(2).trim(), 
-            completed: false 
-        }));
-
-        if (newActionItems.length > 0) {
-            updateAppointmentDetails(appointmentId, { actionItems: [...appointment.actionItems, ...newActionItems] });
-        }
-        
-        setIsGeneratingPlan({ ...isGeneratingPlan, [appointmentId]: false });
-    };
-
     const updateAppointmentDetails = (id, newDetails) => {
         setAppointments(appointments.map(app => app.id === id ? { ...app, ...newDetails } : app));
     };
@@ -323,7 +273,6 @@ const CounsellorAppointments = () => {
 
     const renderAvailabilityCalendar = () => {
         const calendarDays = [];
-        const today = new Date();
         const startDay = firstDayOfMonth.getDay();
 
         for (let i = 0; i < startDay; i++) {
@@ -337,11 +286,21 @@ const CounsellorAppointments = () => {
             const hasSlots = availability[dateKey] && availability[dateKey].length > 0;
 
             calendarDays.push(
-                <div key={day}
+                <div
+                    key={day}
+                    role="button"
+                    tabIndex={0}
                     className={`text-center p-2 rounded-full cursor-pointer transition-all duration-300 ease-in-out relative
                         ${isSelected ? 'bg-cyan-600 text-white font-bold shadow-lg' : 'hover:bg-cyan-100'}
                         ${!isSelected && hasSlots ? 'bg-cyan-50' : ''}`}
-                    onClick={() => handleSelectAvailabilityDate(day)}>
+                    onClick={() => handleSelectAvailabilityDate(day)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleSelectAvailabilityDate(day);
+                        }
+                    }}
+                >
                     {day}
                     {hasSlots && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}
                 </div>
@@ -375,12 +334,12 @@ const CounsellorAppointments = () => {
     // Navigation Tabs
     const renderTabs = () => (
         <div className="flex justify-center mb-8">
-            <div className="flex space-x-2 bg-gray-200 p-1 rounded-full">
+            <div className={`flex space-x-2 p-1 rounded-full ${isDark ? 'bg-slate-800 border border-slate-600 shadow-lg' : 'bg-gray-200'}`}>
                 <Button 
                     onClick={() => setView('requests')} 
                     variant={view === 'requests' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view !== 'requests' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
+                        view === 'requests' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
                     }`}
                     >
                     {t('appointmentRequestsTitle')}
@@ -389,7 +348,7 @@ const CounsellorAppointments = () => {
                     onClick={() => setView('sessions')} 
                     variant={view === 'sessions' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view !== 'sessions' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
+                        view === 'sessions' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
                     }`}
                 >
                     {t('sessions') || 'Sessions'}
@@ -398,7 +357,7 @@ const CounsellorAppointments = () => {
                     onClick={() => setView('availability')} 
                     variant={view === 'availability' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view !== 'availability' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
+                        view === 'availability' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
                     }`}
                     >
                     {t('manageAvailability')}
@@ -459,7 +418,7 @@ const CounsellorAppointments = () => {
                                                             <div className="text-left sm:text-left">
                                                                 <h3 className={`font-bold text-sm sm:text-lg ${theme.colors.text}`}>{app.studentName}</h3>
                                                             </div>
-                                                            <Badge className="bg-orange-100 text-orange-700 px-3 py-1">
+                                                            <Badge className={`${isDark ? 'bg-slate-700 text-orange-400' : 'bg-orange-100 text-orange-700'} px-3 py-1`}>
                                                                 {t('pending')}
                                                             </Badge>
                                                         </div>
@@ -639,11 +598,11 @@ const CounsellorAppointments = () => {
                                                     
                                                     <div>
                                                         <div className="flex items-center justify-between mb-2">
-                                                            <h4 className={`font-semibold ${theme.colors.text}`}>{t('suggestedActionPlan')}</h4>
+                                                            <h4 className={`font-semibold ${isDark ? 'text-white' : theme.colors.text}`}>{t('suggestedActionPlan')}</h4>
                                                         </div>
-                                                        <div className={`space-y-2 p-3 bg-gradient-to-r ${theme.colors.secondary} rounded-lg border h-40 overflow-y-auto`}>
+                                                        <div className={`space-y-2 p-3 rounded-lg border h-40 overflow-y-auto ${isDark ? 'bg-slate-800 border-slate-700' : `bg-gradient-to-r ${theme.colors.secondary}`}`}>
                                                             {app.actionItems.length > 0 ? app.actionItems.map(item => (
-                                                                <div key={item.id} className="flex items-start justify-between group hover:bg-opacity-80 p-2 rounded transition-all">
+                                                                <div key={item.id} className={`flex items-start justify-between group p-2 rounded transition-all ${isDark ? 'hover:bg-slate-700' : 'hover:bg-opacity-80'}`}>
                                                                     <div className="flex items-start flex-1">
                                                                         <span className="text-cyan-500 mr-2 mt-0.5">•</span>
                                                                         {editingActionItem?.itemId === item.id && editingActionItem?.appointmentId === app.id ? (
@@ -651,11 +610,10 @@ const CounsellorAppointments = () => {
                                                                                 type="text"
                                                                                 value={editingActionText}
                                                                                 onChange={(e) => setEditingActionText(e.target.value)}
-                                                                                className={`flex-1 p-1 rounded border border-cyan-400 focus:ring-2 focus:ring-cyan-500 ${theme.colors.card}`}
-                                                                                autoFocus
+                                                                                className={`flex-1 p-1 rounded border border-cyan-400 focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-slate-700 text-white' : theme.colors.card}`}
                                                                             />
                                                                         ) : (
-                                                                            <p className={`${theme.colors.text} text-sm flex-1`}>{item.text}</p>
+                                                                            <p className={`text-sm flex-1 ${isDark ? 'text-white' : theme.colors.text}`}>{item.text}</p>
                                                                         )}
                                                                     </div>
                                                                     <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -716,7 +674,8 @@ const CounsellorAppointments = () => {
                                                                 type="text"
                                                                 value={newActionText[app.id] || ''}
                                                                 onChange={(e) => setNewActionText(prev => ({ ...prev, [app.id]: e.target.value }))}
-                                                                className={`flex-grow p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
+                                                                className={`flex-grow p-2 rounded-lg border focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${isDark ? 'bg-slate-700 text-white border-slate-600' : `border-gray-300 ${theme.colors.card}`}`}
+                                                                placeholder={isDark ? 'Add action item...' : ''}
                                                             />
                                                             <Button onClick={() => handleAddActionItem(app.id)} size="sm" className="bg-cyan-500 text-white">
                                                                 {t('addButton') || 'Add'}
@@ -746,7 +705,7 @@ const CounsellorAppointments = () => {
                             </div>
                             
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <Card className={`${theme.colors.card} shadow-lg border-0`}>
+                                <Card className={`${isDark ? 'bg-slate-800 border-slate-700' : theme.colors.card} shadow-lg ${isDark ? 'border' : 'border-0'}`}>
                                     <CardContent className="p-6">
                                         <div className="flex items-center justify-between mb-4">
                                             <Button onClick={handlePrevMonth} variant="outline" size="sm" className="hover:bg-cyan-50">
@@ -768,7 +727,7 @@ const CounsellorAppointments = () => {
                                     </CardContent>
                                 </Card>
                                 
-                                <Card className={`${theme.colors.card} shadow-lg border-0`}>
+                                <Card className={`${isDark ? 'bg-slate-800 border-slate-700' : theme.colors.card} shadow-lg ${isDark ? 'border' : 'border-0'}`}>
                                     <CardContent className="p-6">
                                         <h3 className={`font-bold text-lg ${theme.colors.text} mb-4`}>
                                             {t('availableSlotsForDate', { date: selectedAvailabilityDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) })}
@@ -780,7 +739,7 @@ const CounsellorAppointments = () => {
                                                     value={newTimeSlot}
                                                     onChange={(e) => setNewTimeSlot(e.target.value)}
                                                     placeholder={t('timeExamplePlaceholder')}
-                                                    className={`flex-grow p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
+                                                    className={`flex-grow p-2 rounded-lg border focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${isDark ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-gray-300'}`}
                                                 />
                                                 <Button onClick={handleAddTimeSlot} className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:bg-cyan-700">
                                                     {t('addButton')}
@@ -790,13 +749,13 @@ const CounsellorAppointments = () => {
                                         <div className="space-y-2 h-64 overflow-y-auto">
                                             {(availability[formatDateToKey(selectedAvailabilityDate)] || []).length > 0 ? (
                                                 (availability[formatDateToKey(selectedAvailabilityDate)] || []).map(time => (
-                                                    <div key={time} className="flex items-center justify-between bg-cyan-50 p-3 rounded-lg border border-cyan-200">
+                                                    <div key={time} className={`flex items-center justify-between p-3 rounded-lg border ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-cyan-50 border-cyan-200'}`}>
                                                         <p className={`font-semibold ${theme.colors.text}`}>{time}</p>
                                                         <Button 
                                                             onClick={() => handleRemoveTimeSlot(time)} 
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                            className={isDark ? 'text-red-400 hover:text-red-300 hover:bg-slate-600' : 'text-red-500 hover:text-red-700 hover:bg-red-50'}
                                                         >
                                                             <TrashIcon className="w-5 h-5" />
                                                         </Button>

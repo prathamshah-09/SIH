@@ -830,7 +830,7 @@ const StudentAppointments = () => {
                                 <div className="space-y-6">
                                     {completedAppointments.map(app => (
                                         app.actionItems.length > 0 && (
-                                            <Card key={app.id} className={`${theme.colors.card} shadow-lg border-0`}>
+                                            <Card key={app.id} className={`shadow-lg border-0 ${theme.currentTheme === 'midnight' ? 'bg-slate-900 border border-slate-800' : theme.colors.card}`}>
                                                 <CardHeader>
                                                     <div className="flex items-start justify-between">
                                                         <div>
@@ -845,16 +845,16 @@ const StudentAppointments = () => {
                                                 </CardHeader>
                                                 <CardContent>
                                                     <div className="space-y-3">
-                                                        <h5 className={`font-semibold ${theme.colors.text} text-sm sm:text-base`}>Action Items:</h5>
+                                                        <h5 className={`font-semibold text-sm sm:text-base ${theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text}`}>Action Items:</h5>
                                                         {app.actionItems.map(item => (
-                                                            <div key={item.id} className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${theme.currentTheme === 'midnight' ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                                                            <div key={item.id} className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${theme.currentTheme === 'midnight' ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={item.completed}
                                                                     onChange={() => toggleActionItem(app.id, item.id)}
-                                                                    className={`w-5 h-5 text-cyan-600 ${theme.currentTheme === 'midnight' ? 'bg-slate-600 border-slate-500' : 'bg-white border-gray-300'} rounded focus:ring-cyan-500 cursor-pointer`}
+                                                                    className={`w-5 h-5 text-cyan-600 ${theme.currentTheme === 'midnight' ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'} rounded focus:ring-cyan-500 cursor-pointer`}
                                                                 />
-                                                                <span className={`flex-1 text-sm sm:text-base ${item.completed ? `line-through ${theme.colors.muted}` : theme.colors.text}`}>
+                                                                <span className={`flex-1 text-sm sm:text-base ${item.completed ? (theme.currentTheme === 'midnight' ? 'line-through text-slate-400' : `line-through ${theme.colors.muted}`) : (theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text)}`}>
                                                                     {item.text}
                                                                 </span>
                                                                 {item.completed && (

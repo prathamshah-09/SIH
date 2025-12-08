@@ -63,17 +63,17 @@ const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-xl sm:text-2xl md:text-3xl text-white/95 font-medium mb-6"
           >
-            Because Every Mind Matters
+            Your safe space to pause, reflect and recharge
           </motion.p>
 
-          <motion.p
+          {/* <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
             className="text-base sm:text-lg text-white/70 max-w-2xl mx-auto mb-8 leading-relaxed"
           >
             Empowering students and institutions with accessible, anonymous, and supportive mental well-being solutions.
-          </motion.p>
+          </motion.p> */}
         </motion.div>
       </div>
 
