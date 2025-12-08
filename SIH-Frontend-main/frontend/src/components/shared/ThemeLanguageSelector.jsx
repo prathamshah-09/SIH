@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { Palette, Globe, Check } from 'lucide-react';
 
 const ThemeLanguageSelector = () => {
-  const { currentTheme, availableThemes, changeTheme } = useTheme();
+  const { currentTheme, availableThemes, changeTheme, theme } = useTheme();
   const { currentLanguage, availableLanguages, changeLanguage, t } = useLanguage();
   const [showThemes, setShowThemes] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
@@ -22,9 +22,11 @@ const ThemeLanguageSelector = () => {
             variant="outline" 
             size="sm" 
             aria-label="Select language"
-            className="flex items-center justify-center hover:scale-105 transition-transform p-2"
+            className={`flex items-center justify-center hover:scale-105 transition-transform p-2 ${
+              theme.currentTheme === 'midnight' ? 'text-white' : ''
+            }`}
           >
-            <Globe className="w-4 h-4" />
+            <Globe className={`w-4 h-4 ${theme.currentTheme === 'midnight' ? 'text-white' : ''}`} />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-56 p-2">
@@ -62,10 +64,12 @@ const ThemeLanguageSelector = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            className="flex items-center space-x-2 hover:scale-105 transition-transform"
+            className={`flex items-center space-x-2 hover:scale-105 transition-transform ${
+              theme.currentTheme === 'midnight' ? 'text-white' : ''
+            }`}
           >
-            <Palette className="w-4 h-4" />
-            <span className="hidden sm:inline">{availableThemes[currentTheme]?.name}</span>
+            <Palette className={`w-4 h-4 ${theme.currentTheme === 'midnight' ? 'text-white' : ''}`} />
+            <span className={`hidden sm:inline ${theme.currentTheme === 'midnight' ? 'text-white' : ''}`}>{availableThemes[currentTheme]?.name}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-2">

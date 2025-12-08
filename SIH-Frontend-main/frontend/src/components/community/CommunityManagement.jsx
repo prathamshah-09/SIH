@@ -91,14 +91,25 @@ const CommunityManagement = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
 
+  // Theme detection: detect Midnight Calm / dark-like themes for stronger contrast
+  const [isDarkLike, setIsDarkLike] = useState(false);
+  useEffect(() => {
+    try {
+      const themeName = (theme?.name || theme?.id || '').toString().toLowerCase();
+      const docTheme = typeof document !== 'undefined' ? (document.documentElement.getAttribute('data-theme') || '').toLowerCase() : '';
+      const docClassList = typeof document !== 'undefined' ? Array.from(document.documentElement.classList) : [];
+
+      const combined = [themeName, docTheme, ...docClassList].join(' ').toLowerCase();
+      const midnightMatch = /midnight|midnight-calm|dark/.test(combined);
+      setIsDarkLike(Boolean(midnightMatch));
+    } catch (e) {
+      setIsDarkLike(Boolean(theme?.currentTheme === 'dark'));
+    }
+  }, [theme]);
+
   // Initialize Socket.IO
   useEffect(() => {
     if (user && user.id && user.role && user.college_id) {
-      console.log('[CommunityManagement] Initializing socket with user:', {
-        id: user.id,
-        role: user.role,
-        college_id: user.college_id
-      });
       initiateCommunitySocket(user).then(() => {
         setSocketConnected(true);
       }).catch(err => {
@@ -106,7 +117,7 @@ const CommunityManagement = () => {
         setSocketConnected(false);
       });
     } else {
-      console.warn('[CommunityManagement] User data incomplete for socket connection:', user);
+      setSocketConnected(false);
     }
   }, [user]);
 
@@ -156,7 +167,6 @@ const CommunityManagement = () => {
       setCommunities([...communities, newCommunity]);
       setNewCommunityForm({ title: '', description: '' });
       setIsCreateDialogOpen(false);
-      // Refresh statistics
       const statsData = await getAdminCommunityStatistics();
       setStatistics(statsData);
     } catch (error) {
@@ -205,7 +215,6 @@ const CommunityManagement = () => {
         setMessages([]);
       }
       setDeleteDialog({ open: false, communityId: '', communityTitle: '' });
-      // Refresh statistics
       const statsData = await getAdminCommunityStatistics();
       setStatistics(statsData);
     } catch (error) {
@@ -296,6 +305,15 @@ const CommunityManagement = () => {
     });
   };
 
+  // Helper classes for dark-like vs light themes
+  const titleTextClass = isDarkLike ? 'text-white' : theme.colors.text || 'text-gray-900';
+  const mutedTextClass = isDarkLike ? 'text-gray-300' : 'text-gray-600';
+  const cardHeaderTitleClass = isDarkLike ? 'text-white' : 'text-gray-800';
+  const cardDescClass = isDarkLike ? 'text-gray-300' : 'text-gray-600';
+  const statNumberClass = isDarkLike ? 'text-white' : '';
+  const communityCardBg = isDarkLike ? 'bg-slate-800' : theme.colors.card;
+  const communityCardBorder = isDarkLike ? 'border border-white/5' : '';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center w-full h-96">
@@ -310,9 +328,9 @@ const CommunityManagement = () => {
   // Chat View
   if (selectedCommunity) {
     return (
-      <div className={`flex flex-col w-full h-screen overflow-hidden ${theme.colors.background}`}>
+      <div className={`flex flex-col w-full overflow-hidden ${theme.colors.background}`} style={{ height: 'calc(100vh - 110px)' }}>
         {/* Header */}
-        <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700">
+        <div className={`flex-shrink-0 p-4 sm:p-6 border-b ${isDarkLike ? 'bg-gradient-to-r from-gray-900 to-gray-800' : 'bg-gradient-to-r from-blue-50 to-cyan-50'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Button
@@ -321,15 +339,15 @@ const CommunityManagement = () => {
                 onClick={() => setSelectedCommunity(null)}
                 className="hover:scale-105 transition-transform"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className={`w-5 h-5 ${isDarkLike ? 'text-white' : ''}`} />
               </Button>
               <div>
-                <h2 className={`text-xl font-bold ${theme.colors.text} flex items-center`}>
+                <h2 className={`text-xl font-bold ${titleTextClass} flex items-center`}>
                   <MessageCircle className="w-5 h-5 mr-2 text-blue-500" />
                   {selectedCommunity.title}
                 </h2>
-                <p className={`text-xs ${theme.colors.muted} flex items-center space-x-1 mt-1`}>
-                  <Users className="w-3 h-3" />
+                <p className={`text-xs ${mutedTextClass} flex items-center space-x-1 mt-1`}>
+                  <Users className={`w-3 h-3 ${isDarkLike ? 'text-white/60' : ''}`} />
                   <span>{selectedCommunity.total_members} {t('members') || 'members'}</span>
                 </p>
               </div>
@@ -343,7 +361,7 @@ const CommunityManagement = () => {
                   setIsEditDialogOpen(true);
                 }}
               >
-                <Edit className="w-4 h-4 mr-2" />
+                <Edit className={`w-4 h-4 mr-2 ${isDarkLike ? 'text-white' : ''}`} />
                 {t('edit') || 'Edit'}
               </Button>
               <Button
@@ -351,7 +369,7 @@ const CommunityManagement = () => {
                 size="sm"
                 onClick={() => fetchMessages(selectedCommunity.id)}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={`w-4 h-4 ${isDarkLike ? 'text-white' : ''}`} />
               </Button>
             </div>
           </div>
@@ -360,7 +378,7 @@ const CommunityManagement = () => {
         {/* Messages */}
         <div
           ref={messagesContainerRef}
-          className={`flex-1 w-full overflow-y-auto bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900 p-4 sm:p-6`}
+          className={`flex-1 w-full overflow-y-auto ${isDarkLike ? 'bg-slate-900' : 'bg-gradient-to-b from-cyan-50 to-blue-50'} p-4 sm:p-6`}
         >
           <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
             {messagesLoading ? (
@@ -371,7 +389,7 @@ const CommunityManagement = () => {
               <div className="flex items-center justify-center h-full min-h-64 text-center">
                 <div>
                   <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400 opacity-50" />
-                  <p className={`${theme.colors.muted} text-sm`}>
+                  <p className={`${mutedTextClass} text-sm`}>
                     {t('noMessagesYet') || 'No messages yet'}
                   </p>
                 </div>
@@ -386,37 +404,41 @@ const CommunityManagement = () => {
                   const displayName = isStudent ? message.anonymous_username : message.username;
                   const msgTime = formatTime(message.created_at);
 
+                  // bubble classes for readability in dark
+                  const incomingBubbleClass = isDarkLike
+                    ? 'bg-slate-800 text-white border border-gray-700'
+                    : 'bg-white text-gray-900 border border-gray-200';
+                  const outgoingBubbleClass = 'bg-blue-600 text-white';
+
                   return (
                     <div 
                       key={message.id} 
                       className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3 animate-fadeIn`}
                     >
                       <div className="flex flex-col max-w-xs lg:max-w-md">
-                        <p className={`text-xs font-semibold text-gray-600 dark:text-gray-300 px-3 mb-1 truncate ${isCurrentUser ? 'text-right' : ''}`}>
+                        <p className={`${isDarkLike ? 'text-gray-200 font-semibold text-xs px-3 mb-1 truncate' : 'text-gray-600 font-semibold text-xs px-3 mb-1 truncate'} ${isCurrentUser ? 'text-right' : ''}`}>
                           {displayName}
                           {!isStudent && (
                             <span className={`ml-2 inline-block text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                               isAdmin 
-                                ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
-                                : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                ? (isDarkLike ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800')
+                                : (isDarkLike ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800')
                             }`}>
                               {isAdmin ? '👑 Admin' : '👨‍⚕️ Counsellor'}
                             </span>
                           )}
                           {isStudent && (
-                            <span className="ml-2 inline-block bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                            <span className={`ml-2 inline-block text-[10px] px-2 py-0.5 rounded-full font-semibold ${isDarkLike ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}`}>
                               👤 Student
                             </span>
                           )}
                         </p>
-                        <div className={`px-4 py-2.5 rounded-lg break-words shadow-md hover:shadow-lg transition-shadow ${
-                          isCurrentUser
-                            ? 'bg-blue-600 text-white rounded-br-none'
-                            : 'bg-white text-gray-900 dark:bg-gray-700 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600'
-                        }`}>
-                          <p className="text-sm leading-relaxed">{message.message_text}</p>
+
+                        <div className={`px-4 py-4 rounded-2xl break-words shadow-md hover:shadow-lg transition-shadow ${isCurrentUser ? outgoingBubbleClass + ' rounded-br-none' : incomingBubbleClass + ' rounded-bl-none'}`}>
+                          <p className="text-base leading-relaxed">{message.message_text}</p>
                         </div>
-                        <p className={`text-xs ${theme.colors.muted} mt-1 px-3 ${isCurrentUser ? 'text-right' : ''}`}>
+
+                        <p className={`${isDarkLike ? 'text-gray-300 text-xs mt-1 px-3' : 'text-gray-500 text-xs mt-1 px-3'} ${isCurrentUser ? 'text-right' : ''}`}>
                           {msgTime}
                         </p>
                       </div>
@@ -430,9 +452,9 @@ const CommunityManagement = () => {
         </div>
 
         {/* Input */}
-        <div className="flex-shrink-0 w-full p-4 sm:p-5 bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-t z-10">
+        <div className={`flex-shrink-0 w-full p-4 sm:p-5 border-t z-10 ${isDarkLike ? 'bg-gradient-to-r from-gray-900 to-gray-800' : 'bg-gradient-to-r from-white to-gray-50'}`}>
           <div className="max-w-3xl mx-auto flex items-end space-x-3 sm:space-x-4 w-full px-0">
-            <div className="flex-1 flex items-center bg-white dark:bg-gray-700 rounded-2xl border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-900 transition-all px-4">
+            <div className={`flex-1 flex items-center ${isDarkLike ? 'bg-slate-800' : 'bg-white'} rounded-2xl border ${isDarkLike ? 'border-gray-700' : 'border-gray-300'} hover:border-blue-400 dark:hover:border-blue-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-900 transition-all px-4`}>
               <Input
                 placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
                 value={newMessage}
@@ -440,7 +462,7 @@ const CommunityManagement = () => {
                   setNewMessage(e.target.value);
                   handleTyping();
                 }}
-                className="flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-3 sm:py-4 text-base"
+                className={`flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-3 sm:py-4 text-base ${isDarkLike ? 'text-white' : ''}`}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -471,7 +493,7 @@ const CommunityManagement = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className={`text-[22px] font-semibold ${theme.colors.text}`}>
+        <h2 className={`text-[22px] font-semibold ${titleTextClass}`}>
           {t('communityManagement') || 'Community Management'}
         </h2>
         <Button
@@ -479,56 +501,56 @@ const CommunityManagement = () => {
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
-          {t('addCommunity') || 'Add Community'}
+          {t('addCommunity')}
         </Button>
       </div>
 
       {/* Statistics Section */}
       {statistics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className={`${theme.colors.card} border-0 shadow-sm`}>
+          <Card className={`${communityCardBg} ${communityCardBorder} border-0 shadow-sm`}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              <CardTitle className={`text-sm font-medium ${cardDescClass}`}>
                 {t('totalCommunities') || 'Total Communities'}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-600">{statistics.total_communities || 0}</div>
+              <div className={`text-3xl font-bold ${statNumberClass}`}>{statistics.total_communities || 0}</div>
             </CardContent>
           </Card>
 
-          <Card className={`${theme.colors.card} border-0 shadow-sm`}>
+          <Card className={`${communityCardBg} ${communityCardBorder} border-0 shadow-sm`}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              <CardTitle className={`text-sm font-medium ${cardDescClass}`}>
                 {t('totalMembers') || 'Total Members'}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">{statistics.total_members || 0}</div>
+              <div className={`text-3xl font-bold ${statNumberClass}`}>{statistics.total_members || 0}</div>
             </CardContent>
           </Card>
 
-          <Card className={`${theme.colors.card} border-0 shadow-sm`}>
+          <Card className={`${communityCardBg} ${communityCardBorder} border-0 shadow-sm`}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              <CardTitle className={`text-sm font-medium ${cardDescClass}`}>
                 {t('avgMembers') || 'Avg Members'}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-purple-600">
+              <div className={`text-3xl font-bold ${statNumberClass}`}>
                 {statistics.avg_members_per_community?.toFixed(1) || 0}
               </div>
             </CardContent>
           </Card>
 
-          <Card className={`${theme.colors.card} border-0 shadow-sm`}>
+          <Card className={`${communityCardBg} ${communityCardBorder} border-0 shadow-sm`}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                {t('mostActive') || 'Most Active'}
+              <CardTitle className={`text-sm font-medium ${cardDescClass}`}>
+                {t('mostActive')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-sm font-bold text-orange-600 line-clamp-2">
+              <div className={`text-sm font-bold ${statNumberClass} line-clamp-2`}>
                 {statistics.most_active_community?.title || 'N/A'}
               </div>
             </CardContent>
@@ -538,18 +560,18 @@ const CommunityManagement = () => {
 
       {/* Communities List */}
       <div className="space-y-4">
-        <h3 className={`text-lg font-semibold ${theme.colors.text}`}>
+        <h3 className={`text-lg font-semibold ${titleTextClass}`}>
           {t('allCommunities') || 'All Communities'} ({communities.length})
         </h3>
 
         {communities.length === 0 ? (
-          <Card className={`${theme.colors.card} border-2 border-dashed border-gray-300 p-8`}>
+          <Card className={`${communityCardBg} ${communityCardBorder} border-2 border-dashed border-gray-300 p-8`}>
             <div className="text-center">
               <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">
+              <h3 className={`${isDarkLike ? 'text-white' : 'text-gray-600'} text-xl font-semibold mb-2`}>
                 {t('noCommunitiesCreated') || 'No communities created yet'}
               </h3>
-              <p className="text-gray-500 mb-4">
+              <p className={`${isDarkLike ? 'text-gray-300' : 'text-gray-500'} mb-4`}>
                 {t('createFirstCommunity') || 'Create your first community using the button above'}
               </p>
               <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
@@ -561,24 +583,24 @@ const CommunityManagement = () => {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {communities.map(community => (
-              <Card key={community.id} className={`${theme.colors.card} border-0 shadow-sm hover:shadow-md transition-all duration-200`}>
+              <Card key={community.id} className={`${communityCardBg} ${communityCardBorder} border-0 shadow-sm hover:shadow-md transition-all duration-200`}>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold text-gray-800 dark:text-gray-200 line-clamp-2 flex items-start justify-between">
+                  <CardTitle className={`text-sm font-semibold ${isDarkLike ? 'text-white' : 'text-gray-800'} line-clamp-2 flex items-start justify-between`}>
                     <span>{community.title}</span>
                   </CardTitle>
-                  <CardDescription className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                  <CardDescription className={`${isDarkLike ? 'text-gray-300' : 'text-xs text-gray-600'} line-clamp-2`}>
                     {community.description}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <p className="text-gray-500 dark:text-gray-400">Members</p>
-                      <p className="font-bold text-gray-900 dark:text-gray-100">{community.total_members}</p>
+                      <p className={`${isDarkLike ? 'text-gray-300' : 'text-gray-500'}`}>Members</p>
+                      <p className={`${isDarkLike ? 'text-white font-bold' : 'font-bold text-gray-900'}`}>{community.total_members}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 dark:text-gray-400">Messages</p>
-                      <p className="font-bold text-gray-900 dark:text-gray-100">{community.total_messages || 0}</p>
+                      <p className={`${isDarkLike ? 'text-gray-300' : 'text-gray-500'}`}>Messages</p>
+                      <p className={`${isDarkLike ? 'text-white font-bold' : 'font-bold text-gray-900'}`}>{community.total_messages || 0}</p>
                     </div>
                   </div>
                   <div className="flex gap-2 pt-2">

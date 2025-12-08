@@ -164,7 +164,7 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
   const currentQuestionData = form.questions[currentQuestion];
 
   const renderConfirmation = () => (
-    <Card className={`${theme.colors.card} max-w-2xl mx-auto shadow-2xl`}>
+    <Card className={`${theme.colors.card} max-w-2xl mx-auto shadow-2xl !border-2 !border-blue-500`}>
       <CardHeader className="text-center pb-4">
         <div className="mx-auto w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center mb-4">
           <CheckCircle className="w-8 h-8 text-white" />
@@ -212,11 +212,11 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
           <Button 
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg"
+            variant="animated"
           >
             {isSubmitting ? (
               <div className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <Loader className="w-4 h-4 mr-2 animate-spin" />
                 Submitting...
               </div>
             ) : (
@@ -270,7 +270,7 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
       </Card>
 
       {/* Question Card */}
-      <Card className={`${theme.colors.card} shadow-xl hover:shadow-2xl transition-shadow duration-300`}>
+      <Card className={`${theme.colors.card} shadow-xl hover:shadow-2xl transition-shadow duration-300 !border-2 !border-blue-500`}>
         <CardContent className="p-8">
           <div className="mb-8">
             <h2 className={`text-xl font-semibold mb-4 ${theme.colors.text} leading-relaxed`}>
@@ -298,12 +298,12 @@ const AssessmentForm = ({ form, sessionId, onSubmission, onBack }) => {
                   onClick={() => handleResponse(currentQuestionData.id, option.value)}
                   className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
                     responses[currentQuestionData.id] === option.value
-                      ? 'border-cyan-500 bg-gradient-to-r from-cyan-50 to-blue-50 shadow-lg'
+                      ? `border-cyan-500 bg-gradient-to-r from-cyan-50 to-blue-50 shadow-lg ${theme.currentTheme === 'midnight' ? 'text-black' : ''}`
                       : `border-gray-200 hover:border-cyan-300 hover:bg-gradient-to-r hover:from-cyan-25 hover:to-blue-25 ${theme.colors.card}`
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`font-medium ${theme.colors.text}`}>
+                    <span className={`font-medium ${responses[currentQuestionData.id] === option.value && theme.currentTheme === 'midnight' ? 'text-black' : theme.colors.text}`}>
                       {option.label}
                     </span>
                     <div className={`w-5 h-5 rounded-full border-2 ${

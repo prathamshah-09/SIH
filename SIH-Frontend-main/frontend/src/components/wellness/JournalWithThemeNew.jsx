@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@context/ThemeContext';
 import { useLanguage } from '@context/LanguageContext';
 import { mockJournalEntries } from '@mock/mockData';
-import { Card, CardContent, CardHeader, CardTitle } from '@components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@components/ui/card'; // Still used in sidebar tips section at line 506
 import { Button } from '@components/ui/button';
 import { Badge } from '@components/ui/badge';
 import { Textarea } from '@components/ui/textarea';
@@ -38,7 +38,8 @@ import {
 } from '@services/journalingService';
 
 const JournalWithTheme = () => {
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
+  const isDarkTheme = (currentTheme || '').toLowerCase().includes('midnight');
   const { t } = useLanguage();
 
   // State management
@@ -267,14 +268,14 @@ const JournalWithTheme = () => {
           className={`
             text-center p-2 sm:p-3 rounded-lg cursor-pointer transition-all duration-300 relative text-sm
             ${isSelected
-            ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold shadow-lg'
+            ? 'bg-purple-600 text-white font-bold shadow-lg'
             : isTodayDate
               ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold hover:shadow-md'
               : isFuture
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'hover:bg-blue-100 hover:shadow-md'
+                ? `${isDarkTheme ? 'text-white' : 'text-slate-700'} hover:shadow-md`
+                : 'text-slate-400 hover:shadow-md'
             }
-            ${hasEntry && !isSelected ? 'bg-purple-100 border-2 border-purple-300' : ''}
+            ${hasEntry && !isSelected ? 'border-2 border-purple-300' : ''}
           `}
           onClick={() => !isFuture && handleDateClick(day)}
         >
@@ -432,9 +433,9 @@ const JournalWithTheme = () => {
           </button>
           
           {/* Streak Badge */}
-          <div className="flex items-center gap-2 bg-gradient-to-r from-orange-100 to-red-100 px-3 md:px-4 py-2 rounded-lg">
+          <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-cyan-100 px-3 md:px-4 py-2 rounded-lg">
             <span className="text-xl md:text-2xl">🔥</span>
-            <p className="text-base md:text-lg font-bold text-orange-600">{calculateStreak}</p>
+            <p className="text-base md:text-lg font-bold text-blue-600">{calculateStreak}</p>
           </div>
         </div>
       </div>
@@ -452,6 +453,7 @@ const JournalWithTheme = () => {
                 onClick={handlePrevMonth}
                 variant="outline"
                 size="sm"
+                className={`border text-sm px-3 ${isDarkTheme ? 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-50'}`}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -464,6 +466,7 @@ const JournalWithTheme = () => {
                 onClick={handleNextMonth}
                 variant="outline"
                 size="sm"
+                className={`border text-sm px-3 ${isDarkTheme ? 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-50'}`}
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -517,7 +520,7 @@ const JournalWithTheme = () => {
                 onClick={handlePrevMonth}
                 variant="outline"
                 size="sm"
-                className="hover:scale-105 transition-transform"
+                className={`hover:scale-105 transition-transform border text-sm px-3 ${isDarkTheme ? 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-50'}`}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -530,7 +533,7 @@ const JournalWithTheme = () => {
                 onClick={handleNextMonth}
                 variant="outline"
                 size="sm"
-                className="hover:scale-105 transition-transform"
+                className={`hover:scale-105 transition-transform border text-sm px-3 ${isDarkTheme ? 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-50'}`}
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -581,94 +584,94 @@ const JournalWithTheme = () => {
           {isPastDate() && !getEntriesForDate().daily && !getEntriesForDate().weekly && !getEntriesForDate().worry && (
             <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border-l-4 border-l-gray-400">
               <p className="text-sm text-gray-600">
-                <strong>✨ No entries found</strong> for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. Start journaling today!
+                <strong>No entries found</strong> for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. Start journaling today!
               </p>
             </div>
           )}
           
           {/* Daily Check-In */}
-          <Card className={`${theme.colors.card} border-l-4 border-l-yellow-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <CardHeader
-              className="pb-4 cursor-pointer hover:bg-gray-50 transition-colors"
+          <div className={`${currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-blue-50'} border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl`}>
+            <div
+              className={`pb-4 cursor-pointer ${currentTheme === 'midnight' ? 'hover:bg-slate-700' : 'hover:bg-gray-50'} transition-colors p-6 flex flex-col space-y-1.5`}
               onClick={() => setExpandedJournal(expandedJournal === 'daily' ? null : 'daily')}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-lg bg-gradient-to-br from-yellow-100 to-orange-100">
+                  {/* <div className="p-3 rounded-lg bg-gradient-to-br from-yellow-100 to-orange-100">
                     <Sun className="w-6 h-6 text-gray-700" />
-                  </div>
+                  </div> */}
                   <div>
-                    <CardTitle className="text-lg font-bold">Daily Check-In</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">{isPastDate() ? 'Past Entry' : 'Today\'s Reflection'}</p>
+                    <h3 className={`text-lg font-bold ${currentTheme === 'midnight' ? 'text-white' : ''}`}>{t('dailyCheckIn')}</h3>
+                    <p className={`text-sm ${currentTheme === 'midnight' ? 'text-slate-300' : 'text-gray-600'} mt-1`}>{isPastDate() ? t('pastEntry') : t('todaysReflection')}</p>
                   </div>
                 </div>
                 <ChevronDown
-                  className={`w-6 h-6 transition-transform ${expandedJournal === 'daily' ? 'rotate-180' : ''}`}
+                  className={`w-6 h-6 transition-transform ${currentTheme === 'midnight' ? 'text-white' : ''} ${expandedJournal === 'daily' ? 'rotate-180' : ''}`}
                 />
               </div>
-            </CardHeader>
+            </div>
 
             {expandedJournal === 'daily' && (
-              <CardContent className="space-y-4 border-t pt-5">
+              <div className="space-y-4 border-t pt-5 p-6">
                 {isPastDate() && !getEntry('daily').liked && !getEntry('daily').disliked && !getEntry('daily').reflection && !getEntry('daily').goals && !getEntry('daily').mood ? (
-                  <div className="p-4 bg-gray-50 rounded-lg text-center">
-                    <p className="text-gray-600">No daily entries recorded for this date</p>
+                  <div className={`p-4 ${currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-50'} rounded-lg text-center`}>
+                    <p className={currentTheme === 'midnight' ? 'text-slate-300' : 'text-gray-600'}>No daily entries recorded for this date</p>
                   </div>
                 ) : isPastDate() ? (
                   // Read-only view for past dates
                   <>
                     {getEntry('daily').liked && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Heart className="w-5 h-5 mr-2 text-pink-500" />
-                          Positive Moments of Today
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          <Heart className={`w-5 h-5 mr-2 text-pink-500 ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-pink-500'}`} />
+                          {t('positivesMomentsOfToday')}
                         </label>
                         <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').liked}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').liked}</p>
                         </div>
                       </div>
                     )}
                     {getEntry('daily').disliked && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
                           <Frown className="w-5 h-5 mr-2 text-orange-500" />
-                          Challenges I Faced Today
+                          {t('challengesIFacedToday')}
                         </label>
                         <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').disliked}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').disliked}</p>
                         </div>
                       </div>
                     )}
                     {getEntry('daily').reflection && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
                           <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
-                          Reflection
+                          {t('todaysReflection')}
                         </label>
                         <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').reflection}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').reflection}</p>
                         </div>
                       </div>
                     )}
                     {getEntry('daily').goals && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
                           <Plus className="w-5 h-5 mr-2 text-blue-500" />
-                          Intentions for Tomorrow
+                          {t('intentionsForTomorrow')}
                         </label>
                         <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').goals}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').goals}</p>
                         </div>
                       </div>
                     )}
                     {getEntry('daily').mood && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
                           <Frown className="w-5 h-5 mr-2 text-red-500" />
-                          Feelings Space
+                          {t('feelingsSpace')}
                         </label>
                         <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').mood}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').mood}</p>
                         </div>
                       </div>
                     )}
@@ -676,53 +679,53 @@ const JournalWithTheme = () => {
                 ) : !isEditingDaily && (getEntry('daily').liked || getEntry('daily').disliked || getEntry('daily').reflection || getEntry('daily').goals || getEntry('daily').mood) ? (
                   // View mode for today with saved entries and Edit button - show ALL fields
                   <>
-                    <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Heart className="w-5 h-5 mr-2 text-pink-500" />
-                        Positive Moments of Today
-                      </label>
-                      <div className="p-3 bg-pink-50 rounded-lg border border-pink-200 min-h-[60px]">
-                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').liked || '(empty)'}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Frown className="w-5 h-5 mr-2 text-orange-500" />
-                        Challenges I Faced Today
-                      </label>
-                      <div className="p-3 bg-orange-50 rounded-lg border border-orange-200 min-h-[60px]">
-                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').disliked || '(empty)'}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
-                        Today's Reflection
-                      </label>
-                      <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 min-h-[60px]">
-                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').reflection || '(empty)'}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Plus className="w-5 h-5 mr-2 text-blue-500" />
-                        Intentions for Tomorrow
+                    <div className={`space-y-2 ${currentTheme === 'midnight' ? 'bg-slate-700' : ''}`}>
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Heart className="w-5 h-5 mr-2 text-pink-500" /> */}
+                        {t('positivesMomentsOfToday')}
                       </label>
                       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 min-h-[60px]">
-                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').goals || '(empty)'}</p>
+                        <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').liked || '(empty)'}</p>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Frown className="w-5 h-5 mr-2 text-red-500" />
-                        Feelings Space
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Frown className="w-5 h-5 mr-2 text-orange-500" /> */}
+                        {t('challengesIFacedToday')}
                       </label>
-                      <div className="p-3 bg-red-50 rounded-lg border border-red-200 min-h-[60px]">
-                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('daily').mood || '(empty)'}</p>
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 min-h-[60px]">
+                        <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').disliked || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Sparkles className="w-5 h-5 mr-2 text-purple-500" /> */}
+                        {t('todaysReflection')}
+                      </label>
+                      <div className="p-3 bg-blue-50 rounded-lg border border-purple-200 min-h-[60px]">
+                        <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').reflection || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Plus className="w-5 h-5 mr-2 text-blue-500" /> */}
+                        {t('intentionsForTomorrow')}
+                      </label>
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 min-h-[60px]">
+                        <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').goals || '(empty)'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Frown className="w-5 h-5 mr-2 text-red-500" /> */}
+                        {t('feelingsSpace')}
+                      </label>
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 min-h-[60px]">
+                        <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('daily').mood || '(empty)'}</p>
                       </div>
                     </div>
 
@@ -743,7 +746,8 @@ const JournalWithTheme = () => {
                           daily_mood: entry.mood || ''
                         });
                       }}
-                      className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-base py-3 mt-4"
+                      variant="animated"
+                      className="w-full text-base py-3"
                     >
                       Edit
                     </Button>
@@ -754,13 +758,13 @@ const JournalWithTheme = () => {
                     {/* Positive Moments of Today */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Heart className="w-5 h-5 mr-2 text-pink-500" />
-                          Positive Moments of Today
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {/* <Heart className="w-5 h-5 mr-2 text-pink-500" /> */}
+                          {t('positivesMomentsOfToday')}
                         </label>
                         <button
                           onClick={() => addDailyBullet('liked')}
-                          className="text-pink-500 hover:text-pink-700 text-xl font-bold hover:scale-125 transition-transform"
+                          className="text-blue-500 hover:text-blue-700 text-xl font-bold hover:scale-125 transition-transform"
                           title="Add item"
                         >
                           +
@@ -773,8 +777,8 @@ const JournalWithTheme = () => {
                               type="text"
                               value={item}
                               onChange={(e) => handleDailyBulletChange('liked', index, e.target.value)}
-                              placeholder="Write one thing..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 text-base"
+                              placeholder={t('writeOneThingPlaceholder')}
+                              className={`flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-base ${currentTheme === 'midnight' ? 'bg-slate-700 text-white border-slate-600' : 'bg-white text-gray-900 border-gray-300'}`}
                             />
                           </div>
                         ))}
@@ -784,13 +788,13 @@ const JournalWithTheme = () => {
                     {/* Challenges I Faced Today */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Frown className="w-5 h-5 mr-2 text-orange-500" />
-                          Challenges I Faced Today
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {/* <Frown className="w-5 h-5 mr-2 text-orange-500" /> */}
+                          {t('challengesIFacedToday')}
                         </label>
                         <button
                           onClick={() => addDailyBullet('disliked')}
-                          className="text-orange-500 hover:text-orange-700 text-xl font-bold hover:scale-125 transition-transform"
+                          className="text-blue-500 hover:text-blue-700 text-xl font-bold hover:scale-125 transition-transform"
                           title="Add item"
                         >
                           +
@@ -803,8 +807,8 @@ const JournalWithTheme = () => {
                               type="text"
                               value={item}
                               onChange={(e) => handleDailyBulletChange('disliked', index, e.target.value)}
-                              placeholder="Write one thing..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-base"
+                              placeholder={t('writeOneThingPlaceholder')}
+                              className={`flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-base ${currentTheme === 'midnight' ? 'bg-slate-700 text-white border-slate-600' : 'bg-white text-gray-900 border-gray-300'}`}
                             />
                           </div>
                         ))}
@@ -813,24 +817,23 @@ const JournalWithTheme = () => {
 
                     {/* Today's Reflection */}
                     <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
-                        Today's Reflection
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {t('todaysReflection')}
                       </label>
                       <Textarea
                         value={tempEntries.daily_reflection || dailyBullets.reflection.join('\n') || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, daily_reflection: e.target.value })}
-                        placeholder="Write your reflections about today..."
-                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base"
+                        placeholder={t('writeYourReflections')}
+                        className={`w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base ${currentTheme === 'midnight' ? 'text-white bg-slate-700' : 'text-gray-900'}`}
                       />
                     </div>
 
                     {/* Intentions for Tomorrow */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Plus className="w-5 h-5 mr-2 text-blue-500" />
-                          Intentions for Tomorrow
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {/* <Plus className="w-5 h-5 mr-2 text-blue-500" /> */}
+                          {t('intentionsForTomorrow')}
                         </label>
                         <button
                           onClick={() => addDailyBullet('goals')}
@@ -847,8 +850,8 @@ const JournalWithTheme = () => {
                               type="text"
                               value={item}
                               onChange={(e) => handleDailyBulletChange('goals', index, e.target.value)}
-                              placeholder="Write one goal..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"
+                              placeholder={t('writeYourGoal')}
+                              className={`flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-base ${currentTheme === 'midnight' ? 'bg-slate-700 text-white border-slate-600' : 'bg-white text-gray-900 border-gray-300'}`}
                             />
                           </div>
                         ))}
@@ -857,15 +860,15 @@ const JournalWithTheme = () => {
 
                     {/* Feelings Space */}
                     <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Frown className="w-5 h-5 mr-2 text-red-500" />
-                        Feelings Space
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Frown className="w-5 h-5 mr-2 text-red-500" /> */}
+                        {t('feelingsSpace')}
                       </label>
                       <Textarea
                         value={tempEntries.daily_mood || dailyBullets.mood.join('\n') || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, daily_mood: e.target.value })}
-                        placeholder="Share your feelings and emotions..."
-                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-base"
+                        placeholder={t('shareYourFeelings')}
+                        className={`w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base ${currentTheme === 'midnight' ? 'text-white bg-slate-700' : 'text-gray-900'}`}
                       />
                     </div>
 
@@ -908,12 +911,13 @@ const JournalWithTheme = () => {
                           }
                         }}
                         disabled={savingDaily}
-                        className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-base py-3"
+                        variant="animated"
+                        className="w-full text-base py-3"
                       >
                         {savingDaily ? (
                           <>
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                            Saving...
+                            {t('saving')}
                           </>
                         ) : (
                           <>
@@ -925,82 +929,78 @@ const JournalWithTheme = () => {
                     </div>
                   </>
                 )}
-              </CardContent>
+              </div>
             )}
-          </Card>
+          </div>
 
           {/* Weekly Check-In */}
-          <Card className={`${theme.colors.card} border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <CardHeader
-              className="pb-4 cursor-pointer hover:bg-gray-50 transition-colors"
+          <div className={`${currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-blue-50'} border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl`}>
+            <div
+              className={`pb-4 cursor-pointer p-6 flex flex-col space-y-1.5 ${currentTheme === 'midnight' ? 'hover:bg-slate-700' : 'hover:bg-gray-50'} transition-colors`}
               onClick={() => setExpandedJournal(expandedJournal === 'weekly' ? null : 'weekly')}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-lg bg-gradient-to-br from-green-100 to-teal-100">
+                  {/* <div className="p-3 rounded-lg bg-gradient-to-br from-green-100 to-teal-100">
                     <Calendar className="w-6 h-6 text-gray-700" />
-                  </div>
+                  </div> */}
                   <div>
-                    <CardTitle className="text-lg font-bold">Weekly Check-In</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">Week's Growth</p>
+                    <h3 className={`text-lg font-bold ${currentTheme === 'midnight' ? 'text-white' : ''}`}>{t('weeklyCheckIn')}</h3>
+                    <p className={`text-sm ${currentTheme === 'midnight' ? 'text-slate-300' : 'text-gray-600'} mt-1`}>{t('weeksGrowth')}</p>
                   </div>
                 </div>
                 <ChevronDown
-                  className={`w-6 h-6 transition-transform ${expandedJournal === 'weekly' ? 'rotate-180' : ''}`}
+                  className={`w-6 h-6 transition-transform ${currentTheme === 'midnight' ? 'text-white' : ''} ${expandedJournal === 'weekly' ? 'rotate-180' : ''}`}
                 />
               </div>
-            </CardHeader>
+            </div>
 
             {expandedJournal === 'weekly' && (
-              <CardContent className="space-y-4 border-t pt-5">
+              <div className="space-y-4 border-t pt-5 p-6">
                 {isPastDate() && !getEntry('weekly').review && !getEntry('weekly').nextGoals && !getEntry('weekly').selfCareScore && !getEntry('weekly').selfCareReflection ? (
-                  <div className="p-4 bg-gray-50 rounded-lg text-center">
-                    <p className="text-gray-600">No weekly entries recorded for this date</p>
+                  <div className={`p-4 ${currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-50'} rounded-lg text-center`}>
+                    <p className={currentTheme === 'midnight' ? 'text-slate-300' : 'text-gray-600'}>No weekly entries recorded for this date</p>
                   </div>
                 ) : isPastDate() ? (
                   // Read-only view for past dates
                   <>
                     {getEntry('weekly').review && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Calendar className="w-5 h-5 mr-2 text-green-500" />
-                          How was your week?
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {t('howWasYourWeek')}
                         </label>
                         <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').review}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('weekly').review}</p>
                         </div>
                       </div>
                     )}
                     {getEntry('weekly').nextGoals && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Plus className="w-5 h-5 mr-2 text-teal-500" />
-                          Next Week Goals
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {t('nextWeekGoals')}
                         </label>
                         <div className="p-3 bg-teal-50 rounded-lg border border-teal-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').nextGoals}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('weekly').nextGoals}</p>
                         </div>
                       </div>
                     )}
                     {getEntry('weekly').selfCareScore !== undefined && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Heart className="w-5 h-5 mr-2 text-pink-500" />
-                          Self-Care Score
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {t('selfCareScore')}
                         </label>
                         <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
-                          <p className="text-lg font-bold text-gray-800">{getEntry('weekly').selfCareScore}/10</p>
+                          <p className={`text-lg font-bold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'}`}>{getEntry('weekly').selfCareScore}/10</p>
                         </div>
                       </div>
                     )}
                     {getEntry('weekly').selfCareReflection && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
-                          Self-Care Reflection
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {t('selfCareReflection')}
                         </label>
-                        <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').selfCareReflection}</p>
+                        <div className="p-3 bg-gray-50 rounded-lg border border-yellow-200">
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('weekly').selfCareReflection}</p>
                         </div>
                       </div>
                     )}
@@ -1009,42 +1009,42 @@ const JournalWithTheme = () => {
                   // View mode for today with saved entries and Edit button - show ALL fields
                   <>
                     <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Calendar className="w-5 h-5 mr-2 text-green-500" />
-                        How was your week?
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Calendar className="w-5 h-5 mr-2 text-green-500" /> */}
+                        {t('howWasYourWeek')}
                       </label>
                       <div className="p-3 bg-green-50 rounded-lg border border-green-200 min-h-[80px]">
-                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').review || '(empty)'}</p>
+                        <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('weekly').review || '(empty)'}</p>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Plus className="w-5 h-5 mr-2 text-teal-500" />
-                        Next Week Goals
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Plus className="w-5 h-5 mr-2 text-teal-500" /> */}
+                        {t('nextWeekGoals')}
                       </label>
                       <div className="p-3 bg-teal-50 rounded-lg border border-teal-200 min-h-[80px]">
-                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').nextGoals || '(empty)'}</p>
+                        <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('weekly').nextGoals || '(empty)'}</p>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Heart className="w-5 h-5 mr-2 text-pink-500" />
-                        Self-Care Score
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Heart className="w-5 h-5 mr-2 text-pink-500" /> */}
+                        {t('selfCareScore')}
                       </label>
                       <div className="p-3 bg-pink-50 rounded-lg border border-pink-200 min-h-[60px] flex items-center">
-                        <p className="text-lg font-bold text-gray-800">{getEntry('weekly').selfCareScore !== undefined ? getEntry('weekly').selfCareScore + '/10' : '(empty)'}</p>
+                        <p className={`text-lg font-bold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'}`}>{getEntry('weekly').selfCareScore !== undefined ? getEntry('weekly').selfCareScore + '/10' : '(empty)'}</p>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
-                        Self-Care Reflection
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Sparkles className="w-5 h-5 mr-2 text-yellow-500" /> */}
+                        {t('selfCareReflection')}
                       </label>
                       <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 min-h-[80px]">
-                        <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('weekly').selfCareReflection || '(empty)'}</p>
+                        <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('weekly').selfCareReflection || '(empty)'}</p>
                       </div>
                     </div>
 
@@ -1062,7 +1062,8 @@ const JournalWithTheme = () => {
                           weekly_selfCareReflection: entry.selfCareReflection || ''
                         });
                       }}
-                      className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-base py-3 mt-4"
+                      variant="animated"
+                      className="w-full text-base py-3 mt-4"
                     >
                       Edit
                     </Button>
@@ -1072,28 +1073,26 @@ const JournalWithTheme = () => {
                   <>
                     {/* How was your week */}
                     <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Calendar className="w-5 h-5 mr-2 text-green-500" />
-                        How was your week?
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {t('howWasYourWeek')}
                       </label>
                       <Textarea
                         value={tempEntries.weekly_review || getEntry('weekly').review || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, weekly_review: e.target.value })}
-                        placeholder="Summarize your week. What went well? What was challenging?"
-                        className="w-full min-h-[150px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-base"
+                        placeholder={t('summarizeYourWeek')}
+                        className={`w-full min-h-[150px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base ${currentTheme === 'midnight' ? 'text-white bg-slate-700' : 'bg-blue-50 text-gray-900'}`}
                       />
                     </div>
 
                     {/* Next Week Goals */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Plus className="w-5 h-5 mr-2 text-teal-500" />
-                          Next Week Goals
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {t('nextWeekGoals')}
                         </label>
                         <button
                           onClick={() => addWeeklyBullet('nextGoals')}
-                          className="text-teal-500 hover:text-teal-700 text-xl font-bold hover:scale-125 transition-transform"
+                          className="text-blue-500 hover:text-blue-700 text-xl font-bold hover:scale-125 transition-transform"
                           title="Add item"
                         >
                           +
@@ -1106,8 +1105,8 @@ const JournalWithTheme = () => {
                               type="text"
                               value={item}
                               onChange={(e) => handleWeeklyBulletChange('nextGoals', index, e.target.value)}
-                              placeholder="Write one goal..."
-                              className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-base"
+                              placeholder={t('writeYourGoal')}
+                              className={`flex-1 p-2 border ${currentTheme === 'midnight' ? 'bg-slate-700 text-white border-slate-600 focus:ring-slate-400' : 'bg-white text-base border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500`}
                             />
                           </div>
                         ))}
@@ -1116,9 +1115,8 @@ const JournalWithTheme = () => {
 
                     {/* Self-Care Score */}
                     <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Heart className="w-5 h-5 mr-2 text-pink-500" />
-                        Self-Care Score: {tempEntries.weekly_selfCareScore !== undefined ? tempEntries.weekly_selfCareScore : (getEntry('weekly').selfCareScore || 0)}/10
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {t('selfCareScore')}: {tempEntries.weekly_selfCareScore !== undefined ? tempEntries.weekly_selfCareScore : (getEntry('weekly').selfCareScore || 0)}/10
                       </label>
                       <Slider
                         value={[tempEntries.weekly_selfCareScore !== undefined ? tempEntries.weekly_selfCareScore : (getEntry('weekly').selfCareScore || 0)]}
@@ -1126,24 +1124,23 @@ const JournalWithTheme = () => {
                         min={0}
                         max={10}
                         step={1}
-                        className="w-full"
+                        className={`w-full ${currentTheme === 'midnight' ? '[&_[role=slider]]:bg-white [&_[role=slider]]:border-white' : ''}`}
                       />
-                      <div className="text-sm text-gray-600 text-center">
-                        Rate how well you took care of yourself this week
+                      <div className={`text-sm ${currentTheme === 'midnight' ? 'text-slate-300' : 'text-gray-600'} text-center`}>
+                        {t('rateHowWellYouTook')}
                       </div>
                     </div>
 
                     {/* Self-Care Reflection */}
                     <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
-                        Self-Care Reflection
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {t('selfCareReflection')}
                       </label>
                       <Textarea
                         value={tempEntries.weekly_selfCareReflection || getEntry('weekly').selfCareReflection || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, weekly_selfCareReflection: e.target.value })}
-                        placeholder="What self-care activities did you do? How did they make you feel?"
-                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 text-base"
+                        placeholder={t('whatSelfCareActivities')}
+                        className={`w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base ${currentTheme === 'midnight' ? 'text-white bg-slate-700' : 'bg-blue-50 text-gray-900'}`}
                       />
                     </div>
 
@@ -1195,12 +1192,13 @@ const JournalWithTheme = () => {
                           }
                         }}
                         disabled={savingWeekly}
-                        className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-base py-3"
+                        variant="animated"
+                        className="w-full text-base py-3"
                       >
                         {savingWeekly ? (
                           <>
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                            Saving...
+                            {t('saving')}
                           </>
                         ) : (
                           <>
@@ -1212,71 +1210,71 @@ const JournalWithTheme = () => {
                     </div>
                   </>
                 )}
-              </CardContent>
+              </div>
             )}
-          </Card>
+          </div>
 
           {/* Worries & Negative Feelings */}
-          <Card className={`${theme.colors.card} border-l-4 border-l-purple-500 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <CardHeader
-              className="pb-4 cursor-pointer hover:bg-gray-50 transition-colors"
+          <div className={`${currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-blue-50'} border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl`}>
+            <div
+              className={`pb-4 cursor-pointer p-6 flex flex-col space-y-1.5 ${currentTheme === 'midnight' ? 'hover:bg-slate-700' : 'hover:bg-gray-50'} transition-colors`}
               onClick={() => setExpandedJournal(expandedJournal === 'worry' ? null : 'worry')}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100">
+                  {/* <div className="p-3 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100">
                     <Frown className="w-6 h-6 text-gray-700" />
-                  </div>
+                  </div> */}
                   <div>
-                    <CardTitle className="text-lg font-bold">Worries & Negative Feelings</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">Safe Space</p>
+                    <h3 className={`text-lg font-bold ${currentTheme === 'midnight' ? 'text-white' : ''}`}>{t('worriesNegativeFeelings')}</h3>
+                    <p className={`text-sm ${currentTheme === 'midnight' ? 'text-slate-300' : 'text-gray-600'} mt-1`}>{t('safeSpace')}</p>
                   </div>
                 </div>
                 <ChevronDown
-                  className={`w-6 h-6 transition-transform ${expandedJournal === 'worry' ? 'rotate-180' : ''}`}
+                  className={`w-6 h-6 transition-transform ${currentTheme === 'midnight' ? 'text-white' : ''} ${expandedJournal === 'worry' ? 'rotate-180' : ''}`}
                 />
               </div>
-            </CardHeader>
+            </div>
 
             {expandedJournal === 'worry' && (
-              <CardContent className="space-y-4 border-t pt-5">
+              <div className="space-y-4 border-t pt-5 p-6">
                 {isPastDate() && !getEntry('worry').negativeThought && !getEntry('worry').positiveReframe && !getEntry('worry').geminiReframe ? (
-                  <div className="p-4 bg-gray-50 rounded-lg text-center">
-                    <p className="text-gray-600">No worry entries recorded for this date</p>
+                  <div className={`p-4 ${currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-50'} rounded-lg text-center`}>
+                    <p className={currentTheme === 'midnight' ? 'text-slate-300' : 'text-gray-600'}>No worry entries recorded for this date</p>
                   </div>
                 ) : isPastDate() ? (
                   // Read-only view for past dates
                   <>
                     {getEntry('worry').negativeThought && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Frown className="w-5 h-5 mr-2 text-red-500" />
-                          Negative Thought
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {/* <Frown className="w-5 h-5 mr-2 text-red-500" /> */}
+                          {t('negativeThought')}
                         </label>
                         <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('worry').negativeThought}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('worry').negativeThought}</p>
                         </div>
                       </div>
                     )}
                     {getEntry('worry').positiveReframe && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Heart className="w-5 h-5 mr-2 text-green-500" />
-                          Your Positive Reframe
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {/* <Heart className="w-5 h-5 mr-2 text-green-500" /> */}
+                          {t('positiveReframe')}
                         </label>
-                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('worry').positiveReframe}</p>
+                        <div className="p-3 bg-gray-50 rounded-lg border border-green-200">
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('worry').positiveReframe}</p>
                         </div>
                       </div>
                     )}
                     {getEntry('worry').geminiReframe && (
                       <div className="space-y-2">
-                        <label className="text-base font-semibold text-gray-800 flex items-center">
-                          <Sparkles className="w-5 h-5 mr-2 text-blue-500" />
-                          AI's Positive Perspective
+                        <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                          {/* <Sparkles className="w-5 h-5 mr-2 text-blue-500" /> */}
+                          {t('aiPositivePerspective')}
                         </label>
                         <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                          <p className="text-base text-gray-800 whitespace-pre-wrap">{getEntry('worry').geminiReframe}</p>
+                          <p className={`text-base ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} whitespace-pre-wrap`}>{getEntry('worry').geminiReframe}</p>
                         </div>
                       </div>
                     )}
@@ -1286,29 +1284,29 @@ const JournalWithTheme = () => {
                   <>
                     {/* Negative Thought Field */}
                     <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Frown className="w-5 h-5 mr-2 text-red-500" />
-                        Negative Thought
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Frown className="w-5 h-5 mr-2 text-red-500" /> */}
+                        {t('negativeThought')}
                       </label>
                       <Textarea
                         value={tempEntries.worry_negative || getEntry('worry').negativeThought || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, worry_negative: e.target.value })}
-                        placeholder="Write your worry or negative thought..."
-                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-base"
+                        placeholder={t('writeYourWorry')}
+                        className={`w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-base ${currentTheme === 'midnight' ? 'text-white bg-slate-700' : 'text-gray-900'}`}
                       />
                     </div>
 
                     {/* Your Positive Reframe Field */}
                     <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-800 flex items-center">
-                        <Heart className="w-5 h-5 mr-2 text-green-500" />
-                        Your Positive Reframe
+                      <label className={`text-base font-semibold ${currentTheme === 'midnight' ? 'text-slate-100' : 'text-gray-800'} flex items-center`}>
+                        {/* <Heart className="w-5 h-5 mr-2 text-green-500" /> */}
+                        {t('positiveReframe')}
                       </label>
                       <Textarea
                         value={tempEntries.worry_reframe || getEntry('worry').positiveReframe || ''}
                         onChange={(e) => setTempEntries({ ...tempEntries, worry_reframe: e.target.value })}
-                        placeholder="Reframe this thought in a positive way..."
-                        className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-base"
+                        placeholder={t('reframeThisThought')}
+                        className={`w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-base ${currentTheme === 'midnight' ? 'text-white bg-slate-700' : 'text-gray-900'}`}
                       />
                     </div>
 
@@ -1317,23 +1315,24 @@ const JournalWithTheme = () => {
                       <Button
                         onClick={callBackendAIReframe}
                         disabled={loadingGemini || !tempEntries.worry_negative?.trim()}
-                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-base py-3"
+                        variant="animated"
+                        className="w-full text-base py-3"
                       >
                         {loadingGemini ? (
                           <>
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                            Getting AI Perspective...
+                            {t('gettingAIPerspective')}
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-5 h-5 mr-2" />
-                            Get AI Perspective
+                            {/* <Sparkles className="w-5 h-5 mr-2" /> */}
+                            {t('getAIPerspective')}
                           </>
                         )}
                       </Button>
                       {tempEntries.worry_ai && (
                         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                          <p className="text-xs font-bold text-blue-900 mb-2">✨ AI's Positive Perspective:</p>
+                          <p className="text-xs font-bold text-blue-900 mb-2">{t('aiPositivePerspective')}:</p>
                           <p className="text-base text-gray-800">{tempEntries.worry_ai}</p>
                         </div>
                       )}
@@ -1387,12 +1386,13 @@ const JournalWithTheme = () => {
                           }
                         }}
                         disabled={savingWorry}
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-base py-3"
+                        variant="animated"
+                        className="w-full text-base py-3"
                       >
                         {savingWorry ? (
                           <>
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                            Saving...
+                            {t('saving')}
                           </>
                         ) : (
                           <>
@@ -1404,9 +1404,9 @@ const JournalWithTheme = () => {
                     </div>
                   </>
                 )}
-              </CardContent>
+              </div>
             )}
-          </Card>
+          </div>
 
         </div>
       </div>

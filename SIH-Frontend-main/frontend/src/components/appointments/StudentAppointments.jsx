@@ -134,7 +134,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, theme }
                     <h2 className={`text-2xl font-bold ${theme.colors.text} mb-4`}>{title}</h2>
                     <p className={`${theme.colors.muted} mb-6`}>{message}</p>
                     <div className="flex justify-end space-x-4">
-                        <Button onClick={onClose} variant="outline" className="hover:bg-gray-50">{t('cancel')}</Button>
+                        <Button onClick={onClose} variant="outline" className={`${theme.currentTheme === 'midnight' ? 'hover:bg-slate-700 border-slate-800' : 'hover:bg-gray-50'}`}>{t('cancel')}</Button>
                         <Button onClick={onConfirm} className="bg-gradient-to-r from-red-500 to-red-600 hover:bg-red-600 text-white">{t('confirm')}</Button>
                     </div>
                 </CardContent>
@@ -145,7 +145,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, theme }
 
 // --- Main Component ---
 const StudentAppointments = () => {
-    const { theme } = useTheme();
+    const { theme, currentTheme } = useTheme();
     const { t } = useLanguage();
     
     const [view, setView] = useState('schedule');
@@ -305,17 +305,24 @@ const StudentAppointments = () => {
             const isSelected = date.toDateString() === selectedDate.toDateString();
             const isPast = date < new Date(today.setHours(0, 0, 0, 0));
 
+            const baseText = currentTheme === 'midnight' ? 'text-white' : 'text-gray-900';
+            const pastText = currentTheme === 'midnight' ? 'text-slate-500' : 'text-gray-400';
+            const hoverFuture = currentTheme === 'midnight' ? 'hover:bg-slate-700' : 'hover:bg-cyan-100';
+            const todayStyle = currentTheme === 'midnight'
+                ? 'bg-slate-700 text-white font-semibold'
+                : 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold';
+
             calendarDays.push(
                 <div
                     key={day}
                     className={`text-center p-3 rounded-full cursor-pointer transition-all duration-300 hover:scale-105 ${
                         isPast
-                            ? 'text-gray-400 cursor-not-allowed'
+                            ? `${pastText} cursor-not-allowed`
                             : isSelected
-                                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold shadow-lg'
+                                ? 'bg-gradient-to-r from-purple-500 via-purple-600 to-violet-600 text-white font-bold shadow-lg animate-shimmer'
                                 : isToday
-                                    ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold'
-                                    : 'hover:bg-cyan-100'
+                                    ? todayStyle
+                                    : `${baseText} ${hoverFuture}`
                     }`}
                     onClick={() => !isPast && handleDateClick(day)}
                 >
@@ -331,28 +338,31 @@ const StudentAppointments = () => {
 
     // Navigation Tabs with uniform SensEase colors
     const renderTabs = () => (
-        <div className="flex justify-center mb-8">
-            <div className="flex space-x-2 bg-gray-200 p-1 rounded-full">
+        <div className={`flex justify-center mb-8 ${currentTheme === 'midnight' ? 'bg-slate-800 p-1 rounded-full' : 'bg-gray-100 p-1 rounded-full'}`}>
+            <div className={`flex space-x-2 ${currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-200'} p-1 rounded-full`}>
                 <Button 
                     onClick={() => setView('schedule')} 
+                    variant={view === 'schedule' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'schedule' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'schedule' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                 >
                     {t('bookAppointment')}
                 </Button>
                 <Button 
                     onClick={() => setView('appointments')} 
+                    variant={view === 'appointments' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'appointments' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'appointments' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                 >
                     {t('myAppointments')}
                 </Button>
                 <Button 
                     onClick={() => setView('goals')} 
+                    variant={view === 'goals' ? 'animated' : 'ghost'}
                     className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                        view === 'goals' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : `${theme.colors.muted} hover:bg-cyan-50`
+                        view !== 'goals' ? `${theme.colors.muted} hover:bg-cyan-50` : ''
                     }`}
                 >
                     {t('sessionGoals')}
@@ -380,19 +390,19 @@ const StudentAppointments = () => {
                             </button>
                             
                             {showCalendarModal && (
-                                <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 shadow-lg border rounded-lg p-4 z-40 w-80">
+                                <div className={`absolute right-0 mt-2 ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-white'} shadow-lg border rounded-lg p-4 z-40 w-80`}>
                                     <div className="flex items-center justify-between mb-4">
-                                        <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                        <button onClick={handlePrevMonth} className={`p-1 rounded ${theme.currentTheme === 'midnight' ? 'hover:bg-slate-800 text-white' : 'hover:bg-gray-100'}`}>
                                             <ChevronLeftIcon className="w-5 h-5" />
                                         </button>
                                         <h4 className={`font-bold ${theme.colors.text}`}>
                                             {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
                                         </h4>
-                                        <button onClick={handleNextMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                        <button onClick={handleNextMonth} className={`p-1 rounded ${theme.currentTheme === 'midnight' ? 'hover:bg-slate-700 text-white' : 'hover:bg-gray-100'}`}>
                                             <ChevronRightIcon className="w-5 h-5" />
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-7 gap-2 text-center font-medium text-gray-500 mb-2 text-xs">
+                                    <div className={`grid grid-cols-7 gap-2 text-center font-medium ${theme.colors.muted} mb-2 text-xs`}>
                                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                                             <div key={day}>{day}</div>
                                         ))}
@@ -405,12 +415,12 @@ const StudentAppointments = () => {
                 </CardHeader>
                 <CardContent>
                     {/* Mobile quick actions: three tappable options */}
-                    <div className="lg:hidden mb-4">
-                        <div className="grid grid-cols-3 gap-3">
+                    <div className={`lg:hidden mb-4 p-4 rounded-lg ${theme.currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-100'}`}>
+                        <div className={`grid grid-cols-3 gap-3`}>
                             <button onClick={() => setView('schedule')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
                                 {t('bookAppointment')}
                             </button>
-                            <button onClick={() => setView('appointments')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
+                            <button onClick={() => setView('a   ppointments')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
                                 {t('myAppointments')}
                             </button>
                             <button onClick={() => setView('goals')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
@@ -435,8 +445,12 @@ const StudentAppointments = () => {
                                                 key={counsellor.id}
                                                 className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg ${
                                                     selectedCounsellor.id === counsellor.id
-                                                        ? 'border-cyan-500 bg-cyan-50'
-                                                        : 'border-gray-200 hover:border-cyan-300'
+                                                        ? currentTheme === 'midnight'
+                                                            ? 'border-slate-500 bg-slate-800'
+                                                            : 'border-cyan-500 bg-cyan-50'
+                                                        : currentTheme === 'midnight'
+                                                            ? 'border-slate-700 hover:border-slate-500 bg-slate-800/70'
+                                                            : 'border-gray-200 hover:border-cyan-300'
                                                 }`}
                                                 onClick={() => {
                                                     setSelectedCounsellor(counsellor);
@@ -478,17 +492,17 @@ const StudentAppointments = () => {
                                     <Card className={`${theme.colors.card} shadow-lg`}>
                                         <CardContent className="p-4">
                                             <div className="flex items-center justify-between mb-4">
-                                                <Button onClick={handlePrevMonth} variant="outline" size="sm" className="hover:bg-cyan-50">
+                                                <Button onClick={handlePrevMonth} variant="outline" size="sm" className={`${theme.currentTheme === 'midnight' ? 'text-white hover:bg-slate-700' : 'hover:bg-cyan-50'}`}>
                                                     <ChevronLeftIcon />
                                                 </Button>
                                                 <h4 className={`font-bold text-lg ${theme.colors.text}`}>
                                                     {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
                                                 </h4>
-                                                <Button onClick={handleNextMonth} variant="outline" size="sm" className="hover:bg-cyan-50">
+                                                <Button onClick={handleNextMonth} variant="outline" size="sm" className={`${theme.currentTheme === 'midnight' ? 'text-white hover:bg-slate-700' : 'hover:bg-cyan-50'}`}>
                                                     <ChevronRightIcon />
                                                 </Button>
                                             </div>
-                                            <div className="grid grid-cols-7 gap-2 text-center font-medium text-gray-500 mb-2 text-sm">
+                                            <div className={`grid grid-cols-7 gap-2 text-center font-medium ${theme.colors.muted} mb-2 text-sm`}>
                                                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                                                     <div key={day}>{day}</div>
                                                 ))}
@@ -505,10 +519,13 @@ const StudentAppointments = () => {
                                                 <Button
                                                     key={time}
                                                     onClick={() => { setSelectedTime(time); if (!selectedCounsellor) setSelectedCounsellor(counsellors[0]); }}
+                                                    variant={selectedTime === time ? 'animated' : 'outline'}
                                                     className={`p-3 transition-all duration-200 ${
-                                                        selectedTime === time
-                                                            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg'
-                                                            : 'bg-gray-100 text-gray-700 hover:bg-cyan-100 hover:text-cyan-700'
+                                                        currentTheme === 'midnight'
+                                                          ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                          : ''
+                                                    } ${
+                                                        selectedTime !== time ? 'hover:bg-cyan-50' : ''
                                                     }`}
                                                 >
                                                     {time}
@@ -521,10 +538,10 @@ const StudentAppointments = () => {
                                 {/* Mobile: show time selection & notes after counsellor tap */}
                                 <div className="md:hidden">
                                     {mobileShowTimeSelection && (
-                                        <div className="space-y-4 p-3 bg-white rounded-lg border border-gray-200">
+                                        <div className={`space-y-4 p-3 ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-white'} rounded-lg border ${theme.currentTheme === 'midnight' ? 'border-slate-700' : 'border-gray-200'}`}>
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-center space-x-3">
-                                                    <button onClick={() => setShowCalendarModal(true)} className="p-2 rounded-md bg-gray-100 mr-2">
+                                                    <button onClick={() => setShowCalendarModal(true)} className={`p-2 rounded-md mr-2 ${theme.currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-100'}`}>
                                                         <CalendarIcon className="w-6 h-6 text-cyan-600" />
                                                     </button>
                                                     <img src={selectedCounsellor.imageUrl} alt={selectedCounsellor.name} className="w-12 h-12 rounded-full" />
@@ -534,34 +551,37 @@ const StudentAppointments = () => {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <button onClick={() => setMobileShowTimeSelection(false)} className="text-sm text-gray-500">{t('back')}</button>
+                                                    <button onClick={() => setMobileShowTimeSelection(false)} className={`text-sm ${theme.colors.muted}`}>{t('back')}</button>
                                                 </div>
                                             </div>
 
                                             <div>
                                                 <div className="mb-2">
-                                                    <div className="text-xs text-gray-400 mb-1">{t('selectAvailableTime')}</div>
+                                                    <div className={`text-xs ${theme.colors.muted} mb-1`}>{t('selectAvailableTime')}</div>
                                                     <div className="grid grid-cols-3 gap-2">
                                                         {selectedCounsellor.availableSlots.map((time) => (
-                                                            <button
+                                                            <Button
                                                                 key={time}
                                                                 onClick={() => { setSelectedTime(time); if (!selectedCounsellor) setSelectedCounsellor(counsellors[0]); }}
-                                                                className={`text-sm p-3 rounded-lg border transition-colors ${
-                                                                    selectedTime === time
-                                                                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-transparent'
-                                                                        : 'bg-gray-100 text-gray-700 border-gray-200'
+                                                                variant={selectedTime === time ? 'animated' : 'outline'}
+                                                                className={`text-sm p-3 transition-colors ${
+                                                                    currentTheme === 'midnight'
+                                                                      ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                                      : ''
+                                                                } ${
+                                                                    selectedTime !== time ? 'hover:bg-cyan-50' : ''
                                                                 }`}
                                                             >
                                                                 {time}
-                                                            </button>
+                                                            </Button>
                                                         ))}
                                                     </div>
                                                 </div>
 
                                                 {selectedTime && (
                                                     <div className="flex items-center justify-between mt-2">
-                                                        <div className="text-sm text-gray-700">{t('selectedTime')}: <span className="font-medium">{selectedTime}</span></div>
-                                                        <div className="text-xs text-gray-400">{selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                                        <div className={`text-sm ${theme.colors.text}`}>{t('selectedTime')}: <span className="font-medium">{selectedTime}</span></div>
+                                                        <div className={`text-xs ${theme.colors.muted}`}>{selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                                     </div>
                                                 )}
 
@@ -571,7 +591,11 @@ const StudentAppointments = () => {
                                                         onChange={(e) => setNotes(e.target.value)}
                                                         rows={3}
                                                         placeholder={t('sessionNotesPlaceholder')}
-                                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-cyan-500"
+                                                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
+                                                            currentTheme === 'midnight'
+                                                              ? 'bg-slate-800 text-white border-slate-600 placeholder-slate-400'
+                                                              : 'bg-white text-gray-900 border-gray-300'
+                                                        }`}
                                                     />
                                                 </div>
 
@@ -593,7 +617,11 @@ const StudentAppointments = () => {
                                             onChange={(e) => setNotes(e.target.value)}
                                             placeholder={t('sessionNotesPlaceholder')}
                                             rows={5}
-                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                            className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
+                                                currentTheme === 'midnight'
+                                                  ? 'bg-slate-800 text-white border-slate-600 placeholder-slate-400'
+                                                  : 'bg-white text-gray-900 border-gray-300'
+                                            }`}
                                         />
                                     </CardContent>
                                 </Card>
@@ -603,7 +631,8 @@ const StudentAppointments = () => {
                                 <Button
                                     onClick={() => setStep(2)}
                                     disabled={!selectedTime}
-                                    className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                                    variant="animated"
+                                    className="disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {t('proceedToConfirmation')}
                                 </Button>
@@ -645,7 +674,7 @@ const StudentAppointments = () => {
                                         {notes && (
                                             <div className="pt-4 border-t">
                                                 <h4 className={`font-semibold ${theme.colors.text} mb-2`}>Your Notes:</h4>
-                                                <p className={`${theme.colors.muted} bg-gray-50 p-3 rounded-lg`}>{notes}</p>
+                                                <p className={`${theme.colors.muted} ${theme.currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-50'} p-3 rounded-lg`}>{notes}</p>
                                             </div>
                                         )}
                                     </div>
@@ -656,13 +685,13 @@ const StudentAppointments = () => {
                                 <Button
                                     onClick={() => setStep(1)}
                                     variant="outline"
-                                    className="hover:bg-gray-50"
+                                    className={`${theme.currentTheme === 'midnight' ? 'hover:bg-slate-700 border-slate-600' : 'hover:bg-gray-50'}`}
                                 >
                                     {t('backToEdit')}
                                 </Button>
                                 <Button
                                     onClick={handleBookAppointment}
-                                    className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                                    variant="animated"
                                 >
                                     <CheckCircleIcon className="w-5 h-5 mr-2" />
                                     {t('confirmBooking')}
@@ -694,7 +723,7 @@ const StudentAppointments = () => {
                                                                     <div className={`text-sm ${theme.colors.muted}`}>{app.time}</div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-xs text-gray-400">{app.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                                            <div className={`text-xs ${theme.colors.text}`}>{app.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                                         </div>
                                                     </button>
 
@@ -717,7 +746,7 @@ const StudentAppointments = () => {
 
                                                             {app.sessionNotes && (
                                                                 <div className="mt-2 p-3 bg-cyan-50 rounded-lg border border-cyan-200">
-                                                                    <p className="text-sm text-gray-700">{app.sessionNotes}</p>
+                                                                    <p className={`text-sm ${theme.colors.muted}`}>{app.sessionNotes}</p>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -727,7 +756,7 @@ const StudentAppointments = () => {
                                         </Card>
                                     )) : (
                                         <div className={`text-center py-12 bg-gradient-to-r ${theme.colors.secondary} rounded-2xl`}>
-                                            <CalendarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                            <CalendarIcon className={`w-16 h-16 ${theme.colors.muted} mx-auto mb-4`} />
                                             <p className={`${theme.colors.muted} text-lg`}>{t('noUpcomingAppointments')}</p>
                                             <Button
                                                 onClick={() => setView('schedule')}
@@ -781,7 +810,7 @@ const StudentAppointments = () => {
                                         </Card>
                                     )) : (
                                         <div className={`text-center py-12 bg-gradient-to-r ${theme.colors.secondary} rounded-2xl`}>
-                                            <CheckCircleIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                            <CheckCircleIcon className={`w-16 h-16 ${theme.colors.muted} mx-auto mb-4`} />
                                             <p className={`${theme.colors.muted} text-lg`}>{t('noPastSessionsYet')}</p>
                                         </div>
                                     )}
@@ -794,14 +823,14 @@ const StudentAppointments = () => {
                         <div className="space-y-6">
                             <div className="text-center mb-8">
                                 <h2 className={`text-2xl sm:text-3xl font-bold ${theme.colors.text} mb-2`}>{t('sessionGoals')}</h2>
-                                <p className={`${theme.colors.muted} text-sm sm:text-base`}>Track tasks assigned by your counselor and mark them as complete</p>
+                                <p className={`${theme.colors.muted} text-sm sm:text-base`}>{t('trackTasksAssigned')}</p>
                             </div>
 
                             {completedAppointments.length > 0 ? (
                                 <div className="space-y-6">
                                     {completedAppointments.map(app => (
                                         app.actionItems.length > 0 && (
-                                            <Card key={app.id} className={`${theme.colors.card} shadow-lg border-0`}>
+                                            <Card key={app.id} className={`shadow-lg border-0 ${theme.currentTheme === 'midnight' ? 'bg-slate-900 border border-slate-800' : theme.colors.card}`}>
                                                 <CardHeader>
                                                     <div className="flex items-start justify-between">
                                                         <div>
@@ -816,16 +845,16 @@ const StudentAppointments = () => {
                                                 </CardHeader>
                                                 <CardContent>
                                                     <div className="space-y-3">
-                                                        <h5 className={`font-semibold ${theme.colors.text} text-sm sm:text-base`}>Action Items:</h5>
+                                                        <h5 className={`font-semibold text-sm sm:text-base ${theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text}`}>Action Items:</h5>
                                                         {app.actionItems.map(item => (
-                                                            <div key={item.id} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                                            <div key={item.id} className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${theme.currentTheme === 'midnight' ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={item.completed}
                                                                     onChange={() => toggleActionItem(app.id, item.id)}
-                                                                    className="w-5 h-5 text-cyan-600 bg-white border-gray-300 rounded focus:ring-cyan-500 cursor-pointer"
+                                                                    className={`w-5 h-5 text-cyan-600 ${theme.currentTheme === 'midnight' ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'} rounded focus:ring-cyan-500 cursor-pointer`}
                                                                 />
-                                                                <span className={`flex-1 text-sm sm:text-base ${item.completed ? `line-through ${theme.colors.muted}` : theme.colors.text}`}>
+                                                                <span className={`flex-1 text-sm sm:text-base ${item.completed ? (theme.currentTheme === 'midnight' ? 'line-through text-slate-400' : `line-through ${theme.colors.muted}`) : (theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text)}`}>
                                                                     {item.text}
                                                                 </span>
                                                                 {item.completed && (
@@ -841,7 +870,7 @@ const StudentAppointments = () => {
                                 </div>
                             ) : (
                                 <div className={`text-center py-12 bg-gradient-to-r ${theme.colors.secondary} rounded-2xl`}>
-                                    <CheckCircleIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                    <CheckCircleIcon className={`w-16 h-16 ${theme.colors.muted} mx-auto mb-4`} />
                                     <p className={`${theme.colors.muted} text-lg`}>No completed sessions with action items yet</p>
                                 </div>
                             )}
@@ -868,10 +897,10 @@ const StudentAppointments = () => {
             {showCalendarModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/40" onClick={() => setShowCalendarModal(false)} />
-                    <div className={`relative bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md w-full z-60`}> 
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className={`font-bold ${theme.colors.text}`}>{t('bookAppointment')}</h3>
-                            <button onClick={() => setShowCalendarModal(false)} className="p-2">Close</button>
+                    <div className={`relative ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-white'} rounded-xl p-6 max-w-md w-full z-60 shadow-2xl ${theme.currentTheme === 'midnight' ? 'border-slate-700' : 'border-gray-100'} border`}>
+                        <div className="flex items-center justify-between mb-6 border-b pb-4">
+                            <h3 className={`font-bold text-lg ${theme.colors.text}`}>{t('chooseYourCounselor')}</h3>
+                            <button onClick={() => setShowCalendarModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">✕</button>
                         </div>
                         <div className="grid grid-cols-7 gap-2 text-center">{renderCalendar()}</div>
                     </div>

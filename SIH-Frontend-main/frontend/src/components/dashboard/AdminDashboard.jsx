@@ -991,105 +991,38 @@ You are not alone, and there are people who want to help. Please reach out to on
     </nav>
   );
 
-  const renderOverview = () => (
-    <div className="space-y-8 overflow-x-hidden">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
-            {t('adminDashboard')} 
-            <Crown className="w-8 h-8 ml-3 text-yellow-500 animate-pulse" />
-          </h2>
-        </div>
-        <div />
-      </div>
+    const loadChat = chat => {
+      const restored = chat.messages.map(m => ({
+        ...m,
+        timestamp: new Date(m.timestamp)
+      }));
+      setMessages(restored);
+      localStorage.setItem("sensee_admin_chat", JSON.stringify(restored));
+      setChatTab("chat");
+    };
 
-      {/* Enhanced System Metrics (4 in laptop, 2x2 in mobile/tablet) */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
-        {[
-          { 
-            key: 'totalUsers', 
-            value: mockAnalytics.totalUsers.toLocaleString(), 
-            icon: Users, 
-            color: 'from-blue-500 to-cyan-500', 
-            bgColor: 'from-blue-50 to-cyan-50',
-            change: '+12%',
-            changeColor: 'text-green-600'
-          },
-          { 
-            key: 'activeUsers', 
-            value: mockAnalytics.activeUsers.toLocaleString(), 
-            icon: Activity, 
-            color: 'from-green-500 to-emerald-500', 
-            bgColor: 'from-green-50 to-emerald-50',
-            change: '71% engagement',
-            changeColor: 'text-green-600'
-          },
-          { 
-            key: 'totalSessions', 
-            value: mockAnalytics.totalSessions.toLocaleString(), 
-            icon: TrendingUp, 
-            color: 'from-purple-500 to-violet-500', 
-            bgColor: 'from-purple-50 to-violet-50',
-            change: '+8% this week',
-            changeColor: 'text-green-600'
-          },
-          { 
-            key: 'avgSession', 
-            value: mockAnalytics.averageSessionDuration, 
-            icon: Clock, 
-            color: 'from-orange-500 to-pink-500', 
-            bgColor: 'from-orange-50 to-pink-50',
-            change: '+3 min increase',
-            changeColor: 'text-green-600'
-          }
-        ].map(({ key, value, icon: Icon, color, bgColor, change, changeColor }) => (
-          <Card key={key} className={`bg-gradient-to-r ${bgColor} border-0 hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group`}>
-            <CardContent className="p-4 md:p-6 lg:p-8">
-              <div>
-                <p className={`text-sm font-semibold ${theme.colors.muted} mb-2`}>{t(key)}</p>
-                <p className="text-3xl font-bold text-gray-800 group-hover:scale-105 transition-transform">{value}</p>
-                <p className={`text-xs ${changeColor} mt-2 font-medium`}>{change}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+    const deleteHistory = id => {
+      const next = conversationHistory.filter(h => h.id !== id);
+      setConversationHistory(next);
+      localStorage.setItem("sensee_admin_conversation_history", JSON.stringify(next));
+    };
 
-      {/* Platform Analytics — keep Most Used Features only */}
-      <Card className={`${theme.colors.card} border-0 shadow-xl hover:shadow-2xl transition-shadow`}>
-        <CardHeader>
-          <CardTitle className={`flex items-center ${theme.colors.text}`}>
-            <BarChart3 className="w-6 h-6 mr-3 text-blue-500" />
-            {t('platformAnalytics')}
-            <Badge className="ml-3 bg-green-100 text-green-800">{t('liveData')}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div>
-              <h4 className={`font-semibold ${theme.colors.text} mb-4`}>{t('mostUsedFeatures')}</h4>
-              <div className="space-y-4">
-                {mockAnalytics.mostUsedFeatures.map((feature, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 bg-gradient-to-r ${theme.colors.primary} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
-                        {index + 1}
-                      </div>
-                      <span className={`font-medium ${theme.colors.text}`}>{feature.name}</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-32 bg-gray-200 rounded-full h-3">
-                        <div 
-                          className={`bg-gradient-to-r ${theme.colors.primary} h-3 rounded-full transition-all duration-500`}
-                          style={{ width: `${feature.usage}%` }}
-                        ></div>
-                      </div>
-                      <span className={`text-sm font-semibold ${theme.colors.text} min-w-[3rem]`}>{feature.usage}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+    const renderChatMessage = message => (
+      <div
+        key={message.id}
+        className={`flex items-start space-x-3 ${
+          message.isBot ? "justify-start" : "justify-end"
+        } message-row`}
+      >
+        <div className="max-w-md animate-message-in">
+          <div
+            className={`p-4 rounded-2xl shadow-md ${
+              message.isBot
+                ? `${theme.colors.card} ${theme.colors.text}`
+                : theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
+            }`}
+          >
+            {message.text}
           </div>
         </CardContent>
       </Card>
@@ -1354,86 +1287,124 @@ You are not alone, and there are people who want to help. Please reach out to on
     </Card>
   );
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return renderOverview();
-      case 'chatbot':
-        return renderChatbot();
-      case 'analytics':
-        return (
-          <div className="space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className={`text-3xl font-bold ${theme.colors.text} whitespace-nowrap flex items-center`}>
-                <BarChart3 className="w-8 h-8 mr-3 text-green-500" />
-                {t('platformAnalytics')}
-              </h2>
-            </div>
-            <AnalyticsModule />
-          </div>
-        );
-      case 'community':
-        return <CommunityManagement />;
-      case 'announcements':
-        return (
-          <div className="space-y-8">
-            <div className="flex items-center justify-between">
+        {/* Platform Analytics */}
+        <Card className={`${isDarkLike ? 'bg-transparent border border-white/20' : 'bg-white border border-gray-200'} shadow-xl hover:shadow-2xl transition-shadow`}>
+          <CardHeader>
+            <CardTitle className={`flex items-center ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')}`}>
+              <BarChart3 className="w-6 h-6 mr-3 text-blue-500" />
+              {t('platformAnalytics')}
+              <Badge className="ml-3 bg-green-100 text-green-800">{t('liveData')}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
               <div>
-                <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
-                  {t('announcements')} Hub
-                  <Crown className="w-8 h-8 ml-3 text-yellow-500 animate-pulse" />
-                </h2>
-              </div>
-            </div>
-
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 gap-8 lg:gap-12 max-w-7xl mx-auto">
-              {/* Announcement Management Section */}
-              <div className="space-y-6">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-700 rounded-lg flex items-center justify-center">
-                    <div className="text-lg">📣</div>
-                  </div>
-                  <h2 className={`text-2xl font-semibold ${theme.colors.text}`}>{t('announcements')}</h2>
+                <h4 className={`${isDarkLike ? 'font-semibold text-white mb-4' : (isOceanLike ? 'font-semibold text-black mb-4' : 'font-semibold mb-4')}`}>{t('mostUsedFeatures')}</h4>
+                <div className="space-y-4">
+                  {mockAnalytics.mostUsedFeatures.map((feature, index) => (
+                    <div key={index} className={`${isDarkLike ? 'flex items-center justify-between p-4 rounded-lg border border-white/10 hover:shadow-md transition-shadow' : 'flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:shadow-md transition-shadow'}`}>
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 bg-gradient-to-r ${theme.colors.primary} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
+                          {index + 1}
+                        </div>
+                        <span className={`${isDarkLike ? 'font-medium text-white' : (isOceanLike ? 'font-medium text-black' : 'font-medium')}`}>{feature.name}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-32 bg-white/10 rounded-full h-3">
+                          <div 
+                            className={`bg-gradient-to-r ${theme.colors.primary} h-3 rounded-full transition-all duration-500`}
+                            style={{ width: `${feature.usage}%` }}
+                          ></div>
+                        </div>
+                        <span className={`text-sm font-semibold ${isDarkLike ? 'text-white' : (isOceanLike ? 'text-black' : '')} min-w-[3rem]`}>{feature.usage}%</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <AnnouncementManagement />
               </div>
             </div>
-          </div>
-        );
-      case 'forms':
-        return (
-          <div className="space-y-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
-                  Form Creation Hub
-                  <FileText className="w-8 h-8 ml-3 text-cyan-500 animate-pulse" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+
+    const renderContent = () => {
+      switch (activeTab) {
+        case 'overview':
+          return renderOverview();
+        case 'chatbot':
+          return renderChatbot();
+        case 'analytics':
+          return (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <h2 className={`text-3xl font-bold ${theme.colors.text} whitespace-nowrap flex items-center`}>
+                  <BarChart3 className="w-8 h-8 mr-3 text-green-500" />
+                  {t('platformAnalytics')}
                 </h2>
               </div>
+              <AnalyticsModule />
             </div>
-            <FormManagement />
-          </div>
-        );
-      case 'users':
-        return <UserManagement />;
-      default:
-        return renderOverview();
-    }
+          );
+        case 'community':
+          return <CommunityManagement />;
+        case 'announcements':
+          return (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
+                    {t('announcements')} Hub
+                    <Crown className="w-8 h-8 ml-3 text-yellow-500 animate-pulse" />
+                  </h2>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-8 lg:gap-12 max-w-7xl mx-auto">
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-700 rounded-lg flex items-center justify-center">
+                      <div className="text-lg">📣</div>
+                    </div>
+                    <h2 className={`text-2xl font-semibold ${theme.colors.text}`}>{t('announcements')}</h2>
+                  </div>
+                  <AnnouncementManagement />
+                </div>
+              </div>
+            </div>
+          );
+        case 'forms':
+          return (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
+                    {t('formCreationHub')}
+                    <FileText className="w-8 h-8 ml-3 text-cyan-500 animate-pulse" />
+                  </h2>
+                </div>
+              </div>
+              <FormManagement />
+            </div>
+          );
+        case 'users':
+          return <UserManagement />;
+        default:
+          return renderOverview();
+      }
+    };
+
+    return (
+      <DashboardLayout sidebarContent={sidebarContent}>
+        {renderContent()}
+      </DashboardLayout>
+    );
   };
 
-  return (
-    <DashboardLayout sidebarContent={sidebarContent}>
-      {renderContent()}
-    </DashboardLayout>
-  );
-};
-
-// Wrap default export with an ErrorBoundary to catch runtime render errors
-export default function AdminDashboardWithBoundary(props) {
-  return (
-    <ErrorBoundary>
-      <AdminDashboard {...props} />
-    </ErrorBoundary>
-  );
-}
+  export default function AdminDashboardWithBoundary(props) {
+    return (
+      <ErrorBoundary>
+        <AdminDashboard {...props} />
+      </ErrorBoundary>
+    );
+  }

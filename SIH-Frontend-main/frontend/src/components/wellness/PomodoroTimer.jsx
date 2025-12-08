@@ -110,13 +110,9 @@ const PomodoroTimer = () => {
           {Object.keys(sessionTimes).map((type) => (
             <Button
               key={type}
-              variant={currentSession === type ? 'default' : 'outline'}
+              variant={currentSession === type ? 'animated' : 'outline'}
               onClick={() => switchSession(type)}
-              className={`px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base ${
-                currentSession === type 
-                  ? `bg-gradient-to-r ${theme.colors.primary} text-white` 
-                  : `hover:bg-gradient-to-r hover:${theme.colors.secondary}`
-              } transition-all duration-200 whitespace-nowrap`}
+              className="px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base transition-all duration-200 whitespace-nowrap"
             >
               {type === 'work' && t('workSession')}
               {type === 'shortBreak' && t('shortBreak')}
@@ -140,8 +136,9 @@ const PomodoroTimer = () => {
           {!isRunning ? (
             <Button
               onClick={startTimer}
+              variant="animated"
               size="lg"
-              className={`bg-gradient-to-r ${theme.colors.primary} hover:shadow-xl text-white px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 hover:scale-105`}
+              className="px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg"
             >
               <Play className="w-4 sm:w-6 h-4 sm:h-6 mr-2" />
               {t('startTimer')}
@@ -149,8 +146,9 @@ const PomodoroTimer = () => {
           ) : (
             <Button
               onClick={pauseTimer}
+              variant="animated"
               size="lg"
-              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:shadow-xl text-white px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 hover:scale-105"
+              className="px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg"
             >
               <Pause className="w-4 sm:w-6 h-4 sm:h-6 mr-2" />
               {t('stopTimer')}
@@ -161,7 +159,7 @@ const PomodoroTimer = () => {
             onClick={resetTimer}
             size="lg"
             variant="outline"
-            className={`border-2 ${theme.colors.text} hover:bg-gradient-to-r hover:${theme.colors.secondary} px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 hover:scale-105`}
+            className="px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 hover:scale-105"
           >
             <RotateCcw className="w-4 sm:w-6 h-4 sm:h-6 mr-2" />
             {t('resetTimer')}

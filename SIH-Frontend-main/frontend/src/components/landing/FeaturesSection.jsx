@@ -167,7 +167,7 @@ const FeaturesSection = () => {
         </motion.div>
 
         <Tabs defaultValue="students" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="flex flex-wrap justify-center gap-2 sm:gap-3 bg-transparent h-auto mb-14">
+          <TabsList className="flex flex-wrap justify-center gap-3 sm:gap-4 bg-transparent h-auto mb-14">
             {[
               { value: "students", label: "For Students" },
               { value: "counselors", label: "For Counselors" },
@@ -176,11 +176,7 @@ const FeaturesSection = () => {
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className={cn(
-                  "px-4 sm:px-8 py-2 sm:py-3.5 rounded-full font-semibold transition-all duration-300 border-2 text-xs sm:text-sm",
-                  "data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-ocean-glow data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-button",
-                  "data-[state=inactive]:bg-card data-[state=inactive]:border-border data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:border-primary/40 data-[state=inactive]:hover:text-foreground"
-                )}
+                className="px-6 sm:px-8 py-3 sm:py-3 rounded-lg font-semibold transition-all duration-300 text-xs sm:text-sm border-2 border-border data-[state=inactive]:bg-card/40 data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-card/60 data-[state=inactive]:hover:text-foreground"
               >
                 {tab.label}
               </TabsTrigger>

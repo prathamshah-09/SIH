@@ -121,7 +121,7 @@ const EisenhowerMatrix = () => {
               </select>
               <Button
                 onClick={addTask}
-                className={`bg-gradient-to-r ${theme.colors.primary} hover:shadow-lg text-white px-6 transition-all duration-200 hover:scale-105`}
+                variant="animated"
               >
                 <Plus className="w-5 h-5 mr-2" />
                 {t('addTask')}

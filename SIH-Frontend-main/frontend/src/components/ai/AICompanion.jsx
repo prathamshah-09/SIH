@@ -8,7 +8,7 @@ import ThemeLanguageSelector from '@components/shared/ThemeLanguageSelector';
 
 const AICompanion = () => {
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [showChatsPanel, setShowChatsPanel] = useState(false);
@@ -462,11 +462,11 @@ const AICompanion = () => {
               <ChevronDown className="w-5 h-5" />
 
               {showChatsPanel && (
-                <div className="absolute right-0 mt-2 w-64 max-h-72 overflow-auto bg-white dark:bg-gray-800 shadow-lg border rounded-md p-2 z-40">
-                  {chats.length === 0 && <div className="p-2 text-sm text-gray-500">{t('noConversationsFound') || 'No conversations found'}</div>}
+                <div className={`absolute right-0 mt-2 w-64 max-h-72 overflow-auto shadow-lg border rounded-md p-2 z-40 ${isMidnight ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+                  {chats.length === 0 && <div className={`p-2 text-sm ${theme.colors.muted}`}>{t('noConversationsFound') || 'No conversations found'}</div>}
                   {chats.map(c => (
                     <div key={c.id} className="w-full flex items-center justify-between p-1 rounded">
-                      <button onClick={() => handleSelectChat(c.id)} className="flex-1 text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <button onClick={() => handleSelectChat(c.id)} className={`flex-1 text-left p-2 rounded ${isMidnight ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
                         <div className="text-sm font-medium truncate" title={c.title}>{c.title}</div>
                         <div className="text-[11px] text-gray-500 truncate">
                           {c.messages[c.messages.length - 1]?.text || (
@@ -515,7 +515,7 @@ const AICompanion = () => {
           )}
           {currentChat?.messages?.map(msg => (
             <div key={msg.id} className={`max-w-[85%] ${msg.role === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}>
-              <div className={`chat-bubble inline-block px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'}`}>
+              <div className={`chat-bubble inline-block px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : isMidnight ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900 border border-gray-200'}`}>
                 {msg.type === 'audio' ? (
                   <audio controls className="w-56 sm:w-96">
                     <source src={msg.audioUrl} />
@@ -567,10 +567,10 @@ const AICompanion = () => {
             <button
               aria-label={isRecording ? 'Stop recording' : 'Voice message'}
               onClick={() => { isRecording ? stopRecording() : startRecording(); }}
-              className={`icon-tap rounded-full w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center transition-all hover:shadow-lg ${isRecording ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              className={`icon-tap rounded-full w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center transition-all ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl' : isMidnight ? 'bg-slate-700 hover:bg-slate-600 text-blue-400 shadow-sm hover:shadow-md' : 'bg-gray-200 hover:bg-gray-300 text-blue-600 shadow-sm hover:shadow-md'}`}
               title={isRecording ? 'Stop recording' : 'Voice message'}
             >
-              <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'text-white' : 'text-blue-600'}`} />
+              <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${isRecording ? 'animate-pulse' : ''}`} />
             </button>
           </div>
         </div>

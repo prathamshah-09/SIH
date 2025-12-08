@@ -98,8 +98,9 @@ const BookSection = ({ books = [] }) => {
                 {/* Read Button */}
                 <Button
                   onClick={() => handleReadBook(book)}
+                  variant="animated"
                   size="sm"
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-2 sm:px-3 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg w-full"
+                  className="px-2 sm:px-3 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm w-full"
                 >
                   <FileDown className="w-3 h-3 lg:w-4 lg:h-4 mr-1" />
                   <span className="hidden sm:inline">{t('readBook')}</span>

@@ -161,7 +161,7 @@ MenubarLabel.displayName = MenubarPrimitive.Label.displayName
 const MenubarSeparator = React.forwardRef(({ className, ...props }, ref) => (
   <MenubarPrimitive.Separator
     ref={ref}
-    className={cn("-mx-1 my-1 h-px bg-muted", className)}
+    className={cn("-mx-1 my-1 h-px", className)}
     {...props} />
 ))
 MenubarSeparator.displayName = MenubarPrimitive.Separator.displayName

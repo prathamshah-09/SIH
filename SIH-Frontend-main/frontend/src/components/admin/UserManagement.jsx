@@ -38,6 +38,24 @@ const UserManagement = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
   
+  // detect midnight calm theme in a safe way (many projects set theme.name or data-theme on root)
+  const [isMidnight, setIsMidnight] = useState(false);
+  useEffect(() => {
+    try {
+      const themeName = theme?.name?.toLowerCase?.() || theme?.id?.toLowerCase?.();
+      const docTheme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : null;
+      const docClass = typeof document !== 'undefined' ? document.documentElement.classList.contains('theme-midnight-calm') : false;
+      const midnightMatch =
+        themeName?.includes('midnight') ||
+        docTheme === 'midnight-calm' ||
+        docTheme === 'midnight' ||
+        docClass;
+      setIsMidnight(Boolean(midnightMatch));
+    } catch (e) {
+      setIsMidnight(false);
+    }
+  }, [theme]);
+
   // State management
   const [allUsers, setAllUsers] = useState([]); // All users from API
   const [filteredUsers, setFilteredUsers] = useState([]); // Filtered users for display
@@ -419,7 +437,7 @@ const UserManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Roll Number</label>
+                  <label className="text-sm font-medium mb-2 block">{t('rollNo')}</label>
                   <Input
                     placeholder="e.g., GV-CSE-2024-055"
                     value={studentForm.roll_no}
@@ -567,7 +585,7 @@ const UserManagement = () => {
           <CardContent className="p-4 sm:p-5 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Users</p>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>{t('totalUsers')}</p>
                 <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
                   {isLoadingStats ? (
                     <Loader className="w-6 h-6 animate-spin" />
@@ -576,7 +594,10 @@ const UserManagement = () => {
                   )}
                 </p>
               </div>
-              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500 opacity-20" />
+              {/* Icon wrapper - white border & icon when midnight */}
+              <div className={isMidnight ? 'w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full border border-white/60' : ''}>
+                <Users className={`w-8 h-8 sm:w-10 sm:h-10 ${isMidnight ? 'text-white opacity-80' : 'text-blue-500 opacity-20'}`} />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -585,7 +606,7 @@ const UserManagement = () => {
           <CardContent className="p-4 sm:p-5 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Students</p>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>{t('totalStudents')}</p>
                 <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
                   {isLoadingStats ? (
                     <Loader className="w-6 h-6 animate-spin" />
@@ -594,7 +615,9 @@ const UserManagement = () => {
                   )}
                 </p>
               </div>
-              <User className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-500 opacity-20" />
+              <div className={isMidnight ? 'w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full border border-white/60' : ''}>
+                <User className={`w-8 h-8 sm:w-10 sm:h-10 ${isMidnight ? 'text-white opacity-80' : 'text-cyan-500 opacity-20'}`} />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -603,7 +626,7 @@ const UserManagement = () => {
           <CardContent className="p-4 sm:p-5 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Counsellors</p>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>{t('totalCounsellors')}</p>
                 <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
                   {isLoadingStats ? (
                     <Loader className="w-6 h-6 animate-spin" />
@@ -612,7 +635,9 @@ const UserManagement = () => {
                   )}
                 </p>
               </div>
-              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-purple-500 opacity-20" />
+              <div className={isMidnight ? 'w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full border border-white/60' : ''}>
+                <Users className={`w-8 h-8 sm:w-10 sm:h-10 ${isMidnight ? 'text-white opacity-80' : 'text-purple-500 opacity-20'}`} />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -681,7 +706,7 @@ const UserManagement = () => {
                   
                   {selectedUser.role === 'student' && selectedUser.roll_no && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Roll Number</label>
+                      <label className="text-sm font-medium text-gray-500">{t('rollNo')}</label>
                       <p className="text-sm">{selectedUser.roll_no}</p>
                     </div>
                   )}
@@ -813,10 +838,16 @@ const UserManagement = () => {
                         const avatarGradient = isStudent 
                           ? 'bg-gradient-to-br from-blue-500 to-cyan-500' 
                           : 'bg-gradient-to-br from-purple-500 to-pink-500';
+
+                        // row class: if midnight -> remove white hover background and use scale hover; otherwise keep original
+                        const rowClass = isMidnight
+                          ? 'border-b transition-transform duration-180 cursor-pointer hover:scale-105 hover:bg-transparent dark:hover:bg-transparent'
+                          : 'border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer';
+
                         return (
                           <tr 
                             key={user.id} 
-                            className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                            className={rowClass}
                             onClick={() => handleViewDetails(user)}
                           >
                             <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -825,14 +856,14 @@ const UserManagement = () => {
                                   {user.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                  <p className={`font-medium truncate ${isMidnight ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
                                     {user.name}
                                   </p>
-                                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                                  <p className={`text-xs truncate ${isMidnight ? 'text-white/75' : 'text-gray-500'}`}>{user.email}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-600 dark:text-gray-400 truncate">
+                            <td className={`px-3 sm:px-6 py-3 sm:py-4 truncate ${isMidnight ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
                               {isStudent ? (user.roll_no || '-') : '-'}
                             </td>
                             <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -852,7 +883,8 @@ const UserManagement = () => {
                                   disabled={isSubmitting}
                                   title="Reset Password"
                                 >
-                                  <Key className="w-4 h-4" />
+                                  {/* Key icon color becomes white in midnight, otherwise default */}
+                                  <Key className={`w-4 h-4 ${isMidnight ? 'text-white' : ''}`} />
                                 </Button>
                                 <Button
                                   size="sm"

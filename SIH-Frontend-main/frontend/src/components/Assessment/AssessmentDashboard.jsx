@@ -137,7 +137,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button 
             size="sm"
-            className="flex-1 sm:flex-none bg-gradient-to-r from-orange-500 to-red-600 hover:shadow-lg text-white transition-all duration-300 hover:scale-105"
+            variant="animated"
             onClick={() => setActiveView('history')}
             title={t('viewHistory')}
           >
@@ -147,7 +147,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
           {userRole === 'admin' && (
             <Button 
               size="sm"
-              className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105"
+              // className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-600 hover:shadow-xl text-white transition-all duration-300 hover:scale-105"
               onClick={() => setActiveView('admin')}
             >
               <Settings className="w-4 h-4 mr-2" />
@@ -158,7 +158,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
       </div>
 
       {/* Anonymity Notice */}
-      <Card className={`${theme.colors.card} border-l-4 border-l-green-500 shadow-lg`}>
+      <Card className={`${theme.colors.card} !border-l-4 !border-l-blue-500 shadow-lg`}>
         <CardContent className="p-6">
           <div className="flex items-center space-x-3">
             <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
@@ -201,14 +201,18 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
       </div>
 
       <Tabs value={assessmentTab} onValueChange={setAssessmentTab} className="w-full">
-        <TabsList className="hidden md:grid w-full grid-cols-2 mb-6 h-auto gap-1 sm:gap-2 p-1 sm:p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <TabsList 
+          style={{
+            backgroundColor: theme.currentTheme === 'midnight' ? '#334155' : '#f3f4f6',
+          }}
+          className={`items-center justify-center text-muted-foreground hidden md:grid w-full grid-cols-2 mb-6 h-auto gap-1 sm:gap-2 p-1 sm:p-2 rounded-lg`}>
           <TabsTrigger value="standard" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
             <Brain className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
             <span className="truncate font-medium">Standard</span>
           </TabsTrigger>
           <TabsTrigger value="admin" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
             <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
-            <span className="truncate font-medium">Admin Forms</span>
+            <span className="truncate font-medium">{t('adminForms')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -223,9 +227,13 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                   <div className={`text-sm ${theme.colors.muted} hide-on-mobile`}>{t(`${form.id}_desc`)?.slice(0, 80) || form.description?.slice(0, 80)}</div>
                 </div>
                 <div className="ml-3">
-                  <button onClick={() => handleStartAssessment(form)} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-3 py-2 rounded-md text-sm">
+                  <Button 
+                    onClick={() => handleStartAssessment(form)} 
+                    variant="animated"
+                    className="text-sm px-4"
+                  >
                     {t('startAssessment')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -261,7 +269,8 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                     </span>
                   </div>
                   <Button 
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg transition-all duration-300"
+                    variant="animated"
+                    className="w-full"
                     onClick={() => handleStartAssessment(form)}
                   >
                     {t('startAssessment')}
@@ -276,14 +285,14 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
         {/* Admin Forms Tab */}
         <TabsContent value="admin" className="space-y-6">
           {adminForms.length === 0 ? (
-            <Card className={`${theme.colors.card} border-0 shadow-lg`}>
+            <Card className={`${theme.colors.card} !border-2 !border-blue-500 shadow-lg`}>
               <CardContent className="p-8 sm:p-12 text-center">
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className={`text-lg font-semibold ${theme.colors.text} mb-2`}>
-                  No Admin Forms Yet
+                  {t('noAdminFormsYet')}
                 </h3>
                 <p className={`${theme.colors.muted} text-sm`}>
-                  Your instructors haven't created any custom forms yet.
+                  {t('noAdminFormsDesc')}
                 </p>
               </CardContent>
             </Card>
@@ -306,9 +315,13 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                         {form.description}
                       </p>
                     )}
-                    <button onClick={() => handleStartAssessment(form, 'admin')} className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white px-3 py-2 rounded-md text-sm font-semibold">
+                    <Button 
+                      variant="animated"
+                      className="w-full"
+                      onClick={() => handleStartAssessment(form, 'admin')}
+                    >
                       Take Form
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -320,7 +333,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                     key={form.id}
                     className={`${theme.colors.card} border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group`}
                   >
-                    <div className={`h-2 bg-gradient-to-r from-purple-500 to-pink-600`} />
+                    {/* <div className={`h-2 bg-gradient-to-r from-purple-500 to-pink-600`} /> */}
                     <CardHeader className="pb-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -350,7 +363,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
                         </p>
                       )}
                       <Button 
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:shadow-lg font-semibold py-2 rounded-lg hover:scale-105 transition-all duration-200"
+                        variant="animated"
                         onClick={() => handleStartAssessment(form, 'admin')}
                       >
                         <FileText className="w-4 h-4 mr-2" />
@@ -387,7 +400,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
 
       {/* Information Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className={`${theme.colors.card} shadow-lg`}>
+        <Card className={`${theme.colors.card} shadow-lg !border-2 !border-blue-500`}>
             <CardHeader>
             <CardTitle className={`flex items-center ${theme.colors.text}`}>
               <AlertCircle className="w-5 h-5 mr-2 text-blue-500" />
@@ -409,7 +422,7 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
           </CardContent>
         </Card>
 
-        <Card className={`${theme.colors.card} shadow-lg`}>
+        <Card className={`${theme.colors.card} shadow-lg !border-2 !border-blue-500`}>
             <CardHeader>
             <CardTitle className={`flex items-center ${theme.colors.text}`}>
               <Users className="w-5 h-5 mr-2 text-green-500" />

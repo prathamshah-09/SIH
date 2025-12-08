@@ -624,7 +624,7 @@ const DirectMessages = ({ userRole = 'student' }) => {
         {/* Messages Area */}
         <Card className={`${theme.colors.card} border-0 shadow-lg flex-1 flex flex-col overflow-hidden min-h-0`}>
           <CardContent className="chat-panel p-0">
-            <div className="chat-messages bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900">
+            <div className={`chat-messages ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900'}`}>
               {messagesLoading ? (
                 <div className="flex items-center justify-center h-full min-h-60">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />

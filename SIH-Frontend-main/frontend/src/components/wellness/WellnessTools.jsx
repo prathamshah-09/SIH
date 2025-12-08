@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Button } from '../ui/button';
 import { wellnessProblems, wellnessContent } from '../../data/wellnessContent';
+import { ArrowLeft } from 'lucide-react';
 
 const VideoSection = lazy(() => import('./VideoSection'));
 const BookSection = lazy(() => import('./BookSection'));
@@ -105,7 +106,7 @@ const GRADIENTS = {
 };
 
 const WellnessTools = () => {
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const { t } = useLanguage();
   const [selectedProblem, setSelectedProblem] = useState(null);
   const [activeTab, setActiveTab] = useState('videos');
@@ -153,9 +154,8 @@ const WellnessTools = () => {
                 key={id}
                 aria-label={t(id)}
                 onClick={() => select(id)}
-                className={`relative group cursor-pointer rounded-2xl overflow-hidden border-0 transition-transform duration-300 transform hover:-translate-y-3 hover:scale-[1.02] ${offsetY}
-                  ${isCenter ? 'bg-white shadow-xl' : `bg-gradient-to-br ${gradient} shadow-[0_25px_40px_rgba(30,41,59,0.06)]`}
-                  min-h-[120px] sm:min-h-[136px] p-6 flex items-center justify-between`}
+                className={`relative group cursor-pointer rounded-xl text-card-foreground bg-blue/500 backdrop-blur-sm border-cyan-100 border-0 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 border-l-4 border-l-blue-500 group cursor-pointer
+                  min-h-[120px] sm:min-h-[136px] p-6 flex items-center justify-center`}
               >
                 {/* sparkle & soft gloss */}
                 <div className="pointer-events-none absolute inset-0">
@@ -164,25 +164,11 @@ const WellnessTools = () => {
                   <div className="absolute left-6 bottom-10 w-2 h-2 rounded-full bg-white/60 opacity-60" />
                 </div>
 
-                {/* left icon */}
-                <div className={`${alignLeftClass} pl-1`}>
-                  <div className={`rounded-full ${isCenter ? 'bg-white/5 border border-slate-100' : 'bg-white/20'} p-3 w-20 h-20 flex items-center justify-center`}>
-                    {leftIcon}
-                  </div>
-                </div>
-
-                {/* center label */}
-                <div className={contentClass}>
+                {/* center label only */}
+                <div className="flex-1 text-center px-4">
                   <h3 className={`text-base md:text-lg lg:text-xl font-semibold ${theme.colors.text} tracking-tight`}>
                     {t(id)}
                   </h3>
-                </div>
-
-                {/* right icon */}
-                <div className="w-1/3 flex items-center justify-end pr-3">
-                  <div className="p-2 rounded-md bg-white/10 border border-white/20 transform transition-transform duration-300 group-hover:translate-x-2">
-                    {rightIcon}
-                  </div>
                 </div>
 
                 <div className="absolute inset-0 rounded-2xl group-hover:ring-2 group-hover:ring-white/30 transition-all duration-300 pointer-events-none" />
@@ -199,28 +185,41 @@ const WellnessTools = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <button onClick={back} className="p-2 rounded-lg hover:bg-gray-200 transition-all duration-200" title={t('backToProblems')}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-slate-700">
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+      {/* Back Button */}
+      <div className="flex items-center gap-3 mb-4">
+        <Button
+          onClick={back}
+          variant="ghost"
+          className={`flex items-center gap-2 ${currentTheme === 'midnight' ? 'text-white hover:bg-slate-700' : 'hover:bg-gray-100'}`}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+      </div>
 
-        <div className="flex-1 flex items-center justify-center space-x-3 py-1">
+      <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center space-x-3 py-1">
           <div className="text-3xl">{problem.icon}</div>
           <h2 className={`text-xl sm:text-2xl font-bold ${theme.colors.text}`}>{t(selectedProblem)}</h2>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2.5 p-3 sm:p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl shadow-xl">
+      <div className={`flex flex-wrap md:flex-nowrap justify-center gap-[3%] md:gap-[5%] p-2 sm:p-3 rounded-2xl shadow-xl ${
+        currentTheme === 'midnight' 
+          ? 'bg-slate-800' 
+          : 'bg-gradient-to-r from-gray-50 to-gray-100'
+      }`}>
         {problem.tools.map((tool) => (
           <Button
             key={tool}
             onClick={() => setActiveTab(tool)}
-            className={`px-4 sm:px-7 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 transform whitespace-nowrap ${
-              activeTab === tool
-                ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-2xl'
-                : 'bg-white text-slate-700 hover:bg-indigo-50 border border-indigo-100 shadow-lg'
+            variant={activeTab === tool ? 'animated' : 'outline'}
+            className={`w-[45%] md:w-[20%] py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-300 transform whitespace-nowrap flex-shrink-0 px-1 sm:px-2 ${
+              currentTheme === 'midnight' 
+                ? activeTab !== tool 
+                  ? 'text-white border-slate-600 hover:bg-slate-700' 
+                  : ''
+                : ''
             }`}
           >
             {t(tool)}
