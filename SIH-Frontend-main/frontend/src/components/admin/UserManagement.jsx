@@ -437,7 +437,7 @@ const UserManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Roll Number</label>
+                  <label className="text-sm font-medium mb-2 block">{t('rollNo')}</label>
                   <Input
                     placeholder="e.g., GV-CSE-2024-055"
                     value={studentForm.roll_no}
@@ -585,7 +585,7 @@ const UserManagement = () => {
           <CardContent className="p-4 sm:p-5 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Users</p>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>{t('totalUsers')}</p>
                 <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
                   {isLoadingStats ? (
                     <Loader className="w-6 h-6 animate-spin" />
@@ -606,7 +606,7 @@ const UserManagement = () => {
           <CardContent className="p-4 sm:p-5 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Students</p>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>{t('totalStudents')}</p>
                 <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
                   {isLoadingStats ? (
                     <Loader className="w-6 h-6 animate-spin" />
@@ -626,7 +626,7 @@ const UserManagement = () => {
           <CardContent className="p-4 sm:p-5 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>Total Counsellors</p>
+                <p className={`${theme.colors.muted} text-xs sm:text-sm font-medium`}>{t('totalCounsellors')}</p>
                 <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${theme.colors.text} mt-2`}>
                   {isLoadingStats ? (
                     <Loader className="w-6 h-6 animate-spin" />
@@ -706,7 +706,7 @@ const UserManagement = () => {
                   
                   {selectedUser.role === 'student' && selectedUser.roll_no && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Roll Number</label>
+                      <label className="text-sm font-medium text-gray-500">{t('rollNo')}</label>
                       <p className="text-sm">{selectedUser.roll_no}</p>
                     </div>
                   )}

@@ -177,7 +177,7 @@ const AnnouncementManagement = () => {
                 max="365"
                 className={`text-sm sm:text-base py-2.5 sm:py-3 px-3 sm:px-4 border-2 border-gray-200 hover:border-cyan-300 focus:border-cyan-500 transition-all duration-200 rounded-lg ${theme.colors.card}`}
               />
-              <p className={`text-xs sm:text-sm ${theme.colors.muted}`}>How long should this be visible?</p>
+              <p className={`text-xs sm:text-sm ${theme.colors.muted}`}>{t('howLongVisible')}</p>
             </div>
           </div>
           

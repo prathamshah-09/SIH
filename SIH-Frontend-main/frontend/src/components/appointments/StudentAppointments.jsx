@@ -823,7 +823,7 @@ const StudentAppointments = () => {
                         <div className="space-y-6">
                             <div className="text-center mb-8">
                                 <h2 className={`text-2xl sm:text-3xl font-bold ${theme.colors.text} mb-2`}>{t('sessionGoals')}</h2>
-                                <p className={`${theme.colors.muted} text-sm sm:text-base`}>Track tasks assigned by your counselor and mark them as complete</p>
+                                <p className={`${theme.colors.muted} text-sm sm:text-base`}>{t('trackTasksAssigned')}</p>
                             </div>
 
                             {completedAppointments.length > 0 ? (

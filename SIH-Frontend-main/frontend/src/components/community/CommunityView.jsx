@@ -441,7 +441,7 @@ const CommunityView = ({ userRole = 'student' }) => {
         <div className="space-y-4">
           <h3 className={`text-2xl font-bold ${theme.colors.text} flex items-center pt-2`}>
             <Users className="w-6 h-6 mr-3 text-blue-500" />
-            <span>Joined Communities</span>
+            <span>{t('joinedCommunities') || 'Joined Communities'}</span>
             <span className="ml-2 text-lg font-semibold text-blue-500">({joinedCommunities.length})</span>
           </h3>
           <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">

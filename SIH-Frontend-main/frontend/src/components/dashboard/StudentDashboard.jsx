@@ -30,7 +30,9 @@ import {
   Plus,
   Trash2,
   Phone,
-  PhoneOff
+  PhoneOff,
+  Smile,
+  Settings
 } from "lucide-react";
 import { useAnnouncements } from "@context/AnnouncementContext";
 import WellnessTools from "@components/wellness/WellnessTools";
@@ -41,13 +43,34 @@ import AudioSection from "@components/wellness/AudioSection";
 import AssessmentDashboard from "@/components/assessment/AssessmentDashboard";
 import DirectMessages from "@components/community/DirectMessages";
 
-const TypingDots = () => (
-  <div className="flex items-center space-x-1 pl-2">
-    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400" />
-    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400 delay-75" />
-    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400 delay-150" />
-  </div>
-);
+const TypingDots = () => {
+  const [message, setMessage] = useState('SensEase is thinking');
+  
+  useEffect(() => {
+    const messages = [
+      'SensEase is thinking',
+      'SensEase is crafting a response',
+      'SensEase is here for you',
+      'Processing with care',
+      'Gathering thoughtful insights'
+    ];
+    const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+    setMessage(randomMsg);
+  }, []);
+
+  return (
+    <div className="flex flex-col space-y-2">
+      <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
+          <div className="w-2 h-2 rounded-full animate-bounce bg-cyan-400" style={{ animationDelay: '0ms' }} />
+          <div className="w-2 h-2 rounded-full animate-bounce bg-cyan-500" style={{ animationDelay: '150ms' }} />
+          <div className="w-2 h-2 rounded-full animate-bounce bg-blue-500" style={{ animationDelay: '300ms' }} />
+        </div>
+        <span className="text-xs text-gray-500 italic animate-pulse">{message}...</span>
+      </div>
+    </div>
+  );
+};
 
 const RealtimeVoice = ({ onAddMessage, theme }) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -291,19 +314,69 @@ const StudentDashboard = () => {
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isLiveTranscribing, setIsLiveTranscribing] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [messageReactions, setMessageReactions] = useState({}); // { messageId: emoji }
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [reactionsEnabled, setReactionsEnabled] = useState(true); // Toggle for emoji reactions
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [incognitoMode, setIncognitoMode] = useState(false); // Incognito / temporary chats
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const recognitionRef = useRef(null);
 
+  // Backend integration
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+  const userId = typeof window !== "undefined" 
+    ? window.localStorage.getItem("sensee_user_id") 
+    : null;
+  const [conversationId, setConversationId] = useState(null);
+
+  // Load current conversation messages from backend
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("sensee_current_chat");
-      if (saved) {
-        const parsed = JSON.parse(saved).map(m => ({
-          ...m,
-          timestamp: new Date(m.timestamp)
-        }));
-        setMessages(parsed);
-      } else {
+    console.log('[StudentDashboard] Loading messages - userId:', userId, 'conversationId:', conversationId);
+    
+    if (!userId || !conversationId) {
+      // Show welcome message if no conversation
+      const welcomeMsg = [
+        {
+          id: 1,
+          text: "Hi! I'm your AI companion. How can I help today?",
+          isBot: true,
+          timestamp: new Date()
+        }
+      ];
+      console.log('[StudentDashboard] Setting welcome message:', welcomeMsg);
+      setMessages(welcomeMsg);
+      return;
+    }
+
+    const loadMessages = async () => {
+      try {
+        const res = await fetch(
+          `${backendUrl}/api/ai/messages?conversationId=${conversationId}&userId=${userId}`,
+          { credentials: 'include' }
+        );
+        if (!res.ok) throw new Error('Failed to load messages');
+        const data = await res.json();
+        
+        const formatted = (data.messages || []).map(msg => ({
+          id: msg.id || Date.now() + Math.random(),
+          text: msg.message || msg.content || msg.text || '',
+          isBot: msg.sender === 'assistant',
+          timestamp: new Date(msg.created_at || msg.timestamp)
+        })).filter(msg => msg.text && msg.text.trim()); // Filter out empty messages
+        
+        setMessages(formatted.length > 0 ? formatted : [
+          {
+            id: 1,
+            text: "Hi! I'm your AI companion. How can I help today?",
+            isBot: true,
+            timestamp: new Date()
+          }
+        ]);
+      } catch (e) {
+        console.error('Failed to load messages from backend:', e);
         setMessages([
           {
             id: 1,
@@ -313,17 +386,51 @@ const StudentDashboard = () => {
           }
         ]);
       }
+    };
+
+    loadMessages();
+  }, [conversationId, userId, backendUrl]);
+
+  // Function to refresh conversation list
+  const refreshConversations = async () => {
+    if (!userId) return;
+    
+    try {
+      const res = await fetch(
+        `${backendUrl}/api/ai/conversations?userId=${userId}&limit=20`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) throw new Error('Failed to load conversations');
+      const data = await res.json();
+      
+      console.log('[Conversations] Backend response:', data);
+      
+      const formatted = (data.conversations || []).map(conv => ({
+        id: conv.id,
+        date: new Date(conv.created_at).toLocaleString(),
+        title: conv.title || 'New Chat',
+        messages: [] // Messages loaded separately when needed
+      }));
+      
+      console.log('[Conversations] Formatted:', formatted);
+      setConversationHistory(formatted);
     } catch (e) {
-      console.error("Failed to load chat", e);
-      setMessages([]);
+      console.error('Failed to load conversations from backend:', e);
     }
+  };
+
+  // Load persisted settings
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sensee_incognito_mode');
+      if (saved) setIncognitoMode(saved === 'true');
+    } catch (e) {}
   }, []);
 
-  // Load chat
+  // Load conversation history from backend
   useEffect(() => {
-    if (messages.length > 0)
-      localStorage.setItem("sensee_current_chat", JSON.stringify(messages));
-  }, [messages]);
+    refreshConversations();
+  }, [userId, backendUrl]);
 
   // Auto scroll
   const scrollToBottom = () => {
@@ -345,16 +452,171 @@ const StudentDashboard = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Initialize SpeechRecognition for live transcription
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      const recognition = recognitionRef.current;
+
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        console.log('[LiveTranscription] Started listening');
+        setIsLiveTranscribing(true);
+        setLiveTranscript('');
+      };
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalTranscript += result[0].transcript;
+          } else {
+            interimTranscript += result[0].transcript;
+          }
+        }
+
+        // Update input with final transcripts, show interim as live feedback
+        if (finalTranscript) {
+          setInput(prev => prev + finalTranscript + ' ');
+          setLiveTranscript(interimTranscript);
+        } else {
+          setLiveTranscript(interimTranscript);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('[LiveTranscription] Error:', event.error);
+        setIsLiveTranscribing(false);
+        setLiveTranscript('');
+      };
+
+      recognition.onend = () => {
+        console.log('[LiveTranscription] Stopped listening');
+        setIsLiveTranscribing(false);
+        setLiveTranscript('');
+      };
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
   // API KEY
   const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
+  // Crisis detection keywords
+  const detectCrisis = (msg) => {
+    const text = msg.toLowerCase();
+    const crisisKeywords = [
+      'suicide', 'suicidal', 'kill myself', 'end my life', 'want to die',
+      'self harm', 'self-harm', 'cut myself', 'hurt myself', 'harm myself',
+      'no reason to live', 'better off dead', 'can\'t go on', 'end it all',
+      'take my life', 'not worth living'
+    ];
+    
+    return crisisKeywords.some(keyword => text.includes(keyword));
+  };
+
+  // Safety resources response
+  const getSafetyResponse = () => {
+    return `I'm really concerned about what you're sharing. Your safety is the top priority. Please reach out to these resources immediately:
+
+🆘 **EMERGENCY HELPLINES:**
+• **National Suicide Prevention Lifeline (US):** 988 or 1-800-273-8255 (24/7)
+• **Crisis Text Line:** Text HOME to 741741 (24/7)
+• **International Association for Suicide Prevention:** https://www.iasp.info/resources/Crisis_Centres/
+
+🇮🇳 **INDIA HELPLINES:**
+• **AASRA:** +91-9820466726 (24/7)
+• **Vandrevala Foundation:** 1860-2662-345 / 1800-2333-330 (24/7)
+• **iCall:** +91-22-25521111 (Mon-Sat, 8am-10pm)
+• **Sneha Foundation:** +91-44-24640050 (24/7)
+
+🏥 **IMMEDIATE ACTIONS:**
+• Call emergency services: 911 (US) or 112 (India)
+• Go to your nearest emergency room
+• Reach out to a trusted friend or family member
+• Contact your counselor or therapist
+
+You are not alone, and there are people who want to help. Please reach out to one of these resources right now.`;
+  };
+
   const getWellnessResponse = msg => {
+    // Check for crisis first
+    if (detectCrisis(msg)) {
+      return getSafetyResponse();
+    }
+    
     msg = msg.toLowerCase();
     if (msg.includes("anx")) return "I hear your anxiety — let's try a grounding exercise.";
     if (msg.includes("stress")) return "Stress can be overwhelming. Want to talk about what caused it?";
     if (msg.includes("sad") || msg.includes("down"))
       return "I'm sorry you're feeling this way. I'm here to listen.";
     return "Thanks for sharing. Tell me more about what's on your mind.";
+  };
+
+  // Backend AI call (uses ChatGPT + mood tracking + DB persistence)
+  const callBackendCompanion = async (userMessage) => {
+    const fallback = getWellnessResponse(userMessage);
+
+    if (!userId) {
+      console.error("No userId found for AI chat (sensee_user_id not set)");
+      return fallback;
+    }
+
+    try {
+      // If incognito mode is enabled, do NOT send messages to backend (avoid saving)
+      if (incognitoMode) {
+        setBotIsTyping(true);
+        const reply = await callChatGPTAPI(userMessage);
+        setBotIsTyping(false);
+        setIsUsingChatGPT(true);
+        return reply || fallback;
+      }
+
+      setBotIsTyping(true);
+
+      const res = await fetch(`${backendUrl}/api/ai/chat`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          conversationId,
+          message: userMessage
+        })
+      });
+
+      if (!res.ok) throw new Error("Server error");
+      const data = await res.json();
+
+      setBotIsTyping(false);
+      setIsUsingChatGPT(true);
+
+      // Update conversationId if backend returns one
+      if (data.conversationId && data.conversationId !== conversationId) {
+        setConversationId(data.conversationId);
+      }
+
+      return data.reply || fallback;
+    } catch (e) {
+      console.error("Backend AI chat error:", e);
+      setBotIsTyping(false);
+      // Fallback to direct ChatGPT if backend fails
+      return await callChatGPTAPI(userMessage);
+    }
   };
 
   const callChatGPTAPI = async userMessage => {
@@ -408,7 +670,20 @@ const StudentDashboard = () => {
     setInput("");
     setIsLoading(true);
 
-    const reply = await callChatGPTAPI(trimmed);
+    // Check for crisis immediately
+    if (detectCrisis(trimmed)) {
+      const safetyMsg = {
+        id: Date.now() + 1,
+        text: getSafetyResponse(),
+        isBot: true,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, safetyMsg]);
+      setIsLoading(false);
+      return;
+    }
+
+    const reply = await callBackendCompanion(trimmed);
 
     setBotIsTyping(true);
     await new Promise(r => setTimeout(r, 400 + reply.length * 5));
@@ -423,6 +698,9 @@ const StudentDashboard = () => {
     setMessages(prev => [...prev, botMsg]);
     setBotIsTyping(false);
     setIsLoading(false);
+    
+    // Refresh conversation list to show updated history (unless incognito)
+    if (!incognitoMode) refreshConversations();
   };
 
   const handleKeyPress = e => {
@@ -437,28 +715,24 @@ const StudentDashboard = () => {
   };
 
   const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunksRef.current = [];
-      const mr = new MediaRecorder(stream);
-      mediaRecorderRef.current = mr;
-
-      mr.ondataavailable = e => audioChunksRef.current.push(e.data);
-      mr.onstop = async () => {
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        await sendAudioToWhisper(blob);
-        stream.getTracks().forEach(t => t.stop());
-      };
-
-      mr.start();
-      setIsRecording(true);
-    } catch (e) {}
+    if (recognitionRef.current && !isLiveTranscribing) {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (e) {
+        console.error('Failed to start speech recognition:', e);
+      }
+    }
   };
 
   const stopRecording = () => {
-    try {
-      mediaRecorderRef.current?.stop();
-    } catch {}
+    if (recognitionRef.current && isLiveTranscribing) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error('Failed to stop speech recognition:', e);
+      }
+    }
     setIsRecording(false);
   };
 
@@ -488,45 +762,124 @@ const StudentDashboard = () => {
     setIsTranscribing(false);
   };
 
-  const startNewChat = () => {
-    if (messages.length > 1) {
-      const entry = {
-        id: Date.now(),
-        date: new Date().toLocaleString(),
-        messages
-      };
-      const next = [entry, ...conversationHistory];
-      setConversationHistory(next);
-      localStorage.setItem("sensee_conversation_history", JSON.stringify(next));
+  const startNewChat = async () => {
+    if (!userId) {
+      console.error('No userId for new chat');
+      return;
     }
-    setMessages([
-      {
-        id: Date.now(),
-        text: "New conversation started — how can I help you today? 💙",
-        isBot: true,
-        timestamp: new Date()
+
+    try {
+      // If incognito mode is enabled, do not create a backend conversation; start locally
+      if (incognitoMode) {
+        setConversationId(null);
+        setMessages([
+          {
+            id: Date.now(),
+            text: "New conversation started — how can I help you today? 💙",
+            isBot: true,
+            timestamp: new Date()
+          }
+        ]);
+        setChatTab("chat");
+        return;
       }
-    ]);
-    setChatTab("chat");
+      const res = await fetch(`${backendUrl}/api/ai/conversations`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          title: 'New Chat'
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to create conversation');
+      const data = await res.json();
+      
+      setConversationId(data.id || data.conversationId);
+      setMessages([
+        {
+          id: Date.now(),
+          text: "New conversation started — how can I help you today? 💙",
+          isBot: true,
+          timestamp: new Date()
+        }
+      ]);
+      setChatTab("chat");
+      
+      // Reload conversation list
+      refreshConversations();
+    } catch (e) {
+      console.error('Failed to create new chat:', e);
+    }
   };
 
-  const loadChat = chat => {
-    const restored = chat.messages.map(m => ({
-      ...m,
-      timestamp: new Date(m.timestamp)
-    }));
-    setMessages(restored);
-    localStorage.setItem("sensee_current_chat", JSON.stringify(restored));
-    setChatTab("chat");
+  const loadChat = async (chat) => {
+    if (!userId) return;
+
+    try {
+      setConversationId(chat.id);
+      // Messages will be loaded by the useEffect that watches conversationId
+      setChatTab("chat");
+    } catch (e) {
+      console.error('Failed to load chat:', e);
+    }
   };
 
-  const deleteHistory = id => {
-    const next = conversationHistory.filter(h => h.id !== id);
-    setConversationHistory(next);
-    localStorage.setItem("sensee_conversation_history", JSON.stringify(next));
+  const deleteHistory = async (id) => {
+    if (!userId) return;
+
+    try {
+      const res = await fetch(
+        `${backendUrl}/api/ai/conversations/${id}?userId=${userId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include'
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to delete conversation');
+
+      // Update local state
+      const next = conversationHistory.filter(h => h.id !== id);
+      setConversationHistory(next);
+      
+      // If deleted current conversation, clear it
+      if (conversationId === id) {
+        setConversationId(null);
+        setMessages([
+          {
+            id: 1,
+            text: "Hi! I'm your AI companion. How can I help today?",
+            isBot: true,
+            timestamp: new Date()
+          }
+        ]);
+      }
+    } catch (e) {
+      console.error('Failed to delete conversation:', e);
+    }
   };
 
   // Render bubble
+  const handleReaction = (messageId, emoji) => {
+    setMessageReactions(prev => ({
+      ...prev,
+      [messageId]: prev[messageId] === emoji ? null : emoji // Toggle reaction
+    }));
+  };
+
+  const insertEmoji = (emoji) => {
+    setInput(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const commonEmojis = [
+    '😊', '😂', '❤️', '👍', '🙏', '😢', '😔', '😌', '💪', '✨',
+    '🌟', '💙', '🤗', '😇', '🥰', '😍', '🎉', '👏', '🙌', '💯',
+    '🔥', '⭐', '💕', '😅', '😭', '🤔', '😴', '😊', '🌈', '☀️'
+  ];
+
   const renderChatMessage = message => (
     <div
       key={message.id}
@@ -544,6 +897,27 @@ const StudentDashboard = () => {
         >
           {message.text}
         </div>
+        
+        {/* Reaction buttons for bot messages */}
+        {message.isBot && reactionsEnabled && (
+          <div className="flex items-center space-x-2 mt-2">
+            {['👍', '❤️', '😢', '💪', '🙏'].map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => handleReaction(message.id, emoji)}
+                className={`text-lg transition-all hover:scale-125 ${
+                  messageReactions[message.id] === emoji 
+                    ? 'scale-125 drop-shadow-lg' 
+                    : 'opacity-50 hover:opacity-100'
+                }`}
+                title={`React with ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+        
         <p className={`text-xs ${theme.colors.muted} mt-1`}>
           {message.timestamp.toLocaleTimeString([], {
             hour: "2-digit",
@@ -558,17 +932,84 @@ const StudentDashboard = () => {
     <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
       <CardHeader className="flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
+            <div className="flex items-center">
             <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
             <CardTitle className={theme.colors.text}>
-              SensEase AI Companion
+              {t('aiCompanionTitle') || 'SensEase AI Companion'}
             </CardTitle>
             <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
+            {incognitoMode && (
+              <span className="ml-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-white">
+                Incognito
+              </span>
+            )}
           </div>
 
-          <div className={`flex items-center space-x-3 ${theme.colors.text}`}>
+          <div className="flex items-center space-x-3">
+            {/* Settings dropdown for reactions */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title="Chat Settings"
+              >
+                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+              {showSettingsDropdown && (
+                <div className="absolute right-0 top-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 w-64 z-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Heart className="w-4 h-4 text-pink-500" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Enable Reactions</span>
+                    </div>
+                    <button
+                      onClick={() => setReactionsEnabled(!reactionsEnabled)}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        reactionsEnabled ? 'bg-cyan-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        reactionsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {reactionsEnabled ? 'You can react to bot messages with emojis' : 'Emoji reactions are disabled'}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Sparkles className="w-4 h-4 text-yellow-400" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Incognito Mode</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const next = !incognitoMode;
+                        // confirm when turning on
+                        if (next) {
+                          const ok = window.confirm('Turn on Incognito Mode? Chats will not be saved to your account.');
+                          if (!ok) return;
+                        }
+                        setIncognitoMode(next);
+                        try { localStorage.setItem('sensee_incognito_mode', next ? 'true' : 'false'); } catch(e) {}
+                      }}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        incognitoMode ? 'bg-gray-700' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        incognitoMode ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {incognitoMode ? 'Incognito on — chats will not be saved' : 'Incognito off — chats saved to account'}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <Button onClick={startNewChat} variant="outline">
-              <Plus className="w-4 h-4 mr-1" /> New
+              <Plus className="w-4 h-4 mr-1" /> {t('newChat') || 'New'}
             </Button>
 
             <Badge
@@ -576,7 +1017,9 @@ const StudentDashboard = () => {
                 isUsingChatGPT ? "bg-green-500" : "bg-orange-500"
               } text-white`}
             >
-              {isUsingChatGPT ? "🤖 ChatGPT Active" : "⚡ Local Mode"}
+              {isUsingChatGPT
+                ? t('chatgptActive') || '🤖 ChatGPT Active'
+                : t('localMode') || '⚡ Local Mode'}
             </Badge>
           </div>
         </div>
@@ -590,9 +1033,9 @@ const StudentDashboard = () => {
   style={theme.currentTheme === 'midnight' ? { backgroundColor: 'rgb(30 41 59)' } : {}}
 >
 
-            <TabsTrigger value="chat"> Chat</TabsTrigger>
-            <TabsTrigger value="voice">Voice</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="chat">💬 {t('chatTab') || 'Chat'}</TabsTrigger>
+            <TabsTrigger value="voice">🎙️ {t('voiceTab') || 'Voice'}</TabsTrigger>
+            <TabsTrigger value="history">📜 {t('historyTab') || 'History'}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="chat-panel">
@@ -609,9 +1052,11 @@ className={`chat-messages border rounded-xl ${
                 {messages.map(m => renderChatMessage(m))}
 
                 {botIsTyping && (
-                  <div className="flex items-start space-x-3">
-                    <div className="w-10 h-10" />
-                    <div className={`p-3 rounded-xl ${theme.colors.card}`}>
+                  <div className="flex items-start space-x-3 animate-fade-in">
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+                      <Heart className="w-5 h-5 text-white animate-pulse" />
+                    </div>
+                    <div className={`p-4 rounded-2xl shadow-md ${theme.colors.card}`}>
                       <TypingDots />
                     </div>
                   </div>
@@ -621,33 +1066,77 @@ className={`chat-messages border rounded-xl ${
               </div>
             </div>
 
-            <div className={`chat-input-bar ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-slate-800'}`}>
-              <div className="chat-input-inner">
+            <div className="chat-input-bar bg-white dark:bg-gray-900">
+              <div className="chat-input-inner relative">
                 <textarea
-                  value={input}
+                  value={input + (liveTranscript ? ' ' + liveTranscript : '')}
                   onChange={e => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
-                  className={`flex-1 p-2 sm:p-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base ${theme.currentTheme === 'midnight' ? 'bg-slate-700 text-white' : 'bg-white'}`}
+                  placeholder={isLiveTranscribing
+                    ? t('listeningPlaceholder') || 'Listening... Speak now'
+                    : t('typeMessagePlaceholder') || 'Type your message...'}
+                  className="flex-1 p-2 sm:p-3 border rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base"
                   rows={1}
                   style={{ minHeight: '40px', maxHeight: '120px' }}
                   onInput={(e) => {
                     e.target.style.height = 'auto';
                     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
                   }}
+                  disabled={isLiveTranscribing}
                 />
+
+                {/* Emoji Picker Popup */}
+                {showEmojiPicker && (
+                  <div className="absolute bottom-16 left-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-2xl p-4 z-50 w-80 max-h-64 overflow-y-auto">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Choose an emoji</h3>
+                      <button
+                        onClick={() => setShowEmojiPicker(false)}
+                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-8 gap-2">
+                      {commonEmojis.map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => insertEmoji(emoji)}
+                          className="text-2xl hover:scale-125 transition-transform hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1"
+                          title={emoji}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Emoji Button */}
+                <button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  disabled={isLoading || isLiveTranscribing}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl ${
+                    showEmojiPicker
+                      ? "bg-yellow-400"
+                      : "bg-gradient-to-br from-yellow-400 to-orange-500"
+                  } text-white transition-all hover:shadow-lg`}
+                  title="Add emoji"
+                >
+                  <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
 
                 <button
                   onClick={() => (isRecording ? stopRecording() : startRecording())}
                   disabled={isLoading || isTranscribing}
                   className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl ${
-                    isRecording
-                      ? "bg-red-500"
+                    isLiveTranscribing
+                      ? "bg-red-500 animate-pulse"
                       : "bg-gradient-to-br from-cyan-400 to-blue-500"
                   } text-white transition-all hover:shadow-lg`}
-                  title={isRecording ? "Stop recording" : "Voice message"}
+                  title={isLiveTranscribing ? "Stop live transcription" : "Start live transcription"}
                 >
-                  {isRecording ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
+                  {isLiveTranscribing ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </button>
 
                 <button
@@ -692,7 +1181,7 @@ className={`chat-messages border rounded-xl ${
                       </button>
                     </div>
                     <p className="text-xs text-gray-600 truncate">
-                      {chat.messages[1]?.text || chat.messages[0].text}
+                      {chat.title}
                     </p>
                   </div>
                 ))
@@ -709,11 +1198,11 @@ className={`chat-messages border rounded-xl ${
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`text-4xl font-bold ${theme.colors.text} flex items-center`}>
-            Welcome to SensEase
+            {t('welcomeToSensEase')}
             <Sparkles className="w-8 h-8 ml-2 text-yellow-500 animate-spin" style={{ animationDuration: "3s" }} />
           </h2>
           <p className={`${theme.colors.muted} mt-2 text-lg`}>
-            Your personal wellness companion - how are you feeling?
+            {t('personalWellnessCompanion')}
           </p>
         </div>
       </div>
@@ -721,7 +1210,7 @@ className={`chat-messages border rounded-xl ${
       <Card className={`${theme.colors.card} p-6 shadow-xl`}>
         <CardHeader>
           <CardTitle className={`flex items-center ${theme.colors.text}`}>
-            Recent Updates
+            {t('recentUpdates')}
           </CardTitle>
         </CardHeader>
         <CardContent>

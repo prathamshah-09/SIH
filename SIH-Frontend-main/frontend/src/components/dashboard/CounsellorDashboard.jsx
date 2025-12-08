@@ -32,7 +32,9 @@ import {
   Plus,
   Eye,
   Phone,
-  PhoneOff
+  PhoneOff,
+  Smile,
+  Settings
 } from 'lucide-react';
 import CounsellorAppointments from '@components/appointments/CounsellorAppointments';
 import { mockAnnouncements } from '@data/mocks/announcements';
@@ -43,14 +45,7 @@ import DirectMessages from '@components/community/DirectMessages';
 import { generateHistoryTitle } from '@lib/utils';
 import { getAllResources, uploadResource, deleteResource, getResourceDownloadUrl } from '@services/resourceService';
 
-const TypingDots = () => (
-  <div className="flex items-center space-x-1 pl-2">
-    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400" />
-    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400 delay-75" />
-    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-cyan-400 delay-150" />
-  </div>
-);
-
+// RealtimeVoice component (copied from StudentDashboard for Voice tab)
 const RealtimeVoice = ({ onAddMessage, theme }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -67,24 +62,16 @@ const RealtimeVoice = ({ onAddMessage, theme }) => {
       setStatus("Connecting...");
 
       const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
-      const tokenRes = await fetch(`${backendUrl}/api/counsellor/realtime-session`, {
+      const tokenRes = await fetch(`${backendUrl}/api/student/realtime-session`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" }
       });
 
-      if (!tokenRes.ok) {
-        const errorData = await tokenRes.text();
-        console.error(`Backend error (${tokenRes.status}):`, errorData);
-        throw new Error(`Failed to get session token (${tokenRes.status})`);
-      }
+      if (!tokenRes.ok) throw new Error("Failed to get session token");
       
       const response = await tokenRes.json();
       const { client_secret } = response.data || response;
-
-      if (!client_secret) {
-        throw new Error("No client_secret in response");
-      }
 
       const pc = new RTCPeerConnection();
       pcRef.current = pc;
@@ -180,8 +167,7 @@ const RealtimeVoice = ({ onAddMessage, theme }) => {
 
     } catch (err) {
       console.error("Realtime session error:", err);
-      const errorMsg = err.message || "Connection failed";
-      setStatus(`Error: ${errorMsg}. Please ensure the backend server is running.`);
+      setStatus("Error: " + err.message);
       setIsConnecting(false);
       stopRealtimeSession();
     }
@@ -249,16 +235,16 @@ const RealtimeVoice = ({ onAddMessage, theme }) => {
           <Button
             onClick={startRealtimeSession}
             disabled={isConnecting}
-            variant="animated"
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-8 py-6 text-lg"
           >
             {isConnecting ? (
               <>
-                <Loader className="w-5 h-5 mr-2 animate-spin" />
+                <Loader className="w-6 h-6 mr-2 animate-spin" />
                 Connecting...
               </>
             ) : (
               <>
-                <Phone className="w-5 h-5 mr-2" />
+                <Phone className="w-6 h-6 mr-2" />
                 Start Voice Session
               </>
             )}
@@ -266,10 +252,9 @@ const RealtimeVoice = ({ onAddMessage, theme }) => {
         ) : (
           <Button
             onClick={stopRealtimeSession}
-            variant="animated"
-            className="bg-gradient-to-135 from-red-600 to-red-500"
+            className="bg-gradient-to-r from-red-500 to-red-600 text-white px-8 py-6 text-lg"
           >
-            <PhoneOff className="w-5 h-5 mr-2" />
+            <PhoneOff className="w-6 h-6 mr-2" />
             End Session
           </Button>
         )}
@@ -278,6 +263,35 @@ const RealtimeVoice = ({ onAddMessage, theme }) => {
       <div className={`text-sm ${theme.colors.muted} text-center max-w-md`}>
         <p>Click "Start" to begin a realtime voice conversation.</p>
         <p className="mt-2">Speak naturally - the AI will respond with voice and text.</p>
+      </div>
+    </div>
+  );
+};
+
+const TypingDots = () => {
+  const [message, setMessage] = useState('SensEase is thinking');
+  
+  useEffect(() => {
+    const messages = [
+      'SensEase is thinking',
+      'SensEase is crafting a response',
+      'SensEase is here for you',
+      'Processing with care',
+      'Gathering thoughtful insights'
+    ];
+    const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+    setMessage(randomMsg);
+  }, []);
+
+  return (
+    <div className="flex flex-col space-y-2">
+      <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
+          <div className="w-2 h-2 rounded-full animate-bounce bg-cyan-400" style={{ animationDelay: '0ms' }} />
+          <div className="w-2 h-2 rounded-full animate-bounce bg-cyan-500" style={{ animationDelay: '150ms' }} />
+          <div className="w-2 h-2 rounded-full animate-bounce bg-blue-500" style={{ animationDelay: '300ms' }} />
+        </div>
+        <span className="text-xs text-gray-500 italic animate-pulse">{message}...</span>
       </div>
     </div>
   );
@@ -616,11 +630,12 @@ const CounsellorResourcesSection = ({ theme }) => {
   );
 };
 const CounsellorDashboard = () => {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState('overview');
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { getRecentAnnouncements, incrementViews } = useAnnouncements();
 
+  // ==== CHATBOT STATE (from StudentDashboard) ====
   const [messages, setMessages] = useState([]);
   const [conversationHistory, setConversationHistory] = useState([]);
   const [chatTab, setChatTab] = useState("chat");
@@ -634,19 +649,69 @@ const CounsellorDashboard = () => {
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isLiveTranscribing, setIsLiveTranscribing] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [messageReactions, setMessageReactions] = useState({}); // { messageId: emoji }
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [reactionsEnabled, setReactionsEnabled] = useState(true); // Toggle for emoji reactions
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [incognitoMode, setIncognitoMode] = useState(false); // Incognito / temporary chats
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const recognitionRef = useRef(null);
 
+  // Backend integration
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+  const userId = typeof window !== "undefined" 
+    ? window.localStorage.getItem("sensee_user_id") 
+    : null;
+  const [conversationId, setConversationId] = useState(null);
+
+  // Load current conversation messages from backend
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("sensee_counsellor_chat");
-      if (saved) {
-        const parsed = JSON.parse(saved).map(m => ({
-          ...m,
-          timestamp: new Date(m.timestamp)
-        }));
-        setMessages(parsed);
-      } else {
+    console.log('[CounsellorDashboard] Loading messages - userId:', userId, 'conversationId:', conversationId);
+    
+    if (!userId || !conversationId) {
+      // Show welcome message if no conversation
+      const welcomeMsg = [
+        {
+          id: 1,
+          text: "Hi! I'm your AI companion. How can I help today?",
+          isBot: true,
+          timestamp: new Date()
+        }
+      ];
+      console.log('[CounsellorDashboard] Setting welcome message:', welcomeMsg);
+      setMessages(welcomeMsg);
+      return;
+    }
+
+    const loadMessages = async () => {
+      try {
+        const res = await fetch(
+          `${backendUrl}/api/ai/messages?conversationId=${conversationId}&userId=${userId}`,
+          { credentials: 'include' }
+        );
+        if (!res.ok) throw new Error('Failed to load messages');
+        const data = await res.json();
+        
+        const formatted = (data.messages || []).map(msg => ({
+          id: msg.id || Date.now() + Math.random(),
+          text: msg.message || msg.content || msg.text || '',
+          isBot: msg.sender === 'assistant',
+          timestamp: new Date(msg.created_at || msg.timestamp)
+        })).filter(msg => msg.text && msg.text.trim()); // Filter out empty messages
+        
+        setMessages(formatted.length > 0 ? formatted : [
+          {
+            id: 1,
+            text: "Hi! I'm your AI companion. How can I help today?",
+            isBot: true,
+            timestamp: new Date()
+          }
+        ]);
+      } catch (e) {
+        console.error('Failed to load messages from backend:', e);
         setMessages([
           {
             id: 1,
@@ -656,17 +721,51 @@ const CounsellorDashboard = () => {
           }
         ]);
       }
-    } catch (e) {
-      console.error("Failed to load chat", e);
-      setMessages([]);
-    }
+    };
+
+    loadMessages();
+  }, [conversationId, userId, backendUrl]);
+
+  // Load persisted incognito setting
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sensee_incognito_mode');
+      if (saved) setIncognitoMode(saved === 'true');
+    } catch (e) {}
   }, []);
 
-  // Load chat
+  // Function to refresh conversation list
+  const refreshConversations = async () => {
+    if (!userId) return;
+    
+    try {
+      const res = await fetch(
+        `${backendUrl}/api/ai/conversations?userId=${userId}&limit=20`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) throw new Error('Failed to load conversations');
+      const data = await res.json();
+      
+      console.log('[Conversations] Backend response:', data);
+      
+      const formatted = (data.conversations || []).map(conv => ({
+        id: conv.id,
+        date: new Date(conv.created_at).toLocaleString(),
+        title: conv.title || 'New Chat',
+        messages: [] // Messages loaded separately when needed
+      }));
+      
+      console.log('[Conversations] Formatted:', formatted);
+      setConversationHistory(formatted);
+    } catch (e) {
+      console.error('Failed to load conversations from backend:', e);
+    }
+  };
+
+  // Load conversation history from backend
   useEffect(() => {
-    if (messages.length > 0)
-      localStorage.setItem("sensee_counsellor_chat", JSON.stringify(messages));
-  }, [messages]);
+    refreshConversations();
+  }, [userId, backendUrl]);
 
   // Auto scroll
   const scrollToBottom = () => {
@@ -688,16 +787,170 @@ const CounsellorDashboard = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Initialize SpeechRecognition for live transcription
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      const recognition = recognitionRef.current;
+
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        console.log('[CounsellorDashboard LiveTranscription] Started listening');
+        setIsLiveTranscribing(true);
+        setLiveTranscript('');
+      };
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalTranscript += result[0].transcript;
+          } else {
+            interimTranscript += result[0].transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          setInput(prev => prev + finalTranscript + ' ');
+          setLiveTranscript(interimTranscript);
+        } else {
+          setLiveTranscript(interimTranscript);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('[CounsellorDashboard LiveTranscription] Error:', event.error);
+        setIsLiveTranscribing(false);
+        setLiveTranscript('');
+      };
+
+      recognition.onend = () => {
+        console.log('[CounsellorDashboard LiveTranscription] Stopped listening');
+        setIsLiveTranscribing(false);
+        setLiveTranscript('');
+      };
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
   // API KEY
   const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
+  // Crisis detection keywords
+  const detectCrisis = (msg) => {
+    const text = msg.toLowerCase();
+    const crisisKeywords = [
+      'suicide', 'suicidal', 'kill myself', 'end my life', 'want to die',
+      'self harm', 'self-harm', 'cut myself', 'hurt myself', 'harm myself',
+      'no reason to live', 'better off dead', 'can\'t go on', 'end it all',
+      'take my life', 'not worth living'
+    ];
+    
+    return crisisKeywords.some(keyword => text.includes(keyword));
+  };
+
+  // Safety resources response
+  const getSafetyResponse = () => {
+    return `I'm really concerned about what you're sharing. Your safety is the top priority. Please reach out to these resources immediately:
+
+🆘 **EMERGENCY HELPLINES:**
+• **National Suicide Prevention Lifeline (US):** 988 or 1-800-273-8255 (24/7)
+• **Crisis Text Line:** Text HOME to 741741 (24/7)
+• **International Association for Suicide Prevention:** https://www.iasp.info/resources/Crisis_Centres/
+
+🇮🇳 **INDIA HELPLINES:**
+• **AASRA:** +91-9820466726 (24/7)
+• **Vandrevala Foundation:** 1860-2662-345 / 1800-2333-330 (24/7)
+• **iCall:** +91-22-25521111 (Mon-Sat, 8am-10pm)
+• **Sneha Foundation:** +91-44-24640050 (24/7)
+
+🏥 **IMMEDIATE ACTIONS:**
+• Call emergency services: 911 (US) or 112 (India)
+• Go to your nearest emergency room
+• Reach out to a trusted friend or family member
+• Contact your counselor or therapist
+
+You are not alone, and there are people who want to help. Please reach out to one of these resources right now.`;
+  };
+
   const getWellnessResponse = msg => {
+    // Check for crisis first
+    if (detectCrisis(msg)) {
+      return getSafetyResponse();
+    }
+    
     msg = msg.toLowerCase();
     if (msg.includes("anx")) return "I hear your anxiety — let's try a grounding exercise.";
     if (msg.includes("stress")) return "Stress can be overwhelming. Want to talk about what caused it?";
     if (msg.includes("sad") || msg.includes("down"))
       return "I'm sorry you're feeling this way. I'm here to listen.";
     return "Thanks for sharing. Tell me more about what's on your mind.";
+  };
+
+  // Backend AI call (uses ChatGPT + mood tracking + DB persistence)
+  const callBackendCompanion = async (userMessage) => {
+    const fallback = getWellnessResponse(userMessage);
+
+    if (!userId) {
+      console.error("No userId found for AI chat (sensee_user_id not set)");
+      return fallback;
+    }
+
+    try {
+      // If incognito is on, bypass backend and call ChatGPT directly (do not persist)
+      if (incognitoMode) {
+        setBotIsTyping(true);
+        const reply = await callChatGPTAPI(userMessage);
+        setBotIsTyping(false);
+        setIsUsingChatGPT(true);
+        return reply || fallback;
+      }
+
+      setBotIsTyping(true);
+
+      const res = await fetch(`${backendUrl}/api/ai/chat`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          conversationId,
+          message: userMessage
+        })
+      });
+
+      if (!res.ok) throw new Error("Server error");
+      const data = await res.json();
+
+      setBotIsTyping(false);
+      setIsUsingChatGPT(true);
+
+      // Update conversationId if backend returns one
+      if (data.conversationId && data.conversationId !== conversationId) {
+        setConversationId(data.conversationId);
+      }
+
+      return data.reply || fallback;
+    } catch (e) {
+      console.error("Backend AI chat error:", e);
+      setBotIsTyping(false);
+      // Fallback to direct ChatGPT if backend fails
+      return await callChatGPTAPI(userMessage);
+    }
   };
 
   const callChatGPTAPI = async userMessage => {
@@ -751,7 +1004,21 @@ const CounsellorDashboard = () => {
     setInput("");
     setIsLoading(true);
 
-    const reply = await callChatGPTAPI(trimmed);
+    // Check for crisis immediately
+    if (detectCrisis(trimmed)) {
+      const safetyMsg = {
+        id: Date.now() + 1,
+        text: getSafetyResponse(),
+        isBot: true,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, safetyMsg]);
+      setIsLoading(false);
+      return;
+    }
+
+    // Try backend first (with automatic fallback to direct ChatGPT)
+    const reply = await callBackendCompanion(trimmed);
 
     setBotIsTyping(true);
     await new Promise(r => setTimeout(r, 400 + reply.length * 5));
@@ -766,6 +1033,9 @@ const CounsellorDashboard = () => {
     setMessages(prev => [...prev, botMsg]);
     setBotIsTyping(false);
     setIsLoading(false);
+    
+    // Refresh conversation list to show updated history (unless incognito)
+    if (!incognitoMode) refreshConversations();
   };
 
   const handleKeyPress = e => {
@@ -780,28 +1050,24 @@ const CounsellorDashboard = () => {
   };
 
   const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunksRef.current = [];
-      const mr = new MediaRecorder(stream);
-      mediaRecorderRef.current = mr;
-
-      mr.ondataavailable = e => audioChunksRef.current.push(e.data);
-      mr.onstop = async () => {
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        await sendAudioToWhisper(blob);
-        stream.getTracks().forEach(t => t.stop());
-      };
-
-      mr.start();
-      setIsRecording(true);
-    } catch (e) {}
+    if (recognitionRef.current && !isLiveTranscribing) {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (e) {
+        console.error('Failed to start speech recognition:', e);
+      }
+    }
   };
 
   const stopRecording = () => {
-    try {
-      mediaRecorderRef.current?.stop();
-    } catch {}
+    if (recognitionRef.current && isLiveTranscribing) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error('Failed to stop speech recognition:', e);
+      }
+    }
     setIsRecording(false);
   };
 
@@ -831,45 +1097,124 @@ const CounsellorDashboard = () => {
     setIsTranscribing(false);
   };
 
-  const startNewChat = () => {
-    if (messages.length > 1) {
-      const entry = {
-        id: Date.now(),
-        date: new Date().toLocaleString(),
-        messages
-      };
-      const next = [entry, ...conversationHistory];
-      setConversationHistory(next);
-      localStorage.setItem("sensee_counsellor_conversation_history", JSON.stringify(next));
+  const startNewChat = async () => {
+    if (!userId) {
+      console.error('No userId for new chat');
+      return;
     }
-    setMessages([
-      {
-        id: Date.now(),
-        text: "New conversation started — how can I help you today? 💙",
-        isBot: true,
-        timestamp: new Date()
+    try {
+      // If incognito mode is enabled, do not create a backend conversation; just start locally
+      if (incognitoMode) {
+        setConversationId(null);
+        setMessages([
+          {
+            id: Date.now(),
+            text: "New conversation started — how can I help you today? 💙",
+            isBot: true,
+            timestamp: new Date()
+          }
+        ]);
+        setChatTab("chat");
+        return;
       }
-    ]);
-    setChatTab("chat");
+
+      const res = await fetch(`${backendUrl}/api/ai/conversations`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          title: 'New Chat'
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to create conversation');
+      const data = await res.json();
+      
+      setConversationId(data.id || data.conversationId);
+      setMessages([
+        {
+          id: Date.now(),
+          text: "New conversation started — how can I help you today? 💙",
+          isBot: true,
+          timestamp: new Date()
+        }
+      ]);
+      setChatTab("chat");
+      
+      // Reload conversation list
+      refreshConversations();
+    } catch (e) {
+      console.error('Failed to create new chat:', e);
+    }
   };
 
-  const loadChat = chat => {
-    const restored = chat.messages.map(m => ({
-      ...m,
-      timestamp: new Date(m.timestamp)
-    }));
-    setMessages(restored);
-    localStorage.setItem("sensee_counsellor_chat", JSON.stringify(restored));
-    setChatTab("chat");
+  const loadChat = async (chat) => {
+    if (!userId) return;
+
+    try {
+      setConversationId(chat.id);
+      // Messages will be loaded by the useEffect that watches conversationId
+      setChatTab("chat");
+    } catch (e) {
+      console.error('Failed to load chat:', e);
+    }
   };
 
-  const deleteHistory = id => {
-    const next = conversationHistory.filter(h => h.id !== id);
-    setConversationHistory(next);
-    localStorage.setItem("sensee_counsellor_conversation_history", JSON.stringify(next));
+  const deleteHistory = async (id) => {
+    if (!userId) return;
+
+    try {
+      const res = await fetch(
+        `${backendUrl}/api/ai/conversations/${id}?userId=${userId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include'
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to delete conversation');
+
+      // Update local state
+      const next = conversationHistory.filter(h => h.id !== id);
+      setConversationHistory(next);
+      
+      // If deleted current conversation, clear it
+      if (conversationId === id) {
+        setConversationId(null);
+        setMessages([
+          {
+            id: 1,
+            text: "Hi! I'm your AI companion. How can I help today?",
+            isBot: true,
+            timestamp: new Date()
+          }
+        ]);
+      }
+    } catch (e) {
+      console.error('Failed to delete conversation:', e);
+    }
   };
 
   // Render bubble
+  const handleReaction = (messageId, emoji) => {
+    setMessageReactions(prev => ({
+      ...prev,
+      [messageId]: prev[messageId] === emoji ? null : emoji // Toggle reaction
+    }));
+  };
+
+  const insertEmoji = (emoji) => {
+    setInput(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const commonEmojis = [
+    '😊', '😂', '❤️', '👍', '🙏', '😢', '😔', '😌', '💪', '✨',
+    '🌟', '💙', '🤗', '😇', '🥰', '😍', '🎉', '👏', '🙌', '💯',
+    '🔥', '⭐', '💕', '😅', '😭', '🤔', '😴', '😊', '🌈', '☀️'
+  ];
+
   const renderChatMessage = message => (
     <div
       key={message.id}
@@ -877,16 +1222,48 @@ const CounsellorDashboard = () => {
         message.isBot ? "justify-start" : "justify-end"
       } message-row`}
     >
+      {message.isBot && (
+        <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+          <Heart className="w-5 h-5 text-white" />
+        </div>
+      )}
+
       <div className="max-w-md animate-message-in">
         <div
           className={`p-4 rounded-2xl shadow-md ${
             message.isBot
-              ? `${theme.colors.card} ${theme.colors.text}`
-              : theme.currentTheme === 'midnight' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
+              ? theme.colors.card
+              : "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
           }`}
         >
           {message.text}
         </div>
+        
+        {/* Reaction buttons for bot messages */}
+        {message.isBot && reactionsEnabled && (
+          <div className="flex items-center space-x-2 mt-2">
+            {['👍', '❤️', '😢', '💪', '🙏'].map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => handleReaction(message.id, emoji)}
+                className={`text-lg transition-all hover:scale-125 ${
+                  messageReactions[message.id] === emoji 
+                    ? 'scale-125 drop-shadow-lg' 
+                    : 'opacity-50 hover:opacity-100'
+                }`}
+                title={`React with ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+            {messageReactions[message.id] && (
+              <span className="text-xs text-gray-500 ml-2 animate-fade-in">
+                You reacted with {messageReactions[message.id]}
+              </span>
+            )}
+          </div>
+        )}
+        
         <p className={`text-xs ${theme.colors.muted} mt-1`}>
           {message.timestamp.toLocaleTimeString([], {
             hour: "2-digit",
@@ -894,8 +1271,16 @@ const CounsellorDashboard = () => {
           })}
         </p>
       </div>
+
+      {!message.isBot && (
+        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+          <User className="w-5 h-5 text-white" />
+        </div>
+      )}
     </div>
   );
+
+  // ==== END CHATBOT FUNCTIONS ====
 
   // Persist active tab so refresh keeps the same section
   useEffect(() => {
@@ -918,7 +1303,6 @@ const CounsellorDashboard = () => {
         { key: 'chatbot', icon: MessageCircle, label: t('aiCompanion') },
         { key: 'community', icon: Users, label: t('community') },
         { key: 'appointments', icon: Calendar, label: t('appointments') },
-        { key: 'students', icon: Users, label: t('studentProgressTitle') },
         { key: 'resources', icon: Brain, label: t('resources') },
         { key: 'reports', icon: BarChart3, label: t('analytics') },
         { key: 'messages', icon: MessageCircle, label: t('messagesLabel') }
@@ -1107,73 +1491,87 @@ const CounsellorDashboard = () => {
     </div>
   );
 
-  const renderStudentProgress = () => (
-    <div className="space-y-6">
-      <h2 className={`text-2xl md:text-3xl font-bold ${theme.colors.text} truncate whitespace-nowrap`}>{t('studentProgressTracking')}</h2>
-
-      <div className="grid gap-4">
-        {[
-          { name: 'Jordan Smith', id: 'SID-8a7b-e4c1', sessions: 4, lastSession: '2 days ago', progress: 'Excellent', trend: 'up' },
-          { name: 'Taylor Wilson', id: 'SID-f2d1-c5e9', sessions: 2, lastSession: '1 week ago', progress: 'Good', trend: 'stable' },
-          { name: 'Morgan Lee', id: 'SID-a9c3-b8d2', sessions: 6, lastSession: '1 day ago', progress: 'Very Good', trend: 'up' }
-        ].map((student) => (
-          <Card
-            key={student.id}
-            tabIndex={0}
-            onClick={() => {}}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); /* placeholder for action */ } }}
-            className={`${theme.colors.card} hover:shadow-2xl transition-transform duration-150 hover:scale-[1.008] border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300`}
-          >
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h3 className={`font-semibold text-base md:text-lg truncate ${theme.colors.text}`}>{student.name}</h3>
-                  <p className={`text-sm ${theme.colors.muted} truncate mt-1`}>ID: {student.id}</p>
-
-                  <div className={`flex flex-wrap gap-2 text-sm ${theme.colors.muted} mt-2`}>
-                    <div className="px-1.5 py-0.5 bg-transparent rounded-md">
-                      <span className="font-medium">{student.sessions}</span>
-                      <span className="ml-1">sessions</span>
-                    </div>
-                    <div className="px-1.5 py-0.5 bg-transparent rounded-md truncate">Last: {student.lastSession}</div>
-                  </div>
-                </div>
-
-                <div className="flex-shrink-0 text-right flex flex-col items-end">
-                  <Badge className={`px-2 py-0.5 text-sm ${student.progress === 'Excellent' ? 'bg-green-100 text-green-800' : student.progress === 'Very Good' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {student.progress}
-                  </Badge>
-                  <div className="mt-1">
-                    {student.trend === 'up' ? (
-                      <div className="text-green-600 text-sm">Improving</div>
-                    ) : (
-                      <div className="text-gray-600 text-sm">Stable</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-
   const renderChatbot = () => (
     <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
       <CardHeader className="flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
+            <div className="flex items-center">
             <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
             <CardTitle className={theme.colors.text}>
-              SensEase AI Companion
+              {t('aiCompanionTitle') || 'SensEase AI Companion'}
             </CardTitle>
             <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
+            {incognitoMode && (
+              <span className="ml-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-white">
+                Incognito
+              </span>
+            )}
           </div>
 
-          <div className={`flex items-center space-x-3 ${theme.colors.text}`}>
+          <div className="flex items-center space-x-3">
+            {/* Settings dropdown for reactions */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title="Chat Settings"
+              >
+                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+              {showSettingsDropdown && (
+                <div className="absolute right-0 top-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 w-64 z-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Heart className="w-4 h-4 text-pink-500" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Enable Reactions</span>
+                    </div>
+                    <button
+                      onClick={() => setReactionsEnabled(!reactionsEnabled)}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        reactionsEnabled ? 'bg-cyan-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        reactionsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {reactionsEnabled ? 'You can react to bot messages with emojis' : 'Emoji reactions are disabled'}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Sparkles className="w-4 h-4 text-yellow-400" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Incognito Mode</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const next = !incognitoMode;
+                        if (next) {
+                          const ok = window.confirm('Turn on Incognito Mode? Chats will not be saved to your account.');
+                          if (!ok) return;
+                        }
+                        setIncognitoMode(next);
+                        try { localStorage.setItem('sensee_incognito_mode', next ? 'true' : 'false'); } catch(e) {}
+                      }}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        incognitoMode ? 'bg-gray-700' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        incognitoMode ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {incognitoMode ? 'Incognito on — chats will not be saved' : 'Incognito off — chats saved to account'}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <Button onClick={startNewChat} variant="outline">
-              <Plus className="w-4 h-4 mr-1" /> New
+              <Plus className="w-4 h-4 mr-1" /> {t('newChat') || 'New'}
             </Button>
 
             <Badge
@@ -1181,7 +1579,9 @@ const CounsellorDashboard = () => {
                 isUsingChatGPT ? "bg-green-500" : "bg-orange-500"
               } text-white`}
             >
-              {isUsingChatGPT ? "🤖 ChatGPT Active" : "⚡ Local Mode"}
+              {isUsingChatGPT
+                ? t('chatgptActive') || '🤖 ChatGPT Active'
+                : t('localMode') || '⚡ Local Mode'}
             </Badge>
           </div>
         </div>
@@ -1189,22 +1589,26 @@ const CounsellorDashboard = () => {
 
       <CardContent className="chat-panel">
         <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
-<TabsList 
-  className="grid grid-cols-3 w-full"
-  style={theme.currentTheme === 'midnight' ? { backgroundColor: 'rgb(30 41 59)' } : {}}
->
 
-            <TabsTrigger value="chat">💬 Chat</TabsTrigger>
-            <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
-            <TabsTrigger value="history">📜 History</TabsTrigger>
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="chat">💬 {t('chatTab') || 'Chat'}</TabsTrigger>
+            <TabsTrigger value="voice">🎙️ {t('voiceTab') || 'Voice'}</TabsTrigger>
+            <TabsTrigger value="history">📜 {t('historyTab') || 'History'}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="chat-panel">
             <div
               ref={messagesContainerRef}
-              className={`chat-messages border rounded-xl ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : `bg-gradient-to-br ${theme.colors.secondary}`}`}
+              className={`chat-messages border rounded-xl bg-gradient-to-br ${theme.colors.secondary}`}
+              style={{ minHeight: '400px' }}
             >
               <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
+                {console.log('[CounsellorDashboard] Rendering messages:', messages.length, messages)}
+                {messages.length === 0 && (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-500">No messages yet. Start chatting!</p>
+                  </div>
+                )}
                 {messages.map(m => renderChatMessage(m))}
 
                 {botIsTyping && (
@@ -1220,33 +1624,77 @@ const CounsellorDashboard = () => {
               </div>
             </div>
 
-            <div className={`chat-input-bar ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-slate-800'}`}>
-              <div className="chat-input-inner">
+            <div className="chat-input-bar bg-white dark:bg-gray-900">
+              <div className="chat-input-inner relative">
                 <textarea
-                  value={input}
+                  value={input + (liveTranscript ? ' ' + liveTranscript : '')}
                   onChange={e => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
-                  className={`flex-1 p-2 sm:p-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base ${theme.currentTheme === 'midnight' ? 'bg-slate-700 text-white' : 'bg-white'}`}
+                  placeholder={isLiveTranscribing
+                    ? t('listeningPlaceholder') || 'Listening... Speak now'
+                    : t('typeMessagePlaceholder') || 'Type your message...'}
+                  className="flex-1 p-2 sm:p-3 border rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base"
                   rows={1}
                   style={{ minHeight: '40px', maxHeight: '120px' }}
                   onInput={(e) => {
                     e.target.style.height = 'auto';
                     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
                   }}
+                  disabled={isLiveTranscribing}
                 />
+
+                {/* Emoji Picker Popup */}
+                {showEmojiPicker && (
+                  <div className="absolute bottom-16 left-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-2xl p-4 z-50 w-80 max-h-64 overflow-y-auto">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Choose an emoji</h3>
+                      <button
+                        onClick={() => setShowEmojiPicker(false)}
+                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-8 gap-2">
+                      {commonEmojis.map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => insertEmoji(emoji)}
+                          className="text-2xl hover:scale-125 transition-transform hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1"
+                          title={emoji}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Emoji Button */}
+                <button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  disabled={isLoading || isLiveTranscribing}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl ${
+                    showEmojiPicker
+                      ? "bg-yellow-400"
+                      : "bg-gradient-to-br from-yellow-400 to-orange-500"
+                  } text-white transition-all hover:shadow-lg`}
+                  title="Add emoji"
+                >
+                  <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
 
                 <button
                   onClick={() => (isRecording ? stopRecording() : startRecording())}
                   disabled={isLoading || isTranscribing}
                   className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-xl ${
-                    isRecording
-                      ? "bg-red-500"
+                    isLiveTranscribing
+                      ? "bg-red-500 animate-pulse"
                       : "bg-gradient-to-br from-cyan-400 to-blue-500"
                   } text-white transition-all hover:shadow-lg`}
-                  title={isRecording ? "Stop recording" : "Voice message"}
+                  title={isLiveTranscribing ? "Stop live transcription" : "Start live transcription"}
                 >
-                  {isRecording ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
+                  {isLiveTranscribing ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </button>
 
                 <button
@@ -1265,7 +1713,7 @@ const CounsellorDashboard = () => {
             <RealtimeVoice onAddMessage={addMessageFromVoice} theme={theme} />
           </TabsContent>
 
-          <TabsContent value="history" className={`flex-1 overflow-hidden ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : ''}`}>
+          <TabsContent value="history" className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto pt-4 px-4">
               {conversationHistory.length === 0 ? (
                 <p className="text-center text-gray-500 mt-10">
@@ -1291,7 +1739,7 @@ const CounsellorDashboard = () => {
                       </button>
                     </div>
                     <p className="text-xs text-gray-600 truncate">
-                      {chat.messages[1]?.text || chat.messages[0].text}
+                      {chat.title}
                     </p>
                   </div>
                 ))
@@ -1313,8 +1761,6 @@ const CounsellorDashboard = () => {
         return <CommunityView userRole="counsellor" />;
       case 'appointments':
         return <CounsellorAppointments />;
-      case 'students':
-        return renderStudentProgress();
       case 'resources':
         return <CounsellorResourcesSection theme={theme} />;
       case 'reports':
