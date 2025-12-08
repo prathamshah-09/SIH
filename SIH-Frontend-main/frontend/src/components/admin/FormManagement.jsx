@@ -44,7 +44,28 @@ const FormManagement = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
 
-  // Demo forms
+  // Theme detection helpers (detect 'midnight' / 'ocean' style)
+  const [isDarkLike, setIsDarkLike] = useState(false);
+  const [isOceanLike, setIsOceanLike] = useState(false);
+  useEffect(() => {
+    try {
+      const themeName = (theme?.name || theme?.id || '').toString().toLowerCase();
+      const docTheme = typeof document !== 'undefined' ? (document.documentElement.getAttribute('data-theme') || '').toLowerCase() : '';
+      const docClassList = typeof document !== 'undefined' ? Array.from(document.documentElement.classList) : [];
+      const combined = [themeName, docTheme, ...docClassList].join(' ').toLowerCase();
+
+      const midnightMatch = /midnight|midnight-calm|dark/.test(combined);
+      const oceanMatch = /ocean|breeze|ocean-breeze/.test(combined);
+
+      setIsDarkLike(Boolean(midnightMatch));
+      setIsOceanLike(Boolean(oceanMatch && !midnightMatch));
+    } catch (e) {
+      setIsDarkLike(Boolean(theme?.currentTheme === 'dark'));
+      setIsOceanLike(false);
+    }
+  }, [theme]);
+
+  // Demo forms (unchanged)
   const demoForms = [
     {
       id: 1,
@@ -156,7 +177,7 @@ const FormManagement = () => {
     },
   ];
 
-  // Demo form submissions for testing
+  // Demo submissions (unchanged)
   const demoSubmissions = [
     {
       id: 1001,
@@ -434,6 +455,7 @@ const FormManagement = () => {
             <TabsTrigger value="create" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
               <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
               <span className="truncate font-medium">{t('createForm')}</span>
+              <span className="truncate font-medium">{t('createForm')}</span>
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
@@ -451,10 +473,12 @@ const FormManagement = () => {
                       <FileText className="w-6 h-6 sm:w-6.5 sm:h-6.5 lg:w-7 lg:h-7 text-white animate-pulse" />
                     </div>
                     <div className="flex-1">
-                      <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold ${theme.colors.cardText}`}>
+                      {/* Title: force white for midnight calm */}
+                      <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold ${isDarkLike ? 'text-white' : theme.colors.cardText}`}>
                         {t('createNewForm')}
                       </CardTitle>
-                      <p className={`text-xs sm:text-sm ${theme.colors.muted} mt-1`}>
+                      {/* Subtitle: force black for ocean breeze */}
+                      <p className={`text-xs sm:text-sm ${isOceanLike ? 'text-black' : theme.colors.muted} mt-1`}>
                         {t('designWellnessForms')}
                       </p>
                     </div>
