@@ -84,7 +84,7 @@ const Login = ({ onLoginSuccess, isModal = false }) => {
     // Prefill with seeded test credentials from backend
     const demoCredentials = {
       student: { email: 'john.student@greenvalley.edu', password: 'Test@12345' },
-      counsellor: { email: 'dr.sarah@greenvalley.edu', password: 'Test@12345' },
+      counsellor: { email: 'robert.mind@greenvalley.edu', password: 'Test@12345' },
       admin: { email: 'admin@greenvalley.edu', password: 'Test@12345' }
     };
     const creds = demoCredentials[role];
