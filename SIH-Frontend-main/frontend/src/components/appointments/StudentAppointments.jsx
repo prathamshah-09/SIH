@@ -134,7 +134,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, theme }
                     <h2 className={`text-2xl font-bold ${theme.colors.text} mb-4`}>{title}</h2>
                     <p className={`${theme.colors.muted} mb-6`}>{message}</p>
                     <div className="flex justify-end space-x-4">
-                        <Button onClick={onClose} variant="outline" className={`${theme.currentTheme === 'midnight' ? 'hover:bg-slate-700 border-slate-600' : 'hover:bg-gray-50'}`}>{t('cancel')}</Button>
+                        <Button onClick={onClose} variant="outline" className={`${theme.currentTheme === 'midnight' ? 'hover:bg-slate-700 border-slate-800' : 'hover:bg-gray-50'}`}>{t('cancel')}</Button>
                         <Button onClick={onConfirm} className="bg-gradient-to-r from-red-500 to-red-600 hover:bg-red-600 text-white">{t('confirm')}</Button>
                     </div>
                 </CardContent>
@@ -145,7 +145,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, theme }
 
 // --- Main Component ---
 const StudentAppointments = () => {
-    const { theme } = useTheme();
+    const { theme, currentTheme } = useTheme();
     const { t } = useLanguage();
     
     const [view, setView] = useState('schedule');
@@ -305,17 +305,24 @@ const StudentAppointments = () => {
             const isSelected = date.toDateString() === selectedDate.toDateString();
             const isPast = date < new Date(today.setHours(0, 0, 0, 0));
 
+            const baseText = currentTheme === 'midnight' ? 'text-white' : 'text-gray-900';
+            const pastText = currentTheme === 'midnight' ? 'text-slate-500' : 'text-gray-400';
+            const hoverFuture = currentTheme === 'midnight' ? 'hover:bg-slate-700' : 'hover:bg-cyan-100';
+            const todayStyle = currentTheme === 'midnight'
+                ? 'bg-slate-700 text-white font-semibold'
+                : 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold';
+
             calendarDays.push(
                 <div
                     key={day}
                     className={`text-center p-3 rounded-full cursor-pointer transition-all duration-300 hover:scale-105 ${
                         isPast
-                            ? 'text-gray-400 cursor-not-allowed'
+                            ? `${pastText} cursor-not-allowed`
                             : isSelected
                                 ? 'bg-gradient-to-r from-purple-500 via-purple-600 to-violet-600 text-white font-bold shadow-lg animate-shimmer'
                                 : isToday
-                                    ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-semibold'
-                                    : 'hover:bg-cyan-100'
+                                    ? todayStyle
+                                    : `${baseText} ${hoverFuture}`
                     }`}
                     onClick={() => !isPast && handleDateClick(day)}
                 >
@@ -331,8 +338,8 @@ const StudentAppointments = () => {
 
     // Navigation Tabs with uniform SensEase colors
     const renderTabs = () => (
-        <div className="flex justify-center mb-8 theme.currentTheme === 'midnight' ? 'bg-slate-800 p-1 rounded-full' : 'bg-gray-100 p-1 rounded-full'">
-            <div className={`flex space-x-2 ${theme.currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-200'} p-1 rounded-full`}>
+        <div className={`flex justify-center mb-8 ${currentTheme === 'midnight' ? 'bg-slate-800 p-1 rounded-full' : 'bg-gray-100 p-1 rounded-full'}`}>
+            <div className={`flex space-x-2 ${currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-200'} p-1 rounded-full`}>
                 <Button 
                     onClick={() => setView('schedule')} 
                     variant={view === 'schedule' ? 'animated' : 'ghost'}
@@ -385,7 +392,7 @@ const StudentAppointments = () => {
                             {showCalendarModal && (
                                 <div className={`absolute right-0 mt-2 ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-white'} shadow-lg border rounded-lg p-4 z-40 w-80`}>
                                     <div className="flex items-center justify-between mb-4">
-                                        <button onClick={handlePrevMonth} className={`p-1 rounded ${theme.currentTheme === 'midnight' ? 'hover:bg-slate-700 text-white' : 'hover:bg-gray-100'}`}>
+                                        <button onClick={handlePrevMonth} className={`p-1 rounded ${theme.currentTheme === 'midnight' ? 'hover:bg-slate-800 text-white' : 'hover:bg-gray-100'}`}>
                                             <ChevronLeftIcon className="w-5 h-5" />
                                         </button>
                                         <h4 className={`font-bold ${theme.colors.text}`}>
@@ -408,7 +415,7 @@ const StudentAppointments = () => {
                 </CardHeader>
                 <CardContent>
                     {/* Mobile quick actions: three tappable options */}
-                    <div className={`lg:hidden mb-4 p-4 rounded-lg ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-gray-100'}`}>
+                    <div className={`lg:hidden mb-4 p-4 rounded-lg ${theme.currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-100'}`}>
                         <div className={`grid grid-cols-3 gap-3`}>
                             <button onClick={() => setView('schedule')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
                                 {t('bookAppointment')}
@@ -438,8 +445,12 @@ const StudentAppointments = () => {
                                                 key={counsellor.id}
                                                 className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg ${
                                                     selectedCounsellor.id === counsellor.id
-                                                        ? 'border-cyan-500 bg-cyan-50'
-                                                        : 'border-gray-200 hover:border-cyan-300'
+                                                        ? currentTheme === 'midnight'
+                                                            ? 'border-slate-500 bg-slate-800'
+                                                            : 'border-cyan-500 bg-cyan-50'
+                                                        : currentTheme === 'midnight'
+                                                            ? 'border-slate-700 hover:border-slate-500 bg-slate-800/70'
+                                                            : 'border-gray-200 hover:border-cyan-300'
                                                 }`}
                                                 onClick={() => {
                                                     setSelectedCounsellor(counsellor);
@@ -572,7 +583,11 @@ const StudentAppointments = () => {
                                                         onChange={(e) => setNotes(e.target.value)}
                                                         rows={3}
                                                         placeholder={t('sessionNotesPlaceholder')}
-                                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-cyan-500"
+                                                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
+                                                            currentTheme === 'midnight'
+                                                              ? 'bg-slate-800 text-white border-slate-600 placeholder-slate-400'
+                                                              : 'bg-white text-gray-900 border-gray-300'
+                                                        }`}
                                                     />
                                                 </div>
 
@@ -594,7 +609,11 @@ const StudentAppointments = () => {
                                             onChange={(e) => setNotes(e.target.value)}
                                             placeholder={t('sessionNotesPlaceholder')}
                                             rows={5}
-                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                            className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
+                                                currentTheme === 'midnight'
+                                                  ? 'bg-slate-800 text-white border-slate-600 placeholder-slate-400'
+                                                  : 'bg-white text-gray-900 border-gray-300'
+                                            }`}
                                         />
                                     </CardContent>
                                 </Card>
