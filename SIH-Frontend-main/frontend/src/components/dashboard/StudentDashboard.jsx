@@ -539,7 +539,7 @@ const StudentDashboard = () => {
           className={`p-4 rounded-2xl shadow-md ${
             message.isBot
               ? `${theme.colors.card} ${theme.colors.text}`
-              : theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
+              : theme.currentTheme === 'midnight' ? 'bg-slate-700 text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
           }`}
         >
           {message.text}
@@ -587,19 +587,24 @@ const StudentDashboard = () => {
 {/* <TabsList className={`grid grid-cols-3 w-full dark:!bg-slate-800`}>0 */}
 <TabsList 
   className="grid grid-cols-3 w-full"
-  style={theme.currentTheme === 'dark' ? { backgroundColor: 'rgb(30 41 59)' } : {}}
+  style={theme.currentTheme === 'midnight' ? { backgroundColor: 'rgb(30 41 59)' } : {}}
 >
 
-            <TabsTrigger value="chat">💬 Chat</TabsTrigger>
-            <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
-            <TabsTrigger value="history">📜 History</TabsTrigger>
+            <TabsTrigger value="chat"> Chat</TabsTrigger>
+            <TabsTrigger value="voice">Voice</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="chat-panel">
             <div
               ref={messagesContainerRef}
-              className={`chat-messages border rounded-xl ${theme.currentTheme === 'dark' ? 'bg-slate-800' : `bg-gradient-to-br ${theme.colors.secondary}`}`}
-            >
+className={`chat-messages border rounded-xl ${
+  theme.currentTheme === 'midnight' 
+    ? 'bg-slate-800' 
+    : `bg-gradient-to-br ${theme.colors.secondary}`
+}`}
+>
+            
               <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
                 {messages.map(m => renderChatMessage(m))}
 
@@ -616,14 +621,14 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            <div className={`chat-input-bar ${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
+            <div className={`chat-input-bar ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-slate-800'}`}>
               <div className="chat-input-inner">
                 <textarea
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Type your message..."
-                  className={`flex-1 p-2 sm:p-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base ${theme.currentTheme === 'dark' ? 'bg-slate-700 text-white' : 'bg-white'}`}
+                  className={`flex-1 p-2 sm:p-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base ${theme.currentTheme === 'midnight' ? 'bg-slate-700 text-white' : 'bg-white'}`}
                   rows={1}
                   style={{ minHeight: '40px', maxHeight: '120px' }}
                   onInput={(e) => {
@@ -661,7 +666,7 @@ const StudentDashboard = () => {
             <RealtimeVoice onAddMessage={addMessageFromVoice} theme={theme} />
           </TabsContent>
 
-          <TabsContent value="history" className={`flex-1 overflow-hidden ${theme.currentTheme === 'dark' ? 'bg-slate-800' : ''}`}>
+          <TabsContent value="history" className={`flex-1 overflow-hidden ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : ''}`}>
             <div className="h-full overflow-y-auto pt-4 px-4">
               {conversationHistory.length === 0 ? (
                 <p className="text-center text-gray-500 mt-10">
@@ -723,11 +728,11 @@ const StudentDashboard = () => {
           {getRecentAnnouncements(3).map(a => (
             <div
               key={a.id}
-              className={`p-4 rounded-lg border mb-3 cursor-pointer transition-all ${theme.currentTheme === 'dark' ? 'hover:bg-black-600' : 'hover:bg-white-100'}`}
+              className={`p-4 rounded-lg border mb-3 cursor-pointer transition-all ${theme.currentTheme === 'midnight' ? 'hover:bg-black-600' : 'hover:bg-white-100'}`}
               onClick={() => incrementViews(a.id)}
             >
               <p className={`font-semibold ${theme.colors.text}`}>{a.title}</p>
-              <p className={`text-sm ${theme.currentTheme === 'dark' ? 'text-slate-300' : 'text-gray-500'}`}>{a.content}</p>
+              <p className={`text-sm ${theme.currentTheme === 'midnight' ? 'text-slate-300' : 'text-gray-500'}`}>{a.content}</p>
               <p className={`text-xs mt-1 opacity-70 ${theme.colors.text}`}>{a.date}</p>
             </div>
           ))}

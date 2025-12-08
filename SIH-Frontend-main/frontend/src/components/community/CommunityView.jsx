@@ -315,7 +315,7 @@ const CommunityView = ({ userRole = 'student' }) => {
           </div>
         </div>
 
-        <div ref={messagesContainerRef} className={`chat-messages ${theme.currentTheme === 'dark' ? 'bg-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900'}`}>
+        <div ref={messagesContainerRef} className={`chat-messages ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900'}`}>
           <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-full min-h-64">

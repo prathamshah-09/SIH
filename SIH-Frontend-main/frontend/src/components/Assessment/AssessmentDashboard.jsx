@@ -201,7 +201,11 @@ const AssessmentDashboard = ({ userRole = 'student' }) => {
       </div>
 
       <Tabs value={assessmentTab} onValueChange={setAssessmentTab} className="w-full">
-        <TabsList className="hidden md:grid w-full grid-cols-2 mb-6 h-auto gap-1 sm:gap-2 p-1 sm:p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <TabsList 
+          style={{
+            backgroundColor: theme.currentTheme === 'midnight' ? '#334155' : '#f3f4f6',
+          }}
+          className={`items-center justify-center text-muted-foreground hidden md:grid w-full grid-cols-2 mb-6 h-auto gap-1 sm:gap-2 p-1 sm:p-2 rounded-lg`}>
           <TabsTrigger value="standard" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
             <Brain className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
             <span className="truncate font-medium">Standard</span>
