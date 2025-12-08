@@ -111,7 +111,7 @@ const DashboardLayout = ({ children, sidebarContent }) => {
           >
             <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
             <nav
-              className={`absolute left-0 top-0 bottom-0 w-72 max-w-[85%] bg-white dark:bg-gray-900 p-5 shadow-xl transform transition-transform ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}
+              className={`absolute left-0 top-0 bottom-0 w-72 max-w-[85%] ${theme.colors.card} p-5 shadow-xl transform transition-transform ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}
               ref={navRef}
               onClick={(e) => {
                 const target = e.target;
