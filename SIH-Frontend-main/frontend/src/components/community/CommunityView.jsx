@@ -77,7 +77,8 @@ const CommunityView = ({ userRole = 'student' }) => {
   const streamRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
+  const isDark = currentTheme === 'midnight';
   const { t } = useLanguage();
   const { user } = useAuth();
 
@@ -282,7 +283,7 @@ const CommunityView = ({ userRole = 'student' }) => {
   if (selectedCommunity) {
     return (
       <div className={`chat-shell ${theme.colors.background}`}>
-        <div className="flex-shrink-0 p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700">
+        <div className={`flex-shrink-0 p-4 sm:p-6 border-b ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-gradient-to-r from-blue-50 to-cyan-50'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 min-w-0">
               <Button
@@ -315,7 +316,7 @@ const CommunityView = ({ userRole = 'student' }) => {
           </div>
         </div>
 
-        <div ref={messagesContainerRef} className={`chat-messages ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900'}`}>
+        <div ref={messagesContainerRef} className={`chat-messages ${isDark ? 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50'}`}>
           <div className="space-y-4 w-full pb-4 px-2 sm:px-4">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-full min-h-64">
@@ -385,14 +386,14 @@ const CommunityView = ({ userRole = 'student' }) => {
           </div>
         </div>
 
-        <div className="chat-input-bar bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+        <div className={`chat-input-bar ${isDark ? 'bg-slate-900 border-t border-slate-800' : 'bg-gradient-to-r from-white to-gray-50'}`}>
           <div className="chat-input-inner">
-            <div className="flex-1 flex items-center bg-white dark:bg-gray-700 rounded-xl border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-900 transition-all px-3 sm:px-4">
+            <div className={`flex-1 flex items-center rounded-xl border transition-all px-3 sm:px-4 ${isDark ? 'bg-slate-800 border-slate-700 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-900' : 'bg-white border-gray-300 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200'}`}>
               <Input
                 placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
                 value={newMessage}
                 onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-                className="flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-2 sm:py-3 text-sm sm:text-base h-10"
+                className={`flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-2 sm:py-3 text-sm sm:text-base h-10 ${isDark ? 'text-slate-100 placeholder-slate-400' : ''}`}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
               />
             </div>
