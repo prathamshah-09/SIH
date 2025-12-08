@@ -455,6 +455,7 @@ const FormManagement = () => {
             <TabsTrigger value="create" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
               <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
               <span className="truncate font-medium">{t('createForm')}</span>
+              <span className="truncate font-medium">{t('createForm')}</span>
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center justify-center gap-1 sm:gap-2 text-[11px] xs:text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-3 md:px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded transition-all">
               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
@@ -472,21 +473,13 @@ const FormManagement = () => {
                       <FileText className="w-6 h-6 sm:w-6.5 sm:h-6.5 lg:w-7 lg:h-7 text-white animate-pulse" />
                     </div>
                     <div className="flex-1">
-<<<<<<< HEAD
                       {/* Title: force white for midnight calm */}
                       <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold ${isDarkLike ? 'text-white' : theme.colors.cardText}`}>
-                        Create New Form
+                        {t('createNewForm')}
                       </CardTitle>
                       {/* Subtitle: force black for ocean breeze */}
                       <p className={`text-xs sm:text-sm ${isOceanLike ? 'text-black' : theme.colors.muted} mt-1`}>
-                        Design wellness forms to understand your students
-=======
-                      <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold ${theme.colors.cardText}`}>
-                        {t('createNewForm')}
-                      </CardTitle>
-                      <p className={`text-xs sm:text-sm ${theme.colors.muted} mt-1`}>
                         {t('designWellnessForms')}
->>>>>>> dc8283c84c0b14415288974f8eeee820627fce70
                       </p>
                     </div>
                   </div>
