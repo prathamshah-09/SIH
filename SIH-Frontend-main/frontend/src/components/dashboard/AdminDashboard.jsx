@@ -821,8 +821,8 @@ const AdminDashboard = () => {
               <div>
                 {/* Label - conditional text color with inline style override */}
                 <p 
-                  style={{ color: theme.currentTheme === 'midnight' ? 'white' : 'black' }}
-                  className={`text-sm font-semibold opacity-70 mb-2 ${theme.currentTheme === 'midnight' ? 'text-white' : 'text-black'}`}
+                  style={{ color: theme.currentTheme === 'midnight' ? 'white !important' : 'black' }}
+                  className={`text-sm font-semibold mb-2 ${theme.currentTheme === 'midnight' ? '!text-white' : 'text-black'}`}
                 >{t(key)}</p>
 
                 {/* Value - conditional text color with inline style override */}

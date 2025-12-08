@@ -124,7 +124,7 @@ const Login = ({ onLoginSuccess, isModal = false }) => {
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                <Label htmlFor="email" className={`text-sm font-medium ${theme.colors.text}`}>
+                <Label htmlFor="email" className={`text-sm font-medium ${theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text}`}>
                   {t('email')}
                 </Label>
                 <Input
@@ -134,12 +134,13 @@ const Login = ({ onLoginSuccess, isModal = false }) => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t('email')}
                   required
-                  className="transition-all duration-300 focus:ring-2 focus:ring-blue-500/20 hover:shadow-md h-11 text-base"
+                  className={`transition-all duration-300 focus:ring-2 focus:ring-blue-500/20 hover:shadow-md h-11 text-base ${theme.currentTheme === 'midnight' ? '!text-white caret-white' : ''}`}
+                  style={theme.currentTheme === 'midnight' ? { color: 'white !important' } : {}}
                 />
               </div>
               
                 <div className="space-y-2">
-                <Label htmlFor="password" className={`text-sm font-medium ${theme.colors.text}`}>
+                <Label htmlFor="password" className={`text-sm font-medium ${theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text}`}>
                   {t('password')}
                 </Label>
                 <Input
@@ -149,7 +150,8 @@ const Login = ({ onLoginSuccess, isModal = false }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('password')}
                   required
-                  className="transition-all duration-300 focus:ring-2 focus:ring-blue-500/20 hover:shadow-md h-11 text-base"
+                  className={`transition-all duration-300 focus:ring-2 focus:ring-blue-500/20 hover:shadow-md h-11 text-base ${theme.currentTheme === 'midnight' ? '!text-white caret-white' : ''}`}
+                  style={theme.currentTheme === 'midnight' ? { color: 'white !important' } : {}}
                 />
               </div>
               

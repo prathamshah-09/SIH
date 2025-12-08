@@ -133,11 +133,15 @@ const Navbar = ({ onLoginClick }) => {
               {link.label}
             </button>
           ))}
-          <button onClick={onLoginClick} className="block pt-2 w-full">
-            <Button variant="animated" className="w-full rounded-lg">
+          <div className="block pt-2 w-full">
+            <Button 
+              onClick={onLoginClick}
+              variant="animated" 
+              className="w-full rounded-lg"
+            >
               Login
             </Button>
-          </button>
+          </div>
         </div>
       </div>
     </nav>
