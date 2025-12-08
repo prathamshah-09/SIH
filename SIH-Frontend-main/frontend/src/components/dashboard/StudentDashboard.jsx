@@ -38,7 +38,7 @@ import JournalWithThemeNew from "@components/wellness/JournalWithThemeNew";
 import StudentAppointments from "@components/appointments/StudentAppointments";
 import CommunityView from "@components/community/CommunityView";
 import AudioSection from "@components/wellness/AudioSection";
-import AssessmentDashboard from "@components/assessment/AssessmentDashboard";
+import AssessmentDashboard from "@/components/assessment/AssessmentDashboard";
 import DirectMessages from "@components/community/DirectMessages";
 
 const TypingDots = () => (
