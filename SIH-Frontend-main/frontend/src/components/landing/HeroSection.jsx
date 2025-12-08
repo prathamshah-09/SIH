@@ -4,6 +4,8 @@ import { ChevronDown } from "lucide-react";
 
 const HeroSection = () => {
   const scrollToFeatures = () => {
+    // Guard for environments without DOM (SSR/static builds)
+    if (typeof document === "undefined") return;
     const element = document.querySelector("#features");
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
@@ -15,15 +17,15 @@ const HeroSection = () => {
       {/* Video Background */}
       <div className="absolute inset-0 z-0">
         <video
-  id="parallaxVideo"
-  autoPlay
-  muted
-  loop
-  playsInline
-  className="w-full h-full object-cover scale-105"
->
-  <source src="../public/videos/bg.mp4" type="video/mp4" />
-</video>
+          id="parallaxVideo"
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover scale-105"
+        >
+          <source src="/videos/bg.mp4" type="video/mp4" />
+        </video>
 
         {/* Beautiful Blue Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-[hsl(215,40%,12%,0.4)] via-[hsl(205,60%,25%,0.5)] to-[hsl(200,50%,20%,0.7)]" />

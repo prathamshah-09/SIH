@@ -1498,7 +1498,7 @@ You are not alone, and there are people who want to help. Please reach out to on
             <div className="flex items-center">
             <MessageCircle className="w-6 h-6 mr-2 text-cyan-500" />
             <CardTitle className={theme.colors.text}>
-              SensEase AI Companion
+              {t('aiCompanionTitle') || 'SensEase AI Companion'}
             </CardTitle>
             <Sparkles className="w-5 h-5 ml-2 text-yellow-500 animate-pulse" />
             {incognitoMode && (
@@ -1571,7 +1571,7 @@ You are not alone, and there are people who want to help. Please reach out to on
             </div>
 
             <Button onClick={startNewChat} variant="outline">
-              <Plus className="w-4 h-4 mr-1" /> New
+              <Plus className="w-4 h-4 mr-1" /> {t('newChat') || 'New'}
             </Button>
 
             <Badge
@@ -1579,7 +1579,9 @@ You are not alone, and there are people who want to help. Please reach out to on
                 isUsingChatGPT ? "bg-green-500" : "bg-orange-500"
               } text-white`}
             >
-              {isUsingChatGPT ? "🤖 ChatGPT Active" : "⚡ Local Mode"}
+              {isUsingChatGPT
+                ? t('chatgptActive') || '🤖 ChatGPT Active'
+                : t('localMode') || '⚡ Local Mode'}
             </Badge>
           </div>
         </div>
@@ -1589,9 +1591,9 @@ You are not alone, and there are people who want to help. Please reach out to on
         <Tabs value={chatTab} onValueChange={setChatTab} className="chat-panel">
 
           <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="chat">💬 Chat</TabsTrigger>
-            <TabsTrigger value="voice">🎙️ Voice</TabsTrigger>
-            <TabsTrigger value="history">📜 History</TabsTrigger>
+            <TabsTrigger value="chat">💬 {t('chatTab') || 'Chat'}</TabsTrigger>
+            <TabsTrigger value="voice">🎙️ {t('voiceTab') || 'Voice'}</TabsTrigger>
+            <TabsTrigger value="history">📜 {t('historyTab') || 'History'}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="chat-panel">
@@ -1628,7 +1630,9 @@ You are not alone, and there are people who want to help. Please reach out to on
                   value={input + (liveTranscript ? ' ' + liveTranscript : '')}
                   onChange={e => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={isLiveTranscribing ? "Listening... Speak now" : "Type your message..."}
+                  placeholder={isLiveTranscribing
+                    ? t('listeningPlaceholder') || 'Listening... Speak now'
+                    : t('typeMessagePlaceholder') || 'Type your message...'}
                   className="flex-1 p-2 sm:p-3 border rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-cyan-500 resize-none text-sm sm:text-base"
                   rows={1}
                   style={{ minHeight: '40px', maxHeight: '120px' }}
