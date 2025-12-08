@@ -918,6 +918,7 @@ const CounsellorDashboard = () => {
         { key: 'chatbot', icon: MessageCircle, label: t('aiCompanion') },
         { key: 'community', icon: Users, label: t('community') },
         { key: 'appointments', icon: Calendar, label: t('appointments') },
+        { key: 'students', icon: Users, label: t('studentProgressTitle') },
         { key: 'resources', icon: Brain, label: t('resources') },
         { key: 'reports', icon: BarChart3, label: t('analytics') },
         { key: 'messages', icon: MessageCircle, label: t('messagesLabel') }
@@ -1106,6 +1107,58 @@ const CounsellorDashboard = () => {
     </div>
   );
 
+  const renderStudentProgress = () => (
+    <div className="space-y-6">
+      <h2 className={`text-2xl md:text-3xl font-bold ${theme.colors.text} truncate whitespace-nowrap`}>{t('studentProgressTracking')}</h2>
+
+      <div className="grid gap-4">
+        {[
+          { name: 'Jordan Smith', id: 'SID-8a7b-e4c1', sessions: 4, lastSession: '2 days ago', progress: 'Excellent', trend: 'up' },
+          { name: 'Taylor Wilson', id: 'SID-f2d1-c5e9', sessions: 2, lastSession: '1 week ago', progress: 'Good', trend: 'stable' },
+          { name: 'Morgan Lee', id: 'SID-a9c3-b8d2', sessions: 6, lastSession: '1 day ago', progress: 'Very Good', trend: 'up' }
+        ].map((student) => (
+          <Card
+            key={student.id}
+            tabIndex={0}
+            onClick={() => {}}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); /* placeholder for action */ } }}
+            className={`${theme.colors.card} hover:shadow-2xl transition-transform duration-150 hover:scale-[1.008] border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300`}
+          >
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className={`font-semibold text-base md:text-lg truncate ${theme.colors.text}`}>{student.name}</h3>
+                  <p className={`text-sm ${theme.colors.muted} truncate mt-1`}>ID: {student.id}</p>
+
+                  <div className={`flex flex-wrap gap-2 text-sm ${theme.colors.muted} mt-2`}>
+                    <div className="px-1.5 py-0.5 bg-transparent rounded-md">
+                      <span className="font-medium">{student.sessions}</span>
+                      <span className="ml-1">sessions</span>
+                    </div>
+                    <div className="px-1.5 py-0.5 bg-transparent rounded-md truncate">Last: {student.lastSession}</div>
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0 text-right flex flex-col items-end">
+                  <Badge className={`px-2 py-0.5 text-sm ${student.progress === 'Excellent' ? 'bg-green-100 text-green-800' : student.progress === 'Very Good' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    {student.progress}
+                  </Badge>
+                  <div className="mt-1">
+                    {student.trend === 'up' ? (
+                      <div className="text-green-600 text-sm">Improving</div>
+                    ) : (
+                      <div className="text-gray-600 text-sm">Stable</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderChatbot = () => (
     <Card className={`chat-shell ${theme.colors.card} border-0 shadow-2xl`}>
       <CardHeader className="flex-shrink-0">
@@ -1260,6 +1313,8 @@ const CounsellorDashboard = () => {
         return <CommunityView userRole="counsellor" />;
       case 'appointments':
         return <CounsellorAppointments />;
+      case 'students':
+        return renderStudentProgress();
       case 'resources':
         return <CounsellorResourcesSection theme={theme} />;
       case 'reports':

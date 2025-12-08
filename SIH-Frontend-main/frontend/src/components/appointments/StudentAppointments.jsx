@@ -521,6 +521,10 @@ const StudentAppointments = () => {
                                                     onClick={() => { setSelectedTime(time); if (!selectedCounsellor) setSelectedCounsellor(counsellors[0]); }}
                                                     variant={selectedTime === time ? 'animated' : 'outline'}
                                                     className={`p-3 transition-all duration-200 ${
+                                                        currentTheme === 'midnight'
+                                                          ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                          : ''
+                                                    } ${
                                                         selectedTime !== time ? 'hover:bg-cyan-50' : ''
                                                     }`}
                                                 >
@@ -561,6 +565,10 @@ const StudentAppointments = () => {
                                                                 onClick={() => { setSelectedTime(time); if (!selectedCounsellor) setSelectedCounsellor(counsellors[0]); }}
                                                                 variant={selectedTime === time ? 'animated' : 'outline'}
                                                                 className={`text-sm p-3 transition-colors ${
+                                                                    currentTheme === 'midnight'
+                                                                      ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                                      : ''
+                                                                } ${
                                                                     selectedTime !== time ? 'hover:bg-cyan-50' : ''
                                                                 }`}
                                                             >
