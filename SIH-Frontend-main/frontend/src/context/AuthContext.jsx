@@ -23,7 +23,18 @@ export const AuthProvider = ({ children }) => {
         if (me) {
           const normalized = { ...me, role: (me?.role || '').toLowerCase() };
           setUser(normalized);
-          try { localStorage.setItem('user', JSON.stringify(normalized)); } catch {}
+
+          try {
+            // store full user (existing behaviour)
+            localStorage.setItem('user', JSON.stringify(normalized));
+            // ⭐ NEW: store ID + role for AI backend
+            if (normalized.id) {
+              localStorage.setItem('sensee_user_id', normalized.id);
+            }
+            if (normalized.role) {
+              localStorage.setItem('sensee_role', normalized.role);
+            }
+          } catch {}
         }
       } catch (e) {
         // Not logged in or endpoint unavailable; fall back to localStorage
@@ -32,6 +43,16 @@ export const AuthProvider = ({ children }) => {
           const parsed = JSON.parse(savedUser);
           const normalized = { ...parsed, role: (parsed?.role || '').toLowerCase() };
           setUser(normalized);
+
+          // ⭐ Ensure AI keys are also present when restoring from localStorage
+          try {
+            if (normalized.id) {
+              localStorage.setItem('sensee_user_id', normalized.id);
+            }
+            if (normalized.role) {
+              localStorage.setItem('sensee_role', normalized.role);
+            }
+          } catch {}
         }
       } finally {
         setLoading(false);
@@ -46,7 +67,19 @@ export const AuthProvider = ({ children }) => {
       const normalized = { ...loggedInUser, role: (loggedInUser?.role || '').toLowerCase() };
       console.log('🔐 [AuthContext] Normalized user:', normalized);
       setUser(normalized);
-      try { localStorage.setItem('user', JSON.stringify(normalized)); } catch {}
+
+      try {
+        // existing behaviour
+        localStorage.setItem('user', JSON.stringify(normalized));
+        // ⭐ NEW: AI keys
+        if (normalized.id) {
+          localStorage.setItem('sensee_user_id', normalized.id);
+        }
+        if (normalized.role) {
+          localStorage.setItem('sensee_role', normalized.role);
+        }
+      } catch {}
+
       return { success: true, user: normalized };
     } catch (error) {
       const message = error?.data?.message || error?.message || 'Login failed';
@@ -58,14 +91,31 @@ export const AuthProvider = ({ children }) => {
     try { await apiLogout(); } catch {}
     setUser(null);
     localStorage.removeItem('user');
+
+    // ⭐ NEW: clear AI-related keys on logout
+    localStorage.removeItem('sensee_user_id');
+    localStorage.removeItem('sensee_role');
   };
 
   const updateUserProfile = async (updatedUser) => {
     try {
       // In a real app, this would be an API call
       // For now, we'll update localStorage and state
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      const normalized = { ...updatedUser, role: (updatedUser?.role || '').toLowerCase() };
+      setUser(normalized);
+      localStorage.setItem('user', JSON.stringify(normalized));
+
+      // ⭐ Keep AI role key in sync if role changes
+      try {
+        if (normalized.role) {
+          localStorage.setItem('sensee_role', normalized.role);
+        }
+        // id shouldn't change, but if it's present, ensure it's set
+        if (normalized.id) {
+          localStorage.setItem('sensee_user_id', normalized.id);
+        }
+      } catch {}
+
       return { success: true };
     } catch (error) {
       console.error('Error updating user profile:', error);

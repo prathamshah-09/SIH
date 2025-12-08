@@ -5,9 +5,6 @@ import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Plus, Mic, Send, ChevronDown, Trash2 } from 'lucide-react';
 import ThemeLanguageSelector from '@components/shared/ThemeLanguageSelector';
-import { generateHistoryTitle } from '@lib/utils';
-
-// Start with no pre-filled chats (remove hard-coded stored messages)
 
 const AICompanion = () => {
   const { t } = useLanguage();
@@ -16,94 +13,285 @@ const AICompanion = () => {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [showChatsPanel, setShowChatsPanel] = useState(false);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
-  const STORAGE_KEY = 'ai_companion_chats_v1';
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+  const userId = typeof window !== "undefined"
+    ? window.localStorage.getItem("sensee_user_id")
+    : null;
+
+  console.log('[AICompanion] Initialized with userId:', userId, 'backendUrl:', backendUrl);
+
+  // Helper to get auth headers with JWT token
+  const getAuthHeaders = () => {
+    const token = typeof window !== "undefined" 
+      ? window.localStorage.getItem("authToken") 
+      : null;
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  };
 
   const currentChat = chats.find(c => c.id === currentChatId) || null;
 
   useEffect(() => {
-    // Prefer scrolling the messages container to bottom so the chat stays within the viewport
     const el = messagesContainerRef.current;
     if (el) {
-      // allow DOM update then jump/animate to bottom
       requestAnimationFrame(() => {
         try {
           el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
         } catch (e) {
-          // fallback
           el.scrollTop = el.scrollHeight;
         }
       });
       return;
     }
 
-    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
   }, [currentChatId, chats]);
 
-  // Load chats from localStorage on mount
+  // Load chats from backend on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.chats) setChats(parsed.chats);
-        if (parsed?.currentChatId) setCurrentChatId(parsed.currentChatId);
+    if (!userId) return;
+    
+    const fetchConversations = async () => {
+      try {
+        const res = await fetch(
+          `${backendUrl}/api/ai/conversations?userId=${userId}&limit=10`,
+          { 
+            headers: getAuthHeaders(),
+            credentials: 'include'
+          }
+        );
+        if (!res.ok) throw new Error("Failed to fetch conversations");
+        const data = await res.json();
+        
+        const formattedChats = (data.conversations || []).map(conv => ({
+          id: conv.id,
+          conversationId: conv.id,
+          title: conv.title || `Chat ${new Date(conv.created_at).toLocaleDateString()}`,
+          messages: [],
+          created_at: conv.created_at
+        }));
+        
+        setChats(formattedChats);
+        if (formattedChats.length > 0) {
+          setCurrentChatId(formattedChats[0].id);
+        }
+      } catch (e) {
+        console.warn('Failed to load chats from backend', e);
       }
-    } catch (e) {
-      console.warn('Failed to load saved chats', e);
-    }
-  }, []);
+    };
 
-  // Persist chats whenever they change
-  useEffect(() => {
+    fetchConversations();
+  }, [userId, backendUrl]);
+
+  const handleNewChat = async () => {
+    if (!userId) {
+      console.error("No userId for new chat");
+      return;
+    }
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ chats, currentChatId }));
-    } catch (e) {
-      console.warn('Failed to save chats', e);
-    }
-  }, [chats, currentChatId]);
+      const res = await fetch(`${backendUrl}/api/ai/conversations`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          userId,
+          title: `${t('newMessage') || 'New Chat'}`
+        })
+      });
 
-  const handleNewChat = () => {
-    const id = `c${Date.now()}`;
-    const newChat = { id, title: `${t('newMessage') || 'New Chat'}`, messages: [] };
-    setChats(prev => [newChat, ...prev]);
-    setCurrentChatId(id);
-    setShowChatsPanel(false);
-  };
-
-  const handleSelectChat = (id) => {
-    setCurrentChatId(id);
-    setShowChatsPanel(false);
-  };
-
-  const handleSend = () => {
-    if (!input.trim()) return;
-
-    // If no chat selected, create one
-    let chatId = currentChatId;
-    if (!chatId) {
-      chatId = `c${Date.now()}`;
-      const newChat = { id: chatId, title: `${t('newMessage') || 'New Chat'}`, messages: [] };
+      if (!res.ok) throw new Error("Failed to create chat");
+      const data = await res.json();
+      
+      const newChat = {
+        id: data.id || data.conversationId,
+        conversationId: data.id || data.conversationId,
+        title: data.title || `${t('newMessage') || 'New Chat'}`,
+        messages: [],
+        created_at: new Date().toISOString()
+      };
+      
       setChats(prev => [newChat, ...prev]);
-      setCurrentChatId(chatId);
+      setCurrentChatId(newChat.id);
+      setShowChatsPanel(false);
+      setInput('');
+    } catch (e) {
+      console.error('Failed to create new chat', e);
+    }
+  };
+
+  const handleSelectChat = async (id) => {
+    setCurrentChatId(id);
+    setShowChatsPanel(false);
+    
+    // Load messages for this chat from backend
+    try {
+      const res = await fetch(
+        `${backendUrl}/api/ai/messages?conversationId=${id}&userId=${userId}`,
+        { 
+          headers: getAuthHeaders(),
+          credentials: 'include'
+        }
+      );
+      if (!res.ok) throw new Error("Failed to load messages");
+      const data = await res.json();
+      
+      const formattedMessages = (data.messages || []).map(m => ({
+        id: m.id,
+        role: m.sender === 'ai' || m.sender === 'assistant' ? 'assistant' : 'user',
+        text: m.message,
+        time: new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        type: 'text'
+      }));
+      
+      setChats(prev => prev.map(c => 
+        c.id === id ? { ...c, messages: formattedMessages } : c
+      ));
+    } catch (e) {
+      console.warn('Failed to load chat messages', e);
+    }
+  };
+
+  // ----- NEW: send through backend -----
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+    if (!userId) {
+      console.error("No userId (sensee_user_id) for AICompanion");
+      return;
     }
 
-    const newMessage = { id: `m${Date.now()}`, role: 'user', text: input.trim(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), type: 'text' };
+    let chatId = currentChatId;
+    
+    // Create new chat if needed
+    if (!chatId) {
+      try {
+        const res = await fetch(`${backendUrl}/api/ai/conversations`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({
+            userId,
+            title: `${t('newMessage') || 'New Chat'}`
+          })
+        });
+
+        if (!res.ok) throw new Error("Failed to create chat");
+        const data = await res.json();
+        
+        chatId = data.id || data.conversationId;
+        const newChat = {
+          id: chatId,
+          conversationId: chatId,
+          title: data.title || `${t('newMessage') || 'New Chat'}`,
+          messages: [],
+          created_at: new Date().toISOString()
+        };
+        
+        setChats(prev => [newChat, ...prev]);
+        setCurrentChatId(chatId);
+      } catch (e) {
+        console.error('Failed to create chat on send', e);
+        return;
+      }
+    }
+
+    const text = input.trim();
+    const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const userMsgId = `m${Date.now()}`;
+    
+    setInput('');
+    setIsLoading(true);
+
+    // Show user message immediately
     setChats(prev => prev.map(c => {
       if (c.id !== chatId) return c;
-      const updatedMessages = [...c.messages, newMessage];
-      const updated = { ...c, messages: updatedMessages };
-      const defaultTitle = t('newMessage') || 'New Chat';
-      if (!c.title || c.title === defaultTitle) {
-        updated.title = generateHistoryTitle(updatedMessages, 3);
-      }
-      return updated;
+      return {
+        ...c,
+        messages: [
+          ...c.messages,
+          { 
+            id: userMsgId, 
+            role: 'user', 
+            text, 
+            time, 
+            type: 'text' 
+          }
+        ]
+      };
     }));
-    setInput('');
+
+    try {
+      // Send message to backend
+      const res = await fetch(`${backendUrl}/api/ai/chat`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          userId,
+          conversationId: chatId,
+          message: text
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('Backend error:', res.status, errText);
+        throw new Error(`Backend error: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      const botText = data.reply || "I'm here with you. Tell me more about how you're feeling.";
+
+      // Add bot response
+      setChats(prev => prev.map(c => {
+        if (c.id !== chatId) return c;
+        return {
+          ...c,
+          conversationId: data.conversationId || chatId,
+          messages: [
+            ...c.messages,
+            {
+              id: `m${Date.now()}`,
+              role: 'assistant',
+              text: botText,
+              time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+              type: 'text'
+            }
+          ]
+        };
+      }));
+    } catch (err) {
+      console.error("AICompanion chat error", err);
+      setChats(prev => prev.map(c => {
+        if (c.id !== chatId) return c;
+        return {
+          ...c,
+          messages: [
+            ...c.messages,
+            {
+              id: `m${Date.now()}`,
+              role: 'assistant',
+              text: "Sorry, I'm having trouble connecting. Please try again.",
+              time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+              type: 'text'
+            }
+          ]
+        };
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Voice recording
@@ -115,27 +303,105 @@ const AICompanion = () => {
       mediaRecorderRef.current = mr;
       const chunks = [];
       mr.ondataavailable = e => chunks.push(e.data);
-      mr.onstop = () => {
+      mr.onstop = async () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        // add as audio message
+        
+        // Send to backend for transcription
+        if (!userId) {
+          console.error("No userId for voice message");
+          return;
+        }
+
         let chatId = currentChatId;
         if (!chatId) {
-          chatId = `c${Date.now()}`;
-          const newChat = { id: chatId, title: `${t('newMessage') || 'New Chat'}`, messages: [] };
-          setChats(prev => [newChat, ...prev]);
-          setCurrentChatId(chatId);
+          try {
+            const res = await fetch(`${backendUrl}/api/ai/conversations`, {
+              method: "POST",
+              headers: getAuthHeaders(),
+              credentials: 'include',
+              body: JSON.stringify({
+                userId,
+                title: `${t('newMessage') || 'New Chat'}`
+              })
+            });
+
+            if (!res.ok) throw new Error("Failed to create chat");
+            const data = await res.json();
+            chatId = data.id || data.conversationId;
+            
+            const newChat = {
+              id: chatId,
+              conversationId: chatId,
+              title: data.title || `${t('newMessage') || 'New Chat'}`,
+              messages: [],
+              created_at: new Date().toISOString()
+            };
+            
+            setChats(prev => [newChat, ...prev]);
+            setCurrentChatId(chatId);
+          } catch (e) {
+            console.error('Failed to create chat for voice', e);
+            stream.getTracks().forEach(t => t.stop());
+            return;
+          }
         }
-        const audioMsg = { id: `m${Date.now()}`, role: 'user', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), type: 'audio', audioUrl: url };
-        setChats(prev => prev.map(c => {
-          if (c.id !== chatId) return c;
-          const updatedMessages = [...c.messages, audioMsg];
-          const updated = { ...c, messages: updatedMessages };
-          const defaultTitle = t('newMessage') || 'New Chat';
-          if (!c.title || c.title === defaultTitle) updated.title = generateHistoryTitle(updatedMessages, 3);
-          return updated;
-        }));
-        // stop tracks
+
+        try {
+          const formData = new FormData();
+          formData.append('audio', blob, 'audio.webm');
+          formData.append('userId', userId);
+
+          const token = typeof window !== "undefined" 
+            ? window.localStorage.getItem("authToken") 
+            : null;
+
+          const res = await fetch(`${backendUrl}/api/ai/voice`, {
+            method: "POST",
+            headers: {
+              ...(token && { 'Authorization': `Bearer ${token}` })
+            },
+            credentials: 'include',
+            body: formData
+          });
+
+          if (!res.ok) throw new Error("Failed to send voice message");
+          const data = await res.json();
+
+          setChats(prev => prev.map(c => {
+            if (c.id !== chatId) return c;
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const updatedMessages = [
+              ...c.messages,
+              {
+                id: `m${Date.now()}`,
+                role: 'user',
+                text: data.transcribedText || '[Voice message]',
+                time,
+                type: 'audio'
+              }
+            ];
+
+            // Add bot response if provided
+            if (data.botResponse) {
+              updatedMessages.push({
+                id: `m${Date.now() + 1}`,
+                role: 'assistant',
+                text: data.botResponse,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                type: 'text'
+              });
+            }
+
+            return {
+              ...c,
+              conversationId: data.conversationId || chatId,
+              messages: updatedMessages
+            };
+          }));
+        } catch (e) {
+          console.error('Voice message failed', e);
+        }
+
         stream.getTracks().forEach(t => t.stop());
         streamRef.current = null;
         mediaRecorderRef.current = null;
@@ -154,28 +420,45 @@ const AICompanion = () => {
     }
   };
 
-  const isMidnight = (theme?.name || currentTheme || '').toLowerCase().includes('midnight');
+  const deleteChat = async (chatId) => {
+    if (!userId) return;
+    
+    try {
+      const res = await fetch(
+        `${backendUrl}/api/ai/conversations/${chatId}?userId=${userId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+          credentials: 'include'
+        }
+      );
 
-  const barStyle = isMidnight
-    ? { backgroundColor: '#0f172a', borderTop: '1px solid #1f2937', boxShadow: '0 -2px 18px rgba(0, 0, 0, 0.35)' }
-    : { backgroundColor: '#ffffff', borderTop: '1px solid #e5e7eb', boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)' };
+      if (!res.ok) throw new Error("Failed to delete chat");
 
-  const innerStyle = isMidnight
-    ? { backgroundColor: '#0b1221', border: '1px solid #1f2937', boxShadow: '0 6px 24px rgba(0, 0, 0, 0.25)' }
-    : { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.08)' };
+      setChats(prev => prev.filter(c => c.id !== chatId));
+      if (currentChatId === chatId) {
+        setCurrentChatId(prev => {
+          const remaining = chats.filter(c => c.id !== chatId);
+          return remaining[0]?.id || null;
+        });
+      }
+    } catch (e) {
+      console.error('Failed to delete chat', e);
+    }
+  };
 
   return (
     <div className={`chat-shell ${theme.colors.background} ${theme.colors.card}`}>
-      {/* Header - fixed */}
-      <div className={`flex-shrink-0 p-4 sm:p-6 border-b ${isMidnight ? 'bg-slate-900/80 border-slate-800' : 'bg-gradient-to-r from-blue-50 to-cyan-50'}`}>
+      {/* Header */}
+      <div className="flex-shrink-0 p-4 sm:p-6 border-b">
         <div className="flex items-center justify-between">
           <h2 className={`text-xl font-semibold ${theme.colors.text}`}>{t('aiCompanion') || 'AI Companion'}</h2>
           <div className="flex items-center space-x-2">
-            <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewChat} className={`p-2 rounded-md ${isMidnight ? 'hover:bg-slate-800' : 'hover:bg-blue-100'}`}>
+            <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewChat} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800" disabled={!userId}>
               <Plus className="w-5 h-5" />
             </button>
 
-            <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowChatsPanel(s => !s)} className={`p-2 rounded-md border ${isMidnight ? 'hover:bg-slate-800 border-slate-700' : 'hover:bg-blue-100 border-gray-300'} relative`}>
+            <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowChatsPanel(s => !s)} className="p-2 rounded-md border hover:bg-gray-100 dark:hover:bg-gray-800 relative" disabled={!userId}>
               <ChevronDown className="w-5 h-5" />
 
               {showChatsPanel && (
@@ -185,16 +468,17 @@ const AICompanion = () => {
                     <div key={c.id} className="w-full flex items-center justify-between p-1 rounded">
                       <button onClick={() => handleSelectChat(c.id)} className={`flex-1 text-left p-2 rounded ${isMidnight ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
                         <div className="text-sm font-medium truncate" title={c.title}>{c.title}</div>
-                        <div className="text-[11px] text-gray-500 truncate">{c.messages[c.messages.length - 1]?.text || (c.messages[c.messages.length - 1]?.type === 'audio' ? 'Voice message' : '')}</div>
+                        <div className="text-[11px] text-gray-500 truncate">
+                          {c.messages[c.messages.length - 1]?.text || (
+                            c.messages[c.messages.length - 1]?.type === 'audio' ? 'Voice message' : ''
+                          )}
+                        </div>
                       </button>
-                      <button onClick={() => {
-                        // delete chat
-                        setChats(prev => prev.filter(x => x.id !== c.id));
-                        if (currentChatId === c.id) setCurrentChatId(prev => {
-                          const remaining = chats.filter(x => x.id !== c.id);
-                          return remaining[0]?.id || null;
-                        });
-                      }} aria-label="Delete chat" className="ml-2 p-1 rounded hover:bg-red-50 text-red-600">
+                      <button
+                        onClick={() => deleteChat(c.id)}
+                        aria-label="Delete chat"
+                        className="ml-2 p-1 rounded hover:bg-red-50 text-red-600"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -206,9 +490,29 @@ const AICompanion = () => {
         </div>
       </div>
 
-      {/* Messages container - scrollable with fixed height, cyan/blue background */}
-      <div ref={messagesContainerRef} className={`chat-messages ${isMidnight ? 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800' : 'bg-gradient-to-b from-cyan-50 to-blue-50'}`}>
+      {/* Messages */}
+      <div ref={messagesContainerRef} className="chat-messages bg-gradient-to-b from-cyan-50 to-blue-50 dark:from-cyan-900 dark:to-blue-900">
         <div className="space-y-4 max-w-3xl mx-auto w-full px-2 sm:px-4">
+          {!userId && (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+              <h3 className="text-lg font-medium mb-2 text-red-600">
+                {t('notLoggedIn') || 'Not Logged In'}
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                {t('pleaseLoginToUseAI') || 'Please log in to use the AI Companion'}
+              </p>
+            </div>
+          )}
+          {userId && !currentChat && (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+              <h3 className={`text-lg font-medium mb-2 ${theme.colors.text}`}>
+                {t('welcomeToAICompanion') || 'Welcome to AI Companion'}
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                {t('startNewChatMessage') || 'Click the + button to start a new conversation'}
+              </p>
+            </div>
+          )}
           {currentChat?.messages?.map(msg => (
             <div key={msg.id} className={`max-w-[85%] ${msg.role === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}>
               <div className={`chat-bubble inline-block px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-600 text-white' : isMidnight ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900 border border-gray-200'}`}>
@@ -224,29 +528,39 @@ const AICompanion = () => {
               <div className="text-xs text-gray-400 mt-1">{msg.time}</div>
             </div>
           ))}
+          
+          {isLoading && currentChat && (
+            <div className="max-w-[85%] mr-auto text-left">
+              <div className="chat-bubble inline-block px-4 py-2 rounded-lg bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input bar — fixed at bottom */}
-      <div className={`flex-shrink-0 sticky bottom-0 left-0 right-0 w-full p-2 sm:p-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] z-20 ${isMidnight ? 'bg-slate-900 border-t border-slate-800' : 'bg-white border-t border-gray-200'}`}>
-        <div className="max-w-[72rem] mx-auto flex items-end gap-2 sm:gap-3 w-full">
-          <div className={`flex-1 flex items-center rounded-xl border transition-all px-3 sm:px-4 ${isMidnight ? 'bg-slate-800 border-slate-700 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-900' : 'bg-white border-gray-300 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200'}`}>
-            <Input
-              placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className={`flex-1 !border-0 bg-transparent !ring-0 focus-visible:!ring-0 focus:outline-none placeholder-gray-400 py-2 sm:py-3 text-sm sm:text-base h-10 ${isMidnight ? 'text-slate-100 placeholder-slate-400' : ''}`}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            />
-          </div>
+      {/* Input bar */}
+      <div className="chat-input-bar bg-white dark:bg-gray-900">
+        <div className="chat-input-inner">
+          <Input
+            placeholder={t('typeMessagePlaceholder') || 'Type your message...'}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="flex-1 text-sm sm:text-base h-10"
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          />
           <div className="flex items-center space-x-2">
             <button 
               onClick={handleSend} 
-              disabled={!input.trim()}
+              disabled={!input.trim() || isLoading}
               className="icon-tap rounded-full bg-blue-600 text-white w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Send message"
+              title={isLoading ? 'Sending...' : 'Send message'}
             >
               <Send className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
