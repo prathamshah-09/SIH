@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../../hooks/use-toast';
@@ -13,7 +14,8 @@ import {
     cancelAppointment as cancelAppointmentAPI,
     formatDateToYYYYMMDD,
     formatDateToISO,
-    convertTo24Hour
+    convertTo24Hour,
+    convertTo12Hour
 } from '../../services/appointmentService';
 import { 
     transformCounsellorsListData,
@@ -90,6 +92,69 @@ const mockCounsellors = [
     { id: 3, name: 'Ms. Priya Singh', specialty: 'Mindfulness & Meditation', imageUrl: 'https://placehold.co/100x100/E2E8F0/4A5568?text=PS', availableSlots: ['09:00 AM', '03:00 PM', '04:00 PM', '05:00 PM'] },
 ];
 
+// Normalize slot data into online/offline buckets so students can see modes clearly
+const groupSlotsByMode = (counsellor) => {
+    if (!counsellor) return { online: [], offline: [], unspecified: [] };
+
+    const formatTime = (value) => {
+        if (!value) return '';
+        const raw = value.toString().trim();
+        const twelveHourPattern = /^\d{1,2}:\d{2}\s*(am|pm)$/i;
+        if (/am|pm/i.test(raw)) {
+            // Only accept well-formed 12h times
+            return twelveHourPattern.test(raw) ? raw.toUpperCase().replace(' ', ' ') : '';
+        }
+        return convertTo12Hour(raw);
+    };
+
+    const detectMode = (slot = {}) => {
+        const hint = (slot.mode || slot.type || slot.channel || slot.location_type || slot.locationType || '').toString().toLowerCase();
+        if (hint.includes('offline') || hint.includes('in-person') || hint.includes('campus') || hint.includes('office')) return 'offline';
+        if (hint.includes('online') || hint.includes('virtual') || hint.includes('remote') || hint.includes('video')) return 'online';
+        return 'online'; // default to online when not specified to avoid "Unspecified" bucket
+    };
+
+    const seenOnline = new Set();
+    const seenOffline = new Set();
+    const online = [];
+    const offline = [];
+
+    const rawSlots = Array.isArray(counsellor.available_slots) && counsellor.available_slots.length > 0
+        ? counsellor.available_slots
+        : (counsellor.availableSlots || []).map(time => ({ start_time: time, __formatted: true }));
+
+    rawSlots.forEach((slot) => {
+        const timeValue = slot.start_time || slot.time || slot;
+        const formatted = slot.__formatted ? timeValue : formatTime(timeValue);
+        if (!formatted) return; // drop malformed entries like "5:%0pm"
+
+        const mode = detectMode(slot);
+
+        if (mode === 'offline') {
+            if (!seenOffline.has(formatted)) {
+                offline.push(formatted);
+                seenOffline.add(formatted);
+            }
+        } else if (mode === 'online') {
+            if (!seenOnline.has(formatted)) {
+                online.push(formatted);
+                seenOnline.add(formatted);
+            }
+        }
+    });
+
+    return { online, offline, unspecified: [] };
+};
+
+const findModeForTime = (counsellor, timeLabel) => {
+    if (!counsellor || !timeLabel) return null;
+    const { online, offline, unspecified } = groupSlotsByMode(counsellor);
+    if (unspecified.includes(timeLabel)) return 'Unspecified';
+    if (offline.includes(timeLabel)) return 'Offline';
+    if (online.includes(timeLabel)) return 'Online';
+    return null;
+};
+
 const getPastDate = (daysAgo) => {
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
@@ -131,6 +196,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, theme }
 const StudentAppointments = () => {
     const { theme, currentTheme } = useTheme();
     const { t } = useLanguage();
+    const navigate = useNavigate();
     
     const [view, setView] = useState('schedule');
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -151,6 +217,7 @@ const StudentAppointments = () => {
     const [showCalendarModal, setShowCalendarModal] = useState(false);
     const [mobileShowTimeSelection, setMobileShowTimeSelection] = useState(false);
     const [expandedAppointments, setExpandedAppointments] = useState({});
+    const selectedSlotMode = useMemo(() => findModeForTime(selectedCounsellor, selectedTime), [selectedCounsellor, selectedTime]);
     
     // Toast notifications
     const { toast } = useToast();
@@ -575,6 +642,15 @@ const StudentAppointments = () => {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    <div className={`mb-6 p-4 rounded-2xl border ${currentTheme === 'midnight' ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'} shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3`}>
+                        <div className="space-y-1">
+                            <p className={`text-sm font-semibold ${theme.colors.text}`}>Video call (Jitsi)</p>
+                            <p className={`${theme.colors.muted} text-sm`}>Create a room and share the host/participant links with your counsellor.</p>
+                        </div>
+                        <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg" onClick={() => navigate('/video-call')}>
+                            Open video call page
+                        </Button>
+                    </div>
                     {/* Mobile quick actions: three tappable options */}
                     <div className={`lg:hidden mb-4 p-4 rounded-lg ${theme.currentTheme === 'midnight' ? 'bg-slate-700' : 'bg-gray-100'}`}>
                         <div className={`grid grid-cols-3 gap-3`}>
@@ -616,63 +692,101 @@ const StudentAppointments = () => {
                                     {/* Counselor selection cards */}
                                     {!loadingCounsellors && counsellors.length > 0 && (
                                         <div className="space-y-4">
-                                            {counsellors.map((counsellor) => (
-                                                <div
-                                                    key={counsellor.id}
-                                                    className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                                                        selectedCounsellor?.id === counsellor.id
-                                                            ? currentTheme === 'midnight'
-                                                                ? 'border-slate-500 bg-slate-800'
-                                                                : 'border-cyan-500 bg-cyan-50'
-                                                            : currentTheme === 'midnight'
-                                                                ? 'border-slate-700 hover:border-slate-500 bg-slate-800/70'
-                                                                : 'border-gray-200 hover:border-cyan-300'
-                                                    }`}
-                                                    onClick={() => {
-                                                        setSelectedCounsellor(counsellor);
-                                                        setSelectedTime(null); // Reset time when changing counsellor
-                                                        // On mobile, after selecting a counsellor, reveal time + notes selector
-                                                        try {
-                                                            if (window?.innerWidth && window.innerWidth < 1024) {
-                                                                setMobileShowTimeSelection(true);
+                                            {counsellors.map((counsellor) => {
+                                                const { online, offline, unspecified } = groupSlotsByMode(counsellor);
+                                                const totalSlots = online.length + offline.length + unspecified.length;
+
+                                                return (
+                                                    <div
+                                                        key={counsellor.id}
+                                                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                                                            selectedCounsellor?.id === counsellor.id
+                                                                ? currentTheme === 'midnight'
+                                                                    ? 'border-slate-500 bg-slate-800'
+                                                                    : 'border-cyan-500 bg-cyan-50'
+                                                                : currentTheme === 'midnight'
+                                                                    ? 'border-slate-700 hover:border-slate-500 bg-slate-800/70'
+                                                                    : 'border-gray-200 hover:border-cyan-300'
+                                                        }`}
+                                                        onClick={() => {
+                                                            setSelectedCounsellor(counsellor);
+                                                            setSelectedTime(null); // Reset time when changing counsellor
+                                                            // On mobile, after selecting a counsellor, reveal time + notes selector
+                                                            try {
+                                                                if (window?.innerWidth && window.innerWidth < 1024) {
+                                                                    setMobileShowTimeSelection(true);
+                                                                }
+                                                            } catch (e) {
+                                                                // fallback: do nothing
                                                             }
-                                                        } catch (e) {
-                                                            // fallback: do nothing
-                                                        }
-                                                    }}
-                                                >
-                                                    <div className="flex items-center space-x-4">
-                                                        <img src={counsellor.imageUrl} alt={counsellor.name} className="w-16 h-16 rounded-full" />
-                                                        <div className="flex-1">
-                                                            <h4 className={`font-bold ${theme.colors.text}`}>{counsellor.name}</h4>
-                                                            <p className={`${theme.colors.muted} text-sm`}>{counsellor.specialty}</p>
-                                                            <div className="mt-2">
-                                                                {counsellor.availableSlots && counsellor.availableSlots.length > 0 ? (
-                                                                    <>
-                                                                        <p className={`text-xs ${theme.colors.muted} mb-1`}>
-                                                                            Available today: {counsellor.availableSlots.length} slot{counsellor.availableSlots.length > 1 ? 's' : ''}
-                                                                        </p>
-                                                                        <div className="flex flex-wrap gap-2">
-                                                                            {counsellor.availableSlots.slice(0, 4).map((slot, index) => (
-                                                                                <Badge key={`${counsellor.id}-slot-${index}`} variant="outline" className="text-xs border-cyan-300 text-cyan-700 bg-cyan-50">
-                                                                                    {slot}
-                                                                                </Badge>
-                                                                            ))}
-                                                                            {counsellor.availableSlots.length > 4 && (
-                                                                                <Badge key={`${counsellor.id}-more`} variant="outline" className="text-xs border-gray-300 text-gray-600">
-                                                                                    +{counsellor.availableSlots.length - 4} more
-                                                                                </Badge>
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center space-x-4">
+                                                            <img src={counsellor.imageUrl} alt={counsellor.name} className="w-16 h-16 rounded-full" />
+                                                            <div className="flex-1">
+                                                                <h4 className={`font-bold ${theme.colors.text}`}>{counsellor.name}</h4>
+                                                                <p className={`${theme.colors.muted} text-sm`}>{counsellor.specialty}</p>
+                                                                <div className="mt-2 space-y-1">
+                                                                    {totalSlots > 0 ? (
+                                                                        <>
+                                                                            <p className={`text-xs ${theme.colors.muted}`}>
+                                                                                Available today: {totalSlots} slot{totalSlots > 1 ? 's' : ''}
+                                                                            </p>
+                                                                            {online.length > 0 && (
+                                                                                <div className="flex items-center flex-wrap gap-2">
+                                                                                    <Badge variant="outline" className="text-[11px] border-green-300 text-green-700 bg-green-50">Online</Badge>
+                                                                                    {online.slice(0, 3).map((slot, index) => (
+                                                                                        <Badge key={`${counsellor.id}-online-${index}`} variant="outline" className="text-xs border-cyan-300 text-cyan-700 bg-cyan-50">
+                                                                                            {slot}
+                                                                                        </Badge>
+                                                                                    ))}
+                                                                                    {online.length > 3 && (
+                                                                                        <Badge key={`${counsellor.id}-online-more`} variant="outline" className="text-xs border-gray-300 text-gray-600">
+                                                                                            +{online.length - 3} more
+                                                                                        </Badge>
+                                                                                    )}
+                                                                                </div>
                                                                             )}
-                                                                        </div>
-                                                                    </>
-                                                                ) : (
-                                                                    <p className={`${theme.colors.muted} text-xs italic`}>No available slots for this date</p>
-                                                                )}
+                                                                            {offline.length > 0 && (
+                                                                                <div className="flex items-center flex-wrap gap-2">
+                                                                                    <Badge variant="outline" className="text-[11px] border-amber-300 text-amber-700 bg-amber-50">Offline</Badge>
+                                                                                    {offline.slice(0, 3).map((slot, index) => (
+                                                                                        <Badge key={`${counsellor.id}-offline-${index}`} variant="outline" className="text-xs border-gray-300 text-gray-700 bg-gray-100">
+                                                                                            {slot}
+                                                                                        </Badge>
+                                                                                    ))}
+                                                                                    {offline.length > 3 && (
+                                                                                        <Badge key={`${counsellor.id}-offline-more`} variant="outline" className="text-xs border-gray-300 text-gray-600">
+                                                                                            +{offline.length - 3} more
+                                                                                        </Badge>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                            {offline.length === 0 && unspecified.length > 0 && (
+                                                                                <div className="flex items-center flex-wrap gap-2">
+                                                                                    <Badge variant="outline" className="text-[11px] border-gray-300 text-gray-700 bg-gray-100">Unspecified</Badge>
+                                                                                    {unspecified.slice(0, 3).map((slot, index) => (
+                                                                                        <Badge key={`${counsellor.id}-unspecified-${index}`} variant="outline" className="text-xs border-gray-300 text-gray-700 bg-gray-50">
+                                                                                            {slot}
+                                                                                        </Badge>
+                                                                                    ))}
+                                                                                    {unspecified.length > 3 && (
+                                                                                        <Badge key={`${counsellor.id}-unspecified-more`} variant="outline" className="text-xs border-gray-300 text-gray-600">
+                                                                                            +{unspecified.length - 3} more
+                                                                                        </Badge>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </>
+                                                                    ) : (
+                                                                        <p className={`${theme.colors.muted} text-xs italic`}>No available slots for this date</p>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                     
@@ -715,26 +829,104 @@ const StudentAppointments = () => {
                                     {/* Time Selection */}
                                     <div>
                                         <h4 className={`font-semibold ${theme.colors.text} mb-3`}>{t('availableTimes')}</h4>
-                                        {selectedCounsellor && selectedCounsellor.availableSlots && selectedCounsellor.availableSlots.length > 0 ? (
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {selectedCounsellor.availableSlots.map((time, idx) => (
-                                                    <Button
-                                                        key={`time-${idx}-${time}`}
-                                                        onClick={() => setSelectedTime(time)}
-                                                        variant={selectedTime === time ? 'animated' : 'outline'}
-                                                        className={`p-3 transition-all duration-200 ${
-                                                            currentTheme === 'midnight'
-                                                              ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
-                                                              : ''
-                                                        } ${
-                                                            selectedTime !== time ? 'hover:bg-cyan-50' : ''
-                                                        }`}
-                                                    >
-                                                        {time}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        ) : (
+                                        {selectedCounsellor ? (() => {
+                                            const { online: onlineSlots, offline: offlineSlots, unspecified: unspecifiedSlots } = groupSlotsByMode(selectedCounsellor);
+                                            const hasSlots = onlineSlots.length > 0 || offlineSlots.length > 0 || unspecifiedSlots.length > 0;
+
+                                            if (!hasSlots) {
+                                                return (
+                                                    <div className={`text-center py-6 ${theme.colors.secondary} rounded-lg`}>
+                                                        <p className={`${theme.colors.muted} text-sm`}>
+                                                            No available times for this counsellor on the selected date.
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div className="space-y-4">
+                                                    {onlineSlots.length > 0 && (
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge variant="outline" className="text-[11px] border-green-300 text-green-700 bg-green-50">Online</Badge>
+                                                                <span className={`text-xs ${theme.colors.muted}`}>Join via video</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                {onlineSlots.map((time, idx) => (
+                                                                    <Button
+                                                                        key={`time-online-${idx}-${time}`}
+                                                                        onClick={() => setSelectedTime(time)}
+                                                                        variant={selectedTime === time ? 'animated' : 'outline'}
+                                                                        className={`p-3 transition-all duration-200 ${
+                                                                            currentTheme === 'midnight'
+                                                                                ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                                                : ''
+                                                                        } ${
+                                                                            selectedTime !== time ? 'hover:bg-cyan-50' : ''
+                                                                        }`}
+                                                                    >
+                                                                        {time}
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {offlineSlots.length > 0 && (
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge variant="outline" className="text-[11px] border-amber-300 text-amber-700 bg-amber-50">Offline</Badge>
+                                                                <span className={`text-xs ${theme.colors.muted}`}>In-person on campus</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                {offlineSlots.map((time, idx) => (
+                                                                    <Button
+                                                                        key={`time-offline-${idx}-${time}`}
+                                                                        onClick={() => setSelectedTime(time)}
+                                                                        variant={selectedTime === time ? 'animated' : 'outline'}
+                                                                        className={`p-3 transition-all duration-200 ${
+                                                                            currentTheme === 'midnight'
+                                                                                ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                                                : ''
+                                                                        } ${
+                                                                            selectedTime !== time ? 'hover:bg-cyan-50' : ''
+                                                                        }`}
+                                                                    >
+                                                                        {time}
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {unspecifiedSlots.length > 0 && (
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge variant="outline" className="text-[11px] border-gray-300 text-gray-700 bg-gray-50">Unspecified</Badge>
+                                                                <span className={`text-xs ${theme.colors.muted}`}>Mode not provided</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                {unspecifiedSlots.map((time, idx) => (
+                                                                    <Button
+                                                                        key={`time-unspecified-${idx}-${time}`}
+                                                                        onClick={() => setSelectedTime(time)}
+                                                                        variant={selectedTime === time ? 'animated' : 'outline'}
+                                                                        className={`p-3 transition-all duration-200 ${
+                                                                            currentTheme === 'midnight'
+                                                                                ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                                                : ''
+                                                                        } ${
+                                                                            selectedTime !== time ? 'hover:bg-cyan-50' : ''
+                                                                        }`}
+                                                                    >
+                                                                        {time}
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })() : (
                                             <div className={`text-center py-6 ${theme.colors.secondary} rounded-lg`}>
                                                 <p className={`${theme.colors.muted} text-sm`}>
                                                     No available times for this counsellor on the selected date.
@@ -767,26 +959,103 @@ const StudentAppointments = () => {
                                             <div>
                                                 <div className="mb-2">
                                                     <div className={`text-xs ${theme.colors.muted} mb-1`}>{t('selectAvailableTime')}</div>
-                                                    {selectedCounsellor && selectedCounsellor.availableSlots && selectedCounsellor.availableSlots.length > 0 ? (
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            {selectedCounsellor.availableSlots.map((time, idx) => (
-                                                            <Button
-                                                                key={`mobile-time-${idx}-${time}`}
-                                                                onClick={() => setSelectedTime(time)}
-                                                                variant={selectedTime === time ? 'animated' : 'outline'}
-                                                                className={`text-sm p-3 transition-colors ${
-                                                                    currentTheme === 'midnight'
-                                                                      ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
-                                                                      : ''
-                                                                } ${
-                                                                    selectedTime !== time ? 'hover:bg-cyan-50' : ''
-                                                                }`}
-                                                            >
-                                                                {time}
-                                                            </Button>
-                                                        ))}
-                                                        </div>
-                                                    ) : (
+                                                    {selectedCounsellor ? (() => {
+                                                        const { online: onlineSlots, offline: offlineSlots, unspecified: unspecifiedSlots } = groupSlotsByMode(selectedCounsellor);
+                                                        const hasSlots = onlineSlots.length > 0 || offlineSlots.length > 0 || unspecifiedSlots.length > 0;
+
+                                                        if (!hasSlots) {
+                                                            return (
+                                                                <div className={`text-center py-4 ${theme.colors.secondary} rounded-lg`}>
+                                                                    <p className={`${theme.colors.muted} text-xs`}>No available times</p>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <div className="space-y-3">
+                                                                {onlineSlots.length > 0 && (
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Badge variant="outline" className="text-[11px] border-green-300 text-green-700 bg-green-50">Online</Badge>
+                                                                            <span className={`text-[11px] ${theme.colors.muted}`}>Video call</span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-3 gap-2">
+                                                                            {onlineSlots.map((time, idx) => (
+                                                                                <Button
+                                                                                    key={`mobile-online-${idx}-${time}`}
+                                                                                    onClick={() => setSelectedTime(time)}
+                                                                                    variant={selectedTime === time ? 'animated' : 'outline'}
+                                                                                    className={`text-sm p-3 transition-colors ${
+                                                                                        currentTheme === 'midnight'
+                                                                                            ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                                                            : ''
+                                                                                    } ${
+                                                                                        selectedTime !== time ? 'hover:bg-cyan-50' : ''
+                                                                                    }`}
+                                                                                >
+                                                                                    {time}
+                                                                                </Button>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {offlineSlots.length > 0 && (
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Badge variant="outline" className="text-[11px] border-amber-300 text-amber-700 bg-amber-50">Offline</Badge>
+                                                                            <span className={`text-[11px] ${theme.colors.muted}`}>On-campus</span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-3 gap-2">
+                                                                            {offlineSlots.map((time, idx) => (
+                                                                                <Button
+                                                                                    key={`mobile-offline-${idx}-${time}`}
+                                                                                    onClick={() => setSelectedTime(time)}
+                                                                                    variant={selectedTime === time ? 'animated' : 'outline'}
+                                                                                    className={`text-sm p-3 transition-colors ${
+                                                                                        currentTheme === 'midnight'
+                                                                                            ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                                                            : ''
+                                                                                    } ${
+                                                                                        selectedTime !== time ? 'hover:bg-cyan-50' : ''
+                                                                                    }`}
+                                                                                >
+                                                                                    {time}
+                                                                                </Button>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {unspecifiedSlots.length > 0 && (
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Badge variant="outline" className="text-[11px] border-gray-300 text-gray-700 bg-gray-50">Unspecified</Badge>
+                                                                            <span className={`text-[11px] ${theme.colors.muted}`}>Mode not provided</span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-3 gap-2">
+                                                                            {unspecifiedSlots.map((time, idx) => (
+                                                                                <Button
+                                                                                    key={`mobile-unspecified-${idx}-${time}`}
+                                                                                    onClick={() => setSelectedTime(time)}
+                                                                                    variant={selectedTime === time ? 'animated' : 'outline'}
+                                                                                    className={`text-sm p-3 transition-colors ${
+                                                                                        currentTheme === 'midnight'
+                                                                                            ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                                                            : ''
+                                                                                    } ${
+                                                                                        selectedTime !== time ? 'hover:bg-cyan-50' : ''
+                                                                                    }`}
+                                                                                >
+                                                                                    {time}
+                                                                                </Button>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })() : (
                                                         <div className={`text-center py-4 ${theme.colors.secondary} rounded-lg`}>
                                                             <p className={`${theme.colors.muted} text-xs`}>No available times</p>
                                                         </div>
@@ -795,7 +1064,10 @@ const StudentAppointments = () => {
 
                                                 {selectedTime && (
                                                     <div className="flex items-center justify-between mt-2">
-                                                        <div className={`text-sm ${theme.colors.text}`}>{t('selectedTime')}: <span className="font-medium">{selectedTime}</span></div>
+                                                        <div className={`text-sm ${theme.colors.text}`}>
+                                                            {t('selectedTime')}: <span className="font-medium">{selectedTime}</span>
+                                                            {selectedSlotMode && <span className={`ml-2 text-xs ${theme.colors.muted}`}>({selectedSlotMode})</span>}
+                                                        </div>
                                                         <div className={`text-xs ${theme.colors.muted}`}>{selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                                     </div>
                                                 )}
@@ -882,7 +1154,10 @@ const StudentAppointments = () => {
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <ClockIcon className="w-5 h-5 text-cyan-500" />
-                                                <span className={theme.colors.text}>{selectedTime}</span>
+                                                <span className={theme.colors.text}>
+                                                    {selectedTime}
+                                                    {selectedSlotMode && <span className={`ml-2 text-xs ${theme.colors.muted}`}>({selectedSlotMode})</span>}
+                                                </span>
                                             </div>
                                         </div>
 
