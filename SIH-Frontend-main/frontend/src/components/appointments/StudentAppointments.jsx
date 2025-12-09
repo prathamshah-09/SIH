@@ -1,9 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useToast } from '../../hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { 
+    getCollegeCounsellors, 
+    bookAppointment,
+    getMyAppointments,
+    getSessionsSummary,
+    cancelAppointment as cancelAppointmentAPI,
+    formatDateToYYYYMMDD,
+    formatDateToISO,
+    convertTo24Hour
+} from '../../services/appointmentService';
+import { 
+    transformCounsellorsListData,
+    transformAppointmentsListData,
+    transformSessionsSummaryData,
+    transformBookingFormToAPI
+} from '../../services/appointmentAdapters';
 
 // --- SVG Icons ---
 const ChevronLeftIcon = () => (
@@ -66,8 +83,8 @@ const CheckCircleIcon = ({ className }) => (
     </svg>
 );
 
-// --- Mock Data ---
-const counsellors = [
+// --- Mock Data (kept as fallback) ---
+const mockCounsellors = [
     { id: 1, name: 'Dr. Anya Sharma', specialty: 'Cognitive Behavioral Therapy', imageUrl: 'https://placehold.co/100x100/E2E8F0/4A5568?text=AS', availableSlots: ['09:00 AM', '10:00 AM', '11:00 AM', '02:00 PM'] },
     { id: 2, name: 'Mr. Rohan Verma', specialty: 'Stress & Anxiety Management', imageUrl: 'https://placehold.co/100x100/E2E8F0/4A5568?text=RV', availableSlots: ['10:00 AM', '11:00 AM', '12:00 PM', '03:00 PM', '04:00 PM'] },
     { id: 3, name: 'Ms. Priya Singh', specialty: 'Mindfulness & Meditation', imageUrl: 'https://placehold.co/100x100/E2E8F0/4A5568?text=PS', availableSlots: ['09:00 AM', '03:00 PM', '04:00 PM', '05:00 PM'] },
@@ -85,42 +102,9 @@ const getFutureDate = (days) => {
     return date;
 };
 
-const initialAppointments = [
-    {
-        id: 'upcoming-1',
-        counsellor: counsellors[0],
-        date: getFutureDate(3),
-        time: '10:00 AM',
-        status: 'upcoming',
-        sessionNotes: 'Looking forward to discussing stress management techniques.',
-        actionItems: []
-    },
-    {
-        id: 'completed-1',
-        counsellor: counsellors[1],
-        date: getPastDate(7),
-        time: '03:00 PM',
-        status: 'completed',
-        sessionNotes: 'We talked about my pre-exam anxiety and strategies to stay calm. Breathing exercises seem promising.',
-        actionItems: [
-            { id: 1, text: 'Practice 5 minutes of deep breathing daily.', completed: true },
-            { id: 2, text: 'Create a study schedule for the upcoming week.', completed: true },
-            { id: 3, text: 'Try the 5-4-3-2-1 grounding technique when feeling overwhelmed.', completed: false },
-        ]
-    },
-    {
-        id: 'completed-2',
-        counsellor: counsellors[2],
-        date: getPastDate(14),
-        time: '09:00 AM',
-        status: 'completed',
-        sessionNotes: 'Focused on mindfulness and being present. It was helpful to disconnect from distracting thoughts.',
-        actionItems: [
-            { id: 1, text: 'Go for a 15-minute walk without my phone each day.', completed: true },
-            { id: 2, text: 'Listen to a guided meditation before bed.', completed: false },
-        ]
-    }
-];
+// Mock initial appointments removed - now fetched from API
+// Keeping structure for reference but not used anymore
+const initialAppointments = [];
 
 // --- Confirmation Modal Component ---
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, theme }) => {
@@ -151,14 +135,15 @@ const StudentAppointments = () => {
     const [view, setView] = useState('schedule');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [selectedCounsellor, setSelectedCounsellor] = useState(counsellors[0]);
+    const [counsellors, setCounsellors] = useState([]);
+    const [selectedCounsellor, setSelectedCounsellor] = useState(null);
     const [selectedTime, setSelectedTime] = useState(null);
     const [step, setStep] = useState(1);
     const [notes, setNotes] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [preparationGuide, setPreparationGuide] = useState('');
     const [isGuideGenerating, setIsGuideGenerating] = useState(false);
-    const [bookedAppointments, setBookedAppointments] = useState(initialAppointments);
+    const [bookedAppointments, setBookedAppointments] = useState([]);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [appointmentToCancel, setAppointmentToCancel] = useState(null);
     const [goalInput, setGoalInput] = useState({});
@@ -166,6 +151,108 @@ const StudentAppointments = () => {
     const [showCalendarModal, setShowCalendarModal] = useState(false);
     const [mobileShowTimeSelection, setMobileShowTimeSelection] = useState(false);
     const [expandedAppointments, setExpandedAppointments] = useState({});
+    
+    // Toast notifications
+    const { toast } = useToast();
+    
+    // Loading and Error States
+    const [loadingCounsellors, setLoadingCounsellors] = useState(false);
+    const [loadingAppointments, setLoadingAppointments] = useState(false);
+    const [appointmentsLoaded, setAppointmentsLoaded] = useState(false);
+    const [bookingInProgress, setBookingInProgress] = useState(false);
+    const [loadingSessionGoals, setLoadingSessionGoals] = useState(false);
+    const [sessionGoalsLoaded, setSessionGoalsLoaded] = useState(false);
+    const [sessionGoals, setSessionGoals] = useState([]);
+
+    // Fetch counsellors with availability when date changes
+    useEffect(() => {
+        const fetchCounsellors = async () => {
+            setLoadingCounsellors(true);
+            try {
+                const dateStr = formatDateToYYYYMMDD(selectedDate);
+                const response = await getCollegeCounsellors(dateStr);
+                const transformedCounsellors = transformCounsellorsListData(response);
+                setCounsellors(transformedCounsellors);
+                
+                // Reset selected counsellor when date changes to force re-selection
+                setSelectedCounsellor(null);
+                setSelectedTime(null);
+                
+                // Auto-select first counsellor if available
+                if (transformedCounsellors.length > 0) {
+                    setSelectedCounsellor(transformedCounsellors[0]);
+                }
+            } catch (err) {
+                console.error('Error fetching counsellors:', err);
+                // Show error toast
+                toast({
+                    title: "Failed to Load Counsellors",
+                    description: err.response?.data?.message || "Please try again later",
+                    variant: "destructive"
+                });
+                // Fallback to mock data if API fails
+                setCounsellors(mockCounsellors);
+                if (!selectedCounsellor) setSelectedCounsellor(mockCounsellors[0]);
+            } finally {
+                setLoadingCounsellors(false);
+            }
+        };
+        
+        // Only fetch if we're on the schedule view
+        if (view === 'schedule') {
+            fetchCounsellors();
+        }
+    }, [selectedDate, view, toast]); // Re-fetch when selectedDate or view changes
+    
+    // Fetch appointments on component mount and when switching to appointments view
+    useEffect(() => {
+        const fetchAppointments = async () => {
+            // Skip if already loaded or not on appointments/goals view
+            if (appointmentsLoaded || (view !== 'appointments' && view !== 'goals')) {
+                return;
+            }
+            
+            setLoadingAppointments(true);
+            try {
+                const response = await getMyAppointments();
+                const transformedAppointments = transformAppointmentsListData(response);
+                setBookedAppointments(transformedAppointments);
+                setAppointmentsLoaded(true);
+            } catch (err) {
+                console.error('Error fetching appointments:', err);
+                // Keep empty array if fetch fails
+            } finally {
+                setLoadingAppointments(false);
+            }
+        };
+        
+        fetchAppointments();
+    }, [view, appointmentsLoaded]); // Only re-fetch when view changes to appointments/goals and not loaded
+
+    // Fetch session goals when switching to goals view
+    useEffect(() => {
+        const fetchSessionGoals = async () => {
+            // Skip if already loaded or not on goals view
+            if (sessionGoalsLoaded || view !== 'goals') {
+                return;
+            }
+            
+            setLoadingSessionGoals(true);
+            try {
+                const response = await getSessionsSummary();
+                const transformedGoals = transformSessionsSummaryData(response);
+                setSessionGoals(transformedGoals);
+                setSessionGoalsLoaded(true);
+            } catch (err) {
+                console.error('Error fetching session goals:', err);
+                // Keep empty array if fetch fails
+            } finally {
+                setLoadingSessionGoals(false);
+            }
+        };
+        
+        fetchSessionGoals();
+    }, [view, sessionGoalsLoaded]); // Only re-fetch when view changes to goals and not loaded
 
     // Persist view state so refresh keeps the same section
     useEffect(() => {
@@ -180,17 +267,6 @@ const StudentAppointments = () => {
             localStorage.setItem('student_appointments_view', view);
         } catch (e) {}
     }, [view]);
-
-    useEffect(() => {
-        const now = new Date();
-        const updatedAppointments = bookedAppointments.map(app => {
-            if (app.status === 'upcoming' && app.date < now) {
-                return { ...app, status: 'completed' };
-            }
-            return app;
-        });
-        setBookedAppointments(updatedAppointments);
-    }, []);
 
     const firstDayOfMonth = useMemo(() => new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), [currentDate]);
     const daysInMonth = useMemo(() => new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate(), [currentDate]);
@@ -240,7 +316,92 @@ const StudentAppointments = () => {
         setIsGuideGenerating(false);
     };
 
-    const handleBookAppointment = () => {
+    const handleBookAppointment = async () => {
+        if (!selectedCounsellor || !selectedDate || !selectedTime) {
+            toast({
+                title: "Missing Information",
+                description: "Please select a counsellor, date, and time",
+                variant: "destructive"
+            });
+            return;
+        }
+        
+        setBookingInProgress(true);
+        
+        try {
+            // Transform form data to API format
+            const bookingData = transformBookingFormToAPI({
+                counsellorId: selectedCounsellor.id || selectedCounsellor.userId,
+                selectedDate: selectedDate,
+                selectedTime: selectedTime,
+                notes: notes,
+                type: 'individual'
+            });
+            
+            // Call API to book appointment
+            const response = await bookAppointment(bookingData);
+            
+            console.log('Booking successful! Response:', response);
+            
+            // Show success toast
+            toast({
+                title: "Success",
+                description: "Appointment booked successfully!",
+            });
+            
+            // Force re-fetch appointments from API to get the latest data
+            setAppointmentsLoaded(false);
+            
+            // Reset form
+            setStep(1);
+            setNotes('');
+            setSelectedTime(null);
+            setPreparationGuide('');
+            
+            // Switch to appointments view (this will trigger the useEffect to fetch appointments)
+            setView('appointments');
+        } catch (err) {
+            console.error('Error booking appointment:', err);
+            
+            // The api.js interceptor transforms errors, so err.data has the response
+            const responseData = err.data || err.response?.data;
+            console.error('Error response full:', JSON.stringify(responseData, null, 2));
+            
+            // Extract error message from response
+            let errorMessage = 'Failed to book appointment. Please try again.';
+            
+            if (responseData) {
+                // Check for validation errors
+                if (responseData.validation && Array.isArray(responseData.validation)) {
+                    const validationMessages = responseData.validation.map(v => `${v.field}: ${v.message}`).join(', ');
+                    errorMessage = `Validation error: ${validationMessages}`;
+                } else if (responseData.details && Array.isArray(responseData.details)) {
+                    // Handle error details array
+                    const detailMessages = responseData.details.map(d => 
+                      typeof d === 'string' ? d : (d.message || JSON.stringify(d))
+                    ).join(', ');
+                    errorMessage = `${responseData.message || 'Validation error'}: ${detailMessages}`;
+                } else if (typeof responseData.message === 'string') {
+                    errorMessage = responseData.message;
+                } else if (typeof responseData.error === 'string') {
+                    errorMessage = responseData.error;
+                }
+            } else if (typeof err.message === 'string') {
+                errorMessage = err.message;
+            }
+            
+            toast({
+                title: "Booking Failed",
+                description: errorMessage,
+                variant: "destructive"
+            });
+        } finally {
+            setBookingInProgress(false);
+        }
+    };
+    
+    // Old mock version (kept for reference, can be removed)
+    const handleBookAppointmentOld = () => {
         const newAppointment = {
             id: `appointment-${Date.now()}`,
             counsellor: selectedCounsellor,
@@ -420,7 +581,7 @@ const StudentAppointments = () => {
                             <button onClick={() => setView('schedule')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
                                 {t('bookAppointment')}
                             </button>
-                            <button onClick={() => setView('a   ppointments')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
+                            <button onClick={() => setView('appointments')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
                                 {t('myAppointments')}
                             </button>
                             <button onClick={() => setView('goals')} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-3 rounded-lg text-xs text-center">
@@ -437,51 +598,91 @@ const StudentAppointments = () => {
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 {/* Counselor Selection */}
                                 <div className="space-y-6">
-                                    <h3 className={`text-xl font-semibold ${theme.colors.text}`}>1. {t('chooseYourCounselor')}</h3>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className={`text-xl font-semibold ${theme.colors.text}`}>1. {t('chooseYourCounselor')}</h3>
+                                        <div className={`text-sm ${theme.colors.muted}`}>
+                                            {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Loading State */}
+                                    {loadingCounsellors && (
+                                        <div className="text-center py-8">
+                                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div>
+                                            <p className={`${theme.colors.muted} mt-2`}>Loading counsellors for selected date...</p>
+                                        </div>
+                                    )}
+                                    
                                     {/* Counselor selection cards */}
-                                    <div className="space-y-4">
-                                        {counsellors.map((counsellor) => (
-                                            <div
-                                                key={counsellor.id}
-                                                className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                                                    selectedCounsellor.id === counsellor.id
-                                                        ? currentTheme === 'midnight'
-                                                            ? 'border-slate-500 bg-slate-800'
-                                                            : 'border-cyan-500 bg-cyan-50'
-                                                        : currentTheme === 'midnight'
-                                                            ? 'border-slate-700 hover:border-slate-500 bg-slate-800/70'
-                                                            : 'border-gray-200 hover:border-cyan-300'
-                                                }`}
-                                                onClick={() => {
-                                                    setSelectedCounsellor(counsellor);
-                                                    // On mobile, after selecting a counsellor, reveal time + notes selector
-                                                    try {
-                                                        if (window?.innerWidth && window.innerWidth < 1024) {
-                                                            setMobileShowTimeSelection(true);
-                                                            setSelectedTime(null);
+                                    {!loadingCounsellors && counsellors.length > 0 && (
+                                        <div className="space-y-4">
+                                            {counsellors.map((counsellor) => (
+                                                <div
+                                                    key={counsellor.id}
+                                                    className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                                                        selectedCounsellor?.id === counsellor.id
+                                                            ? currentTheme === 'midnight'
+                                                                ? 'border-slate-500 bg-slate-800'
+                                                                : 'border-cyan-500 bg-cyan-50'
+                                                            : currentTheme === 'midnight'
+                                                                ? 'border-slate-700 hover:border-slate-500 bg-slate-800/70'
+                                                                : 'border-gray-200 hover:border-cyan-300'
+                                                    }`}
+                                                    onClick={() => {
+                                                        setSelectedCounsellor(counsellor);
+                                                        setSelectedTime(null); // Reset time when changing counsellor
+                                                        // On mobile, after selecting a counsellor, reveal time + notes selector
+                                                        try {
+                                                            if (window?.innerWidth && window.innerWidth < 1024) {
+                                                                setMobileShowTimeSelection(true);
+                                                            }
+                                                        } catch (e) {
+                                                            // fallback: do nothing
                                                         }
-                                                    } catch (e) {
-                                                        // fallback: do nothing
-                                                    }
-                                                }}
-                                            >
-                                                <div className="flex items-center space-x-4">
-                                                    <img src={counsellor.imageUrl} alt={counsellor.name} className="w-16 h-16 rounded-full" />
-                                                    <div className="flex-1">
-                                                        <h4 className={`font-bold ${theme.colors.text}`}>{counsellor.name}</h4>
-                                                        <p className={`${theme.colors.muted} text-sm`}>{counsellor.specialty}</p>
-                                                        <div className="flex flex-wrap gap-2 mt-2">
-                                                            {counsellor.availableSlots.slice(0, 3).map((slot, index) => (
-                                                                <Badge key={index} variant="outline" className="text-xs border-cyan-300 text-cyan-700">
-                                                                    {slot}
-                                                                </Badge>
-                                                            ))}
+                                                    }}
+                                                >
+                                                    <div className="flex items-center space-x-4">
+                                                        <img src={counsellor.imageUrl} alt={counsellor.name} className="w-16 h-16 rounded-full" />
+                                                        <div className="flex-1">
+                                                            <h4 className={`font-bold ${theme.colors.text}`}>{counsellor.name}</h4>
+                                                            <p className={`${theme.colors.muted} text-sm`}>{counsellor.specialty}</p>
+                                                            <div className="mt-2">
+                                                                {counsellor.availableSlots && counsellor.availableSlots.length > 0 ? (
+                                                                    <>
+                                                                        <p className={`text-xs ${theme.colors.muted} mb-1`}>
+                                                                            Available today: {counsellor.availableSlots.length} slot{counsellor.availableSlots.length > 1 ? 's' : ''}
+                                                                        </p>
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {counsellor.availableSlots.slice(0, 4).map((slot, index) => (
+                                                                                <Badge key={`${counsellor.id}-slot-${index}`} variant="outline" className="text-xs border-cyan-300 text-cyan-700 bg-cyan-50">
+                                                                                    {slot}
+                                                                                </Badge>
+                                                                            ))}
+                                                                            {counsellor.availableSlots.length > 4 && (
+                                                                                <Badge key={`${counsellor.id}-more`} variant="outline" className="text-xs border-gray-300 text-gray-600">
+                                                                                    +{counsellor.availableSlots.length - 4} more
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    </>
+                                                                ) : (
+                                                                    <p className={`${theme.colors.muted} text-xs italic`}>No available slots for this date</p>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {/* No Counsellors Found */}
+                                    {!loadingCounsellors && counsellors.length === 0 && (
+                                        <div className={`text-center py-8 ${theme.colors.secondary} rounded-lg`}>
+                                            <p className={`${theme.colors.muted}`}>No counsellors available for the selected date.</p>
+                                            <p className={`${theme.colors.muted} text-sm mt-2`}>Try selecting a different date.</p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Calendar and Time Selection (desktop only) */}
@@ -514,24 +715,32 @@ const StudentAppointments = () => {
                                     {/* Time Selection */}
                                     <div>
                                         <h4 className={`font-semibold ${theme.colors.text} mb-3`}>{t('availableTimes')}</h4>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {selectedCounsellor.availableSlots.map((time) => (
-                                                <Button
-                                                    key={time}
-                                                    onClick={() => { setSelectedTime(time); if (!selectedCounsellor) setSelectedCounsellor(counsellors[0]); }}
-                                                    variant={selectedTime === time ? 'animated' : 'outline'}
-                                                    className={`p-3 transition-all duration-200 ${
-                                                        currentTheme === 'midnight'
-                                                          ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
-                                                          : ''
-                                                    } ${
-                                                        selectedTime !== time ? 'hover:bg-cyan-50' : ''
-                                                    }`}
-                                                >
-                                                    {time}
-                                                </Button>
-                                            ))}
-                                        </div>
+                                        {selectedCounsellor && selectedCounsellor.availableSlots && selectedCounsellor.availableSlots.length > 0 ? (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {selectedCounsellor.availableSlots.map((time, idx) => (
+                                                    <Button
+                                                        key={`time-${idx}-${time}`}
+                                                        onClick={() => setSelectedTime(time)}
+                                                        variant={selectedTime === time ? 'animated' : 'outline'}
+                                                        className={`p-3 transition-all duration-200 ${
+                                                            currentTheme === 'midnight'
+                                                              ? 'text-white border-slate-700 hover:bg-slate-700 hover:text-white'
+                                                              : ''
+                                                        } ${
+                                                            selectedTime !== time ? 'hover:bg-cyan-50' : ''
+                                                        }`}
+                                                    >
+                                                        {time}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className={`text-center py-6 ${theme.colors.secondary} rounded-lg`}>
+                                                <p className={`${theme.colors.muted} text-sm`}>
+                                                    No available times for this counsellor on the selected date.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -558,11 +767,12 @@ const StudentAppointments = () => {
                                             <div>
                                                 <div className="mb-2">
                                                     <div className={`text-xs ${theme.colors.muted} mb-1`}>{t('selectAvailableTime')}</div>
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        {selectedCounsellor.availableSlots.map((time) => (
+                                                    {selectedCounsellor && selectedCounsellor.availableSlots && selectedCounsellor.availableSlots.length > 0 ? (
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            {selectedCounsellor.availableSlots.map((time, idx) => (
                                                             <Button
-                                                                key={time}
-                                                                onClick={() => { setSelectedTime(time); if (!selectedCounsellor) setSelectedCounsellor(counsellors[0]); }}
+                                                                key={`mobile-time-${idx}-${time}`}
+                                                                onClick={() => setSelectedTime(time)}
                                                                 variant={selectedTime === time ? 'animated' : 'outline'}
                                                                 className={`text-sm p-3 transition-colors ${
                                                                     currentTheme === 'midnight'
@@ -575,7 +785,12 @@ const StudentAppointments = () => {
                                                                 {time}
                                                             </Button>
                                                         ))}
-                                                    </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className={`text-center py-4 ${theme.colors.secondary} rounded-lg`}>
+                                                            <p className={`${theme.colors.muted} text-xs`}>No available times</p>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {selectedTime && (
@@ -640,7 +855,7 @@ const StudentAppointments = () => {
                         </div>
                     )}
 
-                    {view === 'schedule' && step === 2 && (
+                    {view === 'schedule' && step === 2 && selectedCounsellor && (
                         <div className="space-y-6">
                             <div className="text-center">
                                 <h2 className={`text-3xl font-bold ${theme.colors.text} mb-2`}>{t('confirmYourAppointment')}</h2>
@@ -685,6 +900,7 @@ const StudentAppointments = () => {
                                 <Button
                                     onClick={() => setStep(1)}
                                     variant="outline"
+                                    disabled={bookingInProgress}
                                     className={`${theme.currentTheme === 'midnight' ? 'hover:bg-slate-700 border-slate-600' : 'hover:bg-gray-50'}`}
                                 >
                                     {t('backToEdit')}
@@ -692,9 +908,20 @@ const StudentAppointments = () => {
                                 <Button
                                     onClick={handleBookAppointment}
                                     variant="animated"
+                                    disabled={bookingInProgress}
+                                    className="disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <CheckCircleIcon className="w-5 h-5 mr-2" />
-                                    {t('confirmBooking')}
+                                    {bookingInProgress ? (
+                                        <>
+                                            <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                            Booking...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircleIcon className="w-5 h-5 mr-2" />
+                                            {t('confirmBooking')}
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </div>
@@ -702,26 +929,40 @@ const StudentAppointments = () => {
 
                     {view === 'appointments' && (
                         <div className="space-y-8">
+                            {/* Loading State */}
+                            {loadingAppointments && (
+                                <div className="text-center py-12">
+                                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mb-4"></div>
+                                    <p className={`${theme.colors.muted}`}>Loading your appointments...</p>
+                                </div>
+                            )}
 
-                            {/* Upcoming Appointments */}
-                            <div>
-                                <h3 className={`text-2xl font-bold ${theme.colors.text} mb-6 flex items-center`}>
-                                    <ClockIcon className="w-6 h-6 mr-2 text-cyan-500" />
-                                    {t('sessions') || t('upcomingSessions')}
-                                </h3>
-                                <div className="space-y-4">
-                                    {upcomingAppointments.length > 0 ? upcomingAppointments.map(app => (
+                            {/* Appointments Content */}
+                            {!loadingAppointments && (
+                                <>
+                                    {/* Upcoming Appointments */}
+                                    <div>
+                                        <h3 className={`text-2xl font-bold ${theme.colors.text} mb-6 flex items-center`}>
+                                            <ClockIcon className="w-6 h-6 mr-2 text-cyan-500" />
+                                            {t('sessions') || t('upcomingSessions')}
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {upcomingAppointments.length > 0 ? upcomingAppointments.map(app => (
                                         <Card key={app.id} className={`${theme.colors.card} shadow-md border-0`}>
                                             <CardContent className="p-4">
                                                 <div>
                                                     <button className="w-full text-left" onClick={() => setExpandedAppointments(prev => ({ ...prev, [app.id]: !prev[app.id] }))}>
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center space-x-3">
-                                                                <img src={app.counsellor.imageUrl} alt={app.counsellor.name} className="w-12 h-12 rounded-full" />
-                                                                <div>
-                                                                    <div className={`font-semibold ${theme.colors.text}`}>{app.counsellor.name}</div>
-                                                                    <div className={`text-sm ${theme.colors.muted}`}>{app.time}</div>
-                                                                </div>
+                                                                {app.counsellor && (
+                                                                    <>
+                                                                        <img src={app.counsellor.imageUrl} alt={app.counsellor.name} className="w-12 h-12 rounded-full" />
+                                                                        <div>
+                                                                            <div className={`font-semibold ${theme.colors.text}`}>{app.counsellor.name}</div>
+                                                                            <div className={`text-sm ${theme.colors.muted}`}>{app.time}</div>
+                                                                        </div>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                             <div className={`text-xs ${theme.colors.text}`}>{app.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                                         </div>
@@ -783,11 +1024,15 @@ const StudentAppointments = () => {
                                                     <button className="w-full text-left" onClick={() => setExpandedAppointments(prev => ({ ...prev, [app.id]: !prev[app.id] }))}>
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center space-x-3">
-                                                                <img src={app.counsellor.imageUrl} alt={app.counsellor.name} className="w-12 h-12 rounded-full" />
-                                                                <div>
-                                                                    <div className={`font-semibold ${theme.colors.text}`}>Session with {app.counsellor.name}</div>
-                                                                    <div className={`text-sm ${theme.colors.muted}`}>{app.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} • {app.time}</div>
-                                                                </div>
+                                                                {app.counsellor && (
+                                                                    <>
+                                                                        <img src={app.counsellor.imageUrl} alt={app.counsellor.name} className="w-12 h-12 rounded-full" />
+                                                                        <div>
+                                                                            <div className={`font-semibold ${theme.colors.text}`}>Session with {app.counsellor.name}</div>
+                                                                            <div className={`text-sm ${theme.colors.muted}`}>{app.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} • {app.time}</div>
+                                                                        </div>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                             <Badge className="bg-green-100 text-green-800">{t('completed')}</Badge>
                                                         </div>
@@ -816,6 +1061,8 @@ const StudentAppointments = () => {
                                     )}
                                 </div>
                             </div>
+                                </>
+                            )}
                         </div>
                     )}
 
@@ -826,10 +1073,19 @@ const StudentAppointments = () => {
                                 <p className={`${theme.colors.muted} text-sm sm:text-base`}>{t('trackTasksAssigned')}</p>
                             </div>
 
-                            {completedAppointments.length > 0 ? (
+                            {loadingSessionGoals ? (
+                                <div className="text-center py-8">
+                                    <div className={`inline-flex items-center justify-center space-x-2 ${theme.colors.muted}`}>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce"></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                    </div>
+                                    <p className={`mt-2 ${theme.colors.muted}`}>Loading session goals...</p>
+                                </div>
+                            ) : sessionGoals.length > 0 ? (
                                 <div className="space-y-6">
-                                    {completedAppointments.map(app => (
-                                        app.actionItems.length > 0 && (
+                                    {sessionGoals.map(app => (
+                                        app.actionItems && app.actionItems.length > 0 && app.counsellor && (
                                             <Card key={app.id} className={`shadow-lg border-0 ${theme.currentTheme === 'midnight' ? 'bg-slate-900 border border-slate-800' : theme.colors.card}`}>
                                                 <CardHeader>
                                                     <div className="flex items-start justify-between">
@@ -841,27 +1097,36 @@ const StudentAppointments = () => {
                                                                 {app.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} at {app.time}
                                                             </p>
                                                         </div>
+                                                        <Badge className="bg-green-500 text-white">{t('completed')}</Badge>
                                                     </div>
                                                 </CardHeader>
                                                 <CardContent>
-                                                    <div className="space-y-3">
-                                                        <h5 className={`font-semibold text-sm sm:text-base ${theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text}`}>Action Items:</h5>
-                                                        {app.actionItems.map(item => (
-                                                            <div key={item.id} className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${theme.currentTheme === 'midnight' ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={item.completed}
-                                                                    onChange={() => toggleActionItem(app.id, item.id)}
-                                                                    className={`w-5 h-5 text-cyan-600 ${theme.currentTheme === 'midnight' ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'} rounded focus:ring-cyan-500 cursor-pointer`}
-                                                                />
-                                                                <span className={`flex-1 text-sm sm:text-base ${item.completed ? (theme.currentTheme === 'midnight' ? 'line-through text-slate-400' : `line-through ${theme.colors.muted}`) : (theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text)}`}>
-                                                                    {item.text}
-                                                                </span>
-                                                                {item.completed && (
-                                                                    <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                                                )}
+                                                    <div className="space-y-4">
+                                                        {app.sessionNotes && (
+                                                            <div className={`p-3 rounded-lg ${theme.currentTheme === 'midnight' ? 'bg-slate-800' : 'bg-blue-50'}`}>
+                                                                <p className={`text-sm ${theme.colors.muted} mb-1`}>Session Notes:</p>
+                                                                <p className={`${theme.colors.text}`}>{app.sessionNotes}</p>
                                                             </div>
-                                                        ))}
+                                                        )}
+                                                        <div>
+                                                            <h5 className={`font-semibold text-sm sm:text-base mb-3 ${theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text}`}>Action Items:</h5>
+                                                            {app.actionItems.map(item => (
+                                                                <div key={item.id} className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${theme.currentTheme === 'midnight' ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={item.completed}
+                                                                        onChange={() => toggleActionItem(app.id, item.id)}
+                                                                        className={`w-5 h-5 text-cyan-600 ${theme.currentTheme === 'midnight' ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'} rounded focus:ring-cyan-500 cursor-pointer`}
+                                                                    />
+                                                                    <span className={`flex-1 text-sm sm:text-base ${item.completed ? (theme.currentTheme === 'midnight' ? 'line-through text-slate-400' : `line-through ${theme.colors.muted}`) : (theme.currentTheme === 'midnight' ? 'text-white' : theme.colors.text)}`}>
+                                                                        {item.text}
+                                                                    </span>
+                                                                    {item.completed && (
+                                                                        <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </CardContent>
                                             </Card>
