@@ -497,8 +497,29 @@ const CounsellorAppointments = () => {
         setProcessingRequest(appointmentId);
         
         try {
+            const appointmentToUpdate = appointments.find(app => app.id === appointmentId);
+            
             if (action === 'accept') {
                 await acceptAppointmentRequest(appointmentId);
+                
+                // When accepting, delete the matching availability slot
+                if (appointmentToUpdate && appointmentToUpdate.date && appointmentToUpdate.time) {
+                    const dateKey = formatDateToKey(appointmentToUpdate.date);
+                    const timeSlot = appointmentToUpdate.time;
+                    
+                    // Find availability ID that matches this appointment
+                    const matchingAvailability = (availability[dateKey] || []).find(slot => slot === timeSlot);
+                    
+                    if (matchingAvailability) {
+                        // Find the availability ID from the response or from the appointment
+                        // For now, we'll remove from UI and let backend sync on next refresh
+                        setAvailability(prev => ({
+                            ...prev,
+                            [dateKey]: (prev[dateKey] || []).filter(slot => slot !== timeSlot)
+                        }));
+                    }
+                }
+                
                 toast({
                     title: "Success",
                     description: "Appointment request accepted!"
@@ -511,28 +532,15 @@ const CounsellorAppointments = () => {
                 });
             }
             
-            // Update local state optimistically
-            const updatedAppointments = appointments.map(app => {
-                if (app.id === appointmentId) {
-                    switch (action) {
-                        case 'accept':
-                            return { ...app, status: 'upcoming' };
-                        case 'decline':
-                            return { ...app, status: 'declined' };
-                        case 'reschedule':
-                            return { ...app, status: 'rescheduling' };
-                        default:
-                            return app;
-                    }
-                }
-                return app;
-            });
-            setAppointments(updatedAppointments);
+            // Refresh the requests list to get updated data
+            setRequestsLoaded(false);
+            setSessionsLoaded(false);
         } catch (err) {
             console.error(`Error ${action}ing appointment:`, err);
+            console.error('Full error details:', JSON.stringify(err, null, 2));
             toast({
                 title: "Error",
-                description: `Failed to ${action} appointment. Please try again.`,
+                description: `Failed to ${action} appointment. ${err.message || 'Please try again.'}`,
                 variant: "destructive"
             });
         } finally {
