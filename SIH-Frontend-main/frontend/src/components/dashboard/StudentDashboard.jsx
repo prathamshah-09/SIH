@@ -96,7 +96,15 @@ const RealtimeVoice = ({ onAddMessage, theme }) => {
         headers: { "Content-Type": "application/json" }
       });
 
-      if (!tokenRes.ok) throw new Error("Failed to get session token");
+      if (!tokenRes.ok) {
+        // Try to surface backend message for clarity (e.g., missing API key or network failure)
+        let msg = "Failed to get session token";
+        try {
+          const errJson = await tokenRes.json();
+          msg = errJson?.message || msg;
+        } catch (_) {}
+        throw new Error(msg);
+      }
       
       const response = await tokenRes.json();
       const { client_secret } = response.data || response;
@@ -386,16 +394,10 @@ const StudentDashboard = () => {
             timestamp: new Date()
           }
         ]);
-      } catch (e) {
-        console.error('Failed to load messages from backend:', e);
-        setMessages([
-          {
-            id: 1,
-            text: "Hi! I'm your AI companion. How can I help today?",
-            isBot: true,
-            timestamp: new Date()
-          }
-        ]);
+      } catch (err) {
+        console.error("Realtime session error:", err);
+        setStatus(err?.message ? `Error: ${err.message}` : "Failed to start");
+        setIsConnecting(false);
       }
     };
 

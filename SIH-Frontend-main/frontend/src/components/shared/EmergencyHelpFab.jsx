@@ -11,10 +11,10 @@ const EmergencyHelpFab = ({ theme }) => {
   ];
 
   return (
-    <div className="fixed left-4 bottom-4 z-[1200] space-y-3">
+    <div className="fixed left-4 bottom-4 z-20 space-y-3 pointer-events-none">
       <div
         className={`rounded-lg shadow-lg overflow-hidden border border-cyan-200/40 ${
-          open ? "opacity-100 translate-y-0" : "opacity-0 pointer-events-none translate-y-3"
+          open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 pointer-events-none translate-y-3"
         } transition-all duration-200 bg-white/90 dark:bg-slate-900/90 backdrop-blur`}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200/50 dark:border-slate-700/50">
@@ -57,7 +57,7 @@ const EmergencyHelpFab = ({ theme }) => {
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg flex items-center justify-center text-xl hover:scale-105 active:scale-95 transition"
+        className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg flex items-center justify-center text-xl hover:scale-105 active:scale-95 transition pointer-events-auto"
         aria-label="Emergency helplines"
       >
         🚑
