@@ -73,7 +73,8 @@ const AnnouncementManagement = () => {
     }
   }, [sheetOpen]);
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
+    // Client-side validation
     if (!title.trim() || !content.trim()) {
       toast({
         title: t('missingInformation'),
@@ -83,37 +84,92 @@ const AnnouncementManagement = () => {
       return;
     }
 
-    addAnnouncement({
+    // Validate title length (min 3 characters)
+    if (title.trim().length < 3) {
+      toast({
+        title: 'Invalid Title',
+        description: 'Title must be at least 3 characters long',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate content length (min 10 characters)
+    if (content.trim().length < 10) {
+      toast({
+        title: 'Invalid Content',
+        description: 'Content must be at least 10 characters long',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate duration (1-365 days)
+    const duration = parseInt(durationDays) || 7;
+    if (duration < 1 || duration > 365) {
+      toast({
+        title: 'Invalid Duration',
+        description: 'Duration must be between 1 and 365 days',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const result = await addAnnouncement({
       title: title.trim(),
       content: content.trim(),
-      visible: true,
-      durationDays: parseInt(durationDays)
+      durationDays: duration
     });
 
-    toast({
-      title: t('announcementPublished'),
-      description: t('announcementLiveMessage'),
-      className: 'animate-celebration'
-    });
+    if (result.success) {
+      toast({
+        title: t('announcementPublished'),
+        description: t('announcementLiveMessage'),
+        className: 'animate-celebration'
+      });
 
-    // Reset form
-    setTitle('');
-    setContent('');
-    setDurationDays(7);
-    // close mobile sheet if open
-    setSheetOpen(false);
+      // Reset form
+      setTitle('');
+      setContent('');
+      setDurationDays(7);
+      // close mobile sheet if open
+      setSheetOpen(false);
+    } else {
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to publish announcement',
+        variant: 'destructive'
+      });
+    }
   };
 
-  const handleDelete = (id) => {
-    deleteAnnouncement(id);
-    toast({
-      title: t('announcementDeletedTitle'),
-      description: t('announcementDeletedDesc'),
-    });
+  const handleDelete = async (id) => {
+    const result = await deleteAnnouncement(id);
+    
+    if (result.success) {
+      toast({
+        title: t('announcementDeletedTitle'),
+        description: t('announcementDeletedDesc'),
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to delete announcement',
+        variant: 'destructive'
+      });
+    }
   };
 
-  const toggleVisibility = (id, currentVisibility) => {
-    updateAnnouncement(id, { visible: !currentVisibility });
+  const toggleVisibility = async (id, currentVisibility) => {
+    const result = await updateAnnouncement(id, { visible: !currentVisibility });
+    
+    if (!result.success) {
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to update announcement',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
@@ -260,10 +316,6 @@ const AnnouncementManagement = () => {
                         <span className="flex items-center">
                           <Calendar className="w-3 h-3 mr-1.5" />
                           {announcement.date}
-                        </span>
-                        <span className="flex items-center">
-                          <BarChart2 className="w-3 h-3 mr-1.5" />
-                          {announcement.views} {t('views')}
                         </span>
                       </div>
                     </div>

@@ -1,4 +1,14 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  createAnnouncement as apiCreateAnnouncement,
+  getAdminAnnouncements as apiGetAdminAnnouncements,
+  updateAnnouncement as apiUpdateAnnouncement,
+  deleteAnnouncement as apiDeleteAnnouncement,
+  getUserAnnouncements as apiGetUserAnnouncements,
+  markAnnouncementSeen as apiMarkAnnouncementSeen,
+  transformAnnouncementForFrontend,
+  transformAnnouncementForBackend
+} from '../services/announcementApi';
 
 const AnnouncementContext = createContext();
 
@@ -11,53 +21,161 @@ export const useAnnouncements = () => {
 };
 
 export const AnnouncementProvider = ({ children }) => {
-  // TODO: Replace sample data with backend-fetched announcements/forms.
-  const sampleAnnouncements = [
-    {
-      id: 1,
-      title: "Welcome to New Semester",
-      content: "We're excited to welcome you all back for another semester of growth and learning. Remember, your mental health is just as important as your academic success.",
-      date: new Date().toISOString().split('T')[0],
-      visible: true,
-      views: 234,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 2,
-      title: "Mental Health Awareness Week",
-      content: "Join us for a special week dedicated to mental health awareness and support. Various workshops and group sessions will be available.",
-      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      visible: true,
-      views: 456,
-      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  ];
-  const [announcements, setAnnouncements] = useState(sampleAnnouncements);
+  const [announcements, setAnnouncements] = useState([]);
   const [forms, setForms] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Determine user role for appropriate API calls
+  const userRole = typeof window !== 'undefined' 
+    ? localStorage.getItem('sensee_role') || 'student'
+    : 'student';
 
-  const addAnnouncement = (announcement) => {
-    const newAnnouncement = {
-      ...announcement,
-      id: Date.now(),
-      date: new Date().toISOString().split('T')[0],
-      views: 0,
-      createdAt: new Date().toISOString()
-    };
-    setAnnouncements(prev => [newAnnouncement, ...prev]);
+  // Fetch announcements on mount based on role
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [userRole]);
+
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      let response;
+      if (userRole === 'admin') {
+        // Admin: fetch all announcements with pagination
+        response = await apiGetAdminAnnouncements({ limit: 100 });
+        const transformedAnnouncements = (response.data || []).map(transformAnnouncementForFrontend);
+        setAnnouncements(transformedAnnouncements);
+      } else {
+        // Student/Counsellor: fetch visible announcements for their role
+        response = await apiGetUserAnnouncements();
+        const transformedAnnouncements = (response.data || []).map(transformAnnouncementForFrontend);
+        setAnnouncements(transformedAnnouncements);
+      }
+    } catch (err) {
+      console.error('Failed to fetch announcements:', err);
+      setError(err.message || 'Failed to load announcements');
+      // Keep empty array on error
+      setAnnouncements([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [userRole]);
+
+  const addAnnouncement = async (announcementData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const backendPayload = transformAnnouncementForBackend(announcementData);
+      console.log('Sending to backend:', backendPayload);
+      const response = await apiCreateAnnouncement(backendPayload);
+      
+      const newAnnouncement = transformAnnouncementForFrontend(response.data);
+      setAnnouncements(prev => [newAnnouncement, ...prev]);
+      
+      return { success: true, data: newAnnouncement };
+    } catch (err) {
+      console.error('Full error object:', err);
+      console.error('Error response data:', err.data);
+      
+      // Extract validation errors from response
+      if (err.data?.error?.details?.validation) {
+        const validationErrors = err.data.error.details.validation;
+        console.error('Validation errors:', validationErrors);
+        const errorMessages = validationErrors.map(e => `${e.field}: ${e.message}`).join(', ');
+        setError(errorMessages);
+        return { success: false, error: errorMessages };
+      }
+      
+      setError(err.message || 'Failed to create announcement');
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateAnnouncement = (id, updates) => {
-    setAnnouncements(prev => 
-      prev.map(announcement => 
-        announcement.id === id 
-          ? { ...announcement, ...updates }
-          : announcement
-      )
-    );
+  const updateAnnouncement = async (id, updates) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Transform updates to backend format if needed
+      const backendUpdates = {};
+      if (updates.title) backendUpdates.title = updates.title;
+      if (updates.content) backendUpdates.content = updates.content;
+      if (updates.durationDays) backendUpdates.duration_days = updates.durationDays;
+      if (updates.visible !== undefined) backendUpdates.is_active = updates.visible;
+      if (updates.type) backendUpdates.type = updates.type;
+      if (updates.targetRole) backendUpdates.target_role = updates.targetRole;
+      
+      const response = await apiUpdateAnnouncement(id, backendUpdates);
+      const updatedAnnouncement = transformAnnouncementForFrontend(response.data);
+      
+      setAnnouncements(prev => 
+        prev.map(announcement => 
+          announcement.id === id ? updatedAnnouncement : announcement
+        )
+      );
+      
+      return { success: true, data: updatedAnnouncement };
+    } catch (err) {
+      console.error('Failed to update announcement:', err);
+      setError(err.message || 'Failed to update announcement');
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteAnnouncement = (id) => {
-    setAnnouncements(prev => prev.filter(announcement => announcement.id !== id));
+  const deleteAnnouncement = async (id) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      await apiDeleteAnnouncement(id);
+      setAnnouncements(prev => prev.filter(announcement => announcement.id !== id));
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Failed to delete announcement:', err);
+      setError(err.message || 'Failed to delete announcement');
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const incrementViews = async (id) => {
+    try {
+      // Optimistically update UI
+      setAnnouncements(prev => 
+        prev.map(announcement => 
+          announcement.id === id 
+            ? { ...announcement, views: (announcement.views || 0) + 1, hasSeen: true }
+            : announcement
+        )
+      );
+      
+      // Call backend to mark as seen
+      const response = await apiMarkAnnouncementSeen(id);
+      
+      // Update with actual backend count
+      if (response.data) {
+        setAnnouncements(prev => 
+          prev.map(announcement => 
+            announcement.id === id 
+              ? { ...announcement, views: response.data.seen_count, hasSeen: true }
+              : announcement
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Failed to mark announcement as seen:', err);
+      // Revert optimistic update on error
+      await fetchAnnouncements();
+    }
   };
 
   const addForm = (form) => {
@@ -71,7 +189,7 @@ export const AnnouncementProvider = ({ children }) => {
   };
 
   const getVisibleAnnouncements = () => {
-    return announcements.filter(announcement => announcement.visible);
+    return announcements.filter(announcement => announcement.visible !== false);
   };
 
   const getRecentAnnouncements = (limit = 3) => {
@@ -80,22 +198,23 @@ export const AnnouncementProvider = ({ children }) => {
       .slice(0, limit);
   };
 
-  const incrementViews = (id) => {
-    const target = announcements.find(a => a.id === id);
-    if (!target) return;
-    updateAnnouncement(id, { views: (target.views || 0) + 1 });
+  const refreshAnnouncements = () => {
+    return fetchAnnouncements();
   };
 
   const value = {
     announcements,
     forms,
+    loading,
+    error,
     addAnnouncement,
     updateAnnouncement,
     deleteAnnouncement,
     addForm,
     getVisibleAnnouncements,
     getRecentAnnouncements,
-    incrementViews
+    incrementViews,
+    refreshAnnouncements
   };
 
   return (
