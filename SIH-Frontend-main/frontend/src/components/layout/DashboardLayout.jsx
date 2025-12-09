@@ -9,6 +9,7 @@ import ThemeLanguageSelector from '@components/shared/ThemeLanguageSelector';
 import AnimatedBackground from '@components/shared/AnimatedBackground';
 import SensEaseLogo from '@components/shared/SensEaseLogo';
 import ProfileDropdown from '@components/shared/ProfileDropdown';
+import EmergencyHelpFab from '@components/shared/EmergencyHelpFab';
 
 const DashboardLayout = ({ children, sidebarContent }) => {
   const { user, logout } = useAuth();
@@ -145,6 +146,9 @@ const DashboardLayout = ({ children, sidebarContent }) => {
           </div>
         </main>
       </div>
+      
+      {/* Emergency Helpline FAB */}
+      <EmergencyHelpFab />
     </div>
   );
 };
