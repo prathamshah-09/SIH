@@ -378,16 +378,15 @@ const CounsellorAppointments = () => {
                 const transformedRequests = transformAppointmentRequestsListData(response);
                 console.log('[CounsellorAppointments] After transformation:', transformedRequests);
                 
-                // Replace pending appointments with real requests
-                const updatedAppointments = appointments.map(app => 
-                    app.status !== 'pending' ? app : null
-                ).filter(Boolean);
-                
-                // Add the fetched requests
-                const finalAppointments = [...transformedRequests, ...updatedAppointments];
-                console.log('[CounsellorAppointments] Setting appointments:', finalAppointments);
-                setAppointments(finalAppointments);
+                // Set loaded flag FIRST to prevent infinite loops
                 setRequestsLoaded(true);
+                
+                // Replace pending appointments with real requests
+                setAppointments(prev => {
+                    const nonPending = prev.filter(app => app.status !== 'pending');
+                    return [...transformedRequests, ...nonPending];
+                });
+                console.log('[CounsellorAppointments] Setting appointments with requests');
             } catch (err) {
                 console.error('Error fetching appointment requests:', err);
                 toast({
@@ -403,6 +402,15 @@ const CounsellorAppointments = () => {
         
         fetchRequests();
     }, [view, requestsLoaded]);
+
+    // Auto-refresh requests every 60s when viewing the requests tab
+    useEffect(() => {
+        if (view !== 'requests') return;
+        const interval = setInterval(() => {
+            setRequestsLoaded(false);
+        }, 60000);
+        return () => clearInterval(interval);
+    }, [view]);
 
     // Fetch sessions from API
     useEffect(() => {
@@ -747,7 +755,19 @@ const CounsellorAppointments = () => {
                         <div className="space-y-6">
                             <div className="text-center">
                                 <h2 className={`text-3xl font-bold ${theme.colors.text} mb-2`}>{t('appointmentRequestsTitle')}</h2>
-                                <p className={`${theme.colors.muted} text-lg`}>{t('reviewRequestsScheduleSessions')}</p>
+                                <div className="flex flex-col items-center gap-3">
+                                    <p className={`${theme.colors.muted} text-lg`}>{t('reviewRequestsScheduleSessions')}</p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setRequestsLoaded(false);
+                                        }}
+                                    >
+                                        <RefreshIcon className="w-4 h-4 mr-2" />
+                                        {loadingRequests ? t('loading') || 'Refreshing...' : t('refresh') || 'Refresh'}
+                                    </Button>
+                                </div>
                             </div>
 
                             {/* Loading State */}
@@ -1294,5 +1314,4 @@ const CounsellorAppointments = () => {
         </div>
     );
 };
-}
 export default CounsellorAppointments;

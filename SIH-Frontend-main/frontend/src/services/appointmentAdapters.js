@@ -197,14 +197,26 @@ export const transformAppointmentData = (apiAppointment) => {
     };
   }
 
-  // Transform student info (for counsellor view)
-  const studentInfo = student.first_name ? {
-    id: student_id,
-    name: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
-    rollNumber: student.roll_number || '',
-    department: student.department || '',
-    imageUrl: generatePlaceholderImage(student.first_name, student.last_name)
-  } : null;
+  // Transform student info (for counsellor view) - handle multiple formats
+  let studentInfo = null;
+  if (student && student.name) {
+    const nameParts = student.name.split(' ');
+    studentInfo = {
+      id: student.id || student_id,
+      name: student.name,
+      rollNumber: student.roll_number || '',
+      department: student.department || '',
+      imageUrl: generatePlaceholderImage(nameParts[0], nameParts[nameParts.length - 1])
+    };
+  } else if (student && student.first_name) {
+    studentInfo = {
+      id: student_id,
+      name: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
+      rollNumber: student.roll_number || '',
+      department: student.department || '',
+      imageUrl: generatePlaceholderImage(student.first_name, student.last_name)
+    };
+  }
 
   // Transform session goals to action items
   const actionItems = Array.isArray(session_goals) ? session_goals.map((goal, index) => ({
@@ -220,6 +232,7 @@ export const transformAppointmentData = (apiAppointment) => {
     counsellorId: counsellor?.id || counsellor_id,
     counsellor: counsellorInfo,
     student: studentInfo,
+    studentName: studentInfo?.name,
     date: parseDate(date),
     time: appointmentTime ? convertTo12Hour(appointmentTime) : '',
     type: type,
@@ -281,26 +294,23 @@ export const transformAppointmentRequestData = (apiRequest) => {
   console.log('[transformAppointmentRequestData] After transformAppointmentData:', transformed);
   
   if (transformed) {
-    // For appointment requests, preserve 'pending' status (don't map to 'upcoming')
-    if (apiRequest.status === 'pending') {
-      transformed.status = 'pending';
-    }
+    // For appointment requests, ALWAYS set status to 'pending' (override any base mapping)
+    transformed.status = 'pending';
     
-    if (apiRequest.student) {
-      // Backend returns student with 'name' field, not first_name/last_name
-      const studentName = apiRequest.student.name 
-        || `${apiRequest.student.first_name || ''} ${apiRequest.student.last_name || ''}`.trim()
-        || 'Student';
-      
-      transformed.studentName = studentName;
-      transformed.studentId = apiRequest.student.roll_number || apiRequest.student.id || apiRequest.student_id;
-      transformed.requestedDate = apiRequest.created_at ? parseDate(apiRequest.created_at) : new Date();
-      console.log('[transformAppointmentRequestData] Added student info:', {
-        studentName: transformed.studentName,
-        studentId: transformed.studentId,
-        requestedDate: transformed.requestedDate
-      });
-    }
+    const studentObj = apiRequest.student;
+    const studentName = studentObj?.name 
+      || `${studentObj?.first_name || ''} ${studentObj?.last_name || ''}`.trim()
+      || apiRequest.student_name
+      || 'Student';
+
+    transformed.studentName = studentName;
+    transformed.studentId = studentObj?.id || studentObj?.roll_number || apiRequest.student_id;
+    transformed.requestedDate = apiRequest.created_at ? parseDate(apiRequest.created_at) : new Date();
+    console.log('[transformAppointmentRequestData] Added student info:', {
+      studentName: transformed.studentName,
+      studentId: transformed.studentId,
+      requestedDate: transformed.requestedDate
+    });
   }
   
   console.log('[transformAppointmentRequestData] Final output:', transformed);
@@ -380,29 +390,6 @@ export const transformBookingFormToAPI = (formData) => {
   // Extract counsellor_id
   const counsellor_id = counsellorId || counsellor?.id || counsellor?.userId;
   
-  // Extract and format date (ISO format for Joi validation)
-  let appointmentDate = selectedDate || date;
-  if (appointmentDate instanceof Date) {
-    // Set to noon UTC on that date to ensure it's in the future
-    const dateOnly = new Date(Date.UTC(
-      appointmentDate.getFullYear(),
-      appointmentDate.getMonth(),
-      appointmentDate.getDate(),
-      12, 0, 0, 0  // Set to noon UTC to avoid timezone issues
-    ));
-    appointmentDate = dateOnly.toISOString();
-  } else if (typeof appointmentDate === 'string') {
-    // If already ISO string, parse and set to noon UTC
-    const parsed = new Date(appointmentDate);
-    const dateOnly = new Date(Date.UTC(
-      parsed.getFullYear(),
-      parsed.getMonth(),
-      parsed.getDate(),
-      12, 0, 0, 0  // Set to noon UTC
-    ));
-    appointmentDate = dateOnly.toISOString();
-  }
-  
   // Extract and format time (ensure 24-hour format HH:MM)
   let appointmentTime = selectedTime || time;
   if (appointmentTime && (appointmentTime.includes('AM') || appointmentTime.includes('PM'))) {
@@ -420,12 +407,31 @@ export const transformBookingFormToAPI = (formData) => {
     appointmentTime = `${String(hours).padStart(2, '0')}:${minutes}`;
   }
 
+  // Combine selected date + time into a precise ISO timestamp to satisfy Joi min("now")
+  let appointmentDate = selectedDate || date;
+  if (appointmentDate instanceof Date && appointmentTime) {
+    const [h, m] = appointmentTime.split(':').map(Number);
+    const combined = new Date(appointmentDate);
+    combined.setHours(h, m, 0, 0);
+    appointmentDate = combined.toISOString();
+  } else if (appointmentDate instanceof Date) {
+    appointmentDate = appointmentDate.toISOString();
+  } else if (typeof appointmentDate === 'string' && appointmentTime) {
+    const parsed = new Date(appointmentDate);
+    const [h, m] = appointmentTime.split(':').map(Number);
+    parsed.setHours(h, m, 0, 0);
+    appointmentDate = parsed.toISOString();
+  }
+
+  const cleanedNotes = notes && notes.trim() ? notes.trim() : undefined;
+
   return {
     counsellor_id,
     date: appointmentDate,
-    time: appointmentTime,  // Backend expects 'time', not 'start_time'
-    type: type || 'individual',  // Type is required by backend validation
-    notes: notes || ''
+    time: appointmentTime,  // Backend accepts 'time' or 'start_time'
+    type: type || 'individual',
+    // Joi disallows empty string; omit if blank
+    ...(cleanedNotes ? { notes: cleanedNotes } : {})
   };
 };
 
