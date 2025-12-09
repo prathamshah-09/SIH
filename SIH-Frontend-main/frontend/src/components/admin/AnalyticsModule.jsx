@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@context/ThemeContext';
 import { useLanguage } from '@context/LanguageContext';
+import { useAuth } from '@context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@components/ui/card';
 import { Badge } from '@components/ui/badge';
 import {
@@ -19,6 +20,7 @@ import {
   analyzeFormStructure,
   generateDataWarnings 
 } from './DynamicAnalyticsHandler';
+import api from '@services/api';
 
 // Chart Components
 const LineChart = ({ data, title, height = 300 }) => {
@@ -176,22 +178,76 @@ const DoughnutChart = ({ data, title, size = 200 }) => {
 const AnalyticsModule = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('standard'); // 'standard' or 'dynamic'
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Dummy Data for Standard Assessments
-  const standardAssessmentsData = {
+  // Fetch analytics data from backend
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, []);
+
+  const fetchAnalyticsData = async () => {
+    try {
+      setLoading(true);
+      
+      // Use appropriate endpoint based on user role
+      const endpoint = user?.role === 'counsellor' 
+        ? '/counsellor/analytics/assessments'
+        : '/admin/analytics/assessments';
+      
+      const response = await api.get(endpoint);
+      
+      setAnalyticsData(response.data.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
+      const errorMessage = err.message || 'Failed to fetch analytics data';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use real data if available, otherwise use dummy data
+  const standardAssessmentsData = analyticsData ? {
+    stressLevels: analyticsData.stressLevels || {
+      labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
+      values: [5.0, 5.0, 5.0, 5.0, 5.0],
+      average: 5.0
+    },
+    anxietyDepression: analyticsData.anxietyDepressionDistribution || {
+      labels: ['Normal', 'Mild', 'Moderate', 'Severe'],
+      values: [0, 0, 0, 0],
+      percentages: [0, 0, 0, 0]
+    },
+    riskAlerts: analyticsData.riskAlertDistribution || {
+      labels: ['Low Risk (Green)', 'Medium Risk (Yellow)', 'High Risk (Red)'],
+      values: [0, 0, 0],
+      colors: ['green', 'yellow', 'red']
+    },
+    totalStudents: analyticsData.totalStudentsAssessed || 0,
+    totalAssessments: analyticsData.totalAssessments || 0
+  } : {
     stressLevels: {
       labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
-      values: [6.2, 5.8, 7.1, 6.5, 5.9]
+      values: [6.2, 5.8, 7.1, 6.5, 5.9],
+      average: 6.3
     },
     anxietyDepression: {
       labels: ['Normal', 'Mild', 'Moderate', 'Severe'],
-      values: [45, 28, 18, 9]
+      values: [45, 28, 18, 9],
+      percentages: [45.0, 28.0, 18.0, 9.0]
     },
     riskAlerts: {
-      labels: ['Green', 'Yellow', 'Red'],
-      values: [78, 15, 7]
-    }
+      labels: ['Low Risk (Green)', 'Medium Risk (Yellow)', 'High Risk (Red)'],
+      values: [78, 15, 7],
+      colors: ['green', 'yellow', 'red']
+    },
+    totalStudents: 100,
+    totalAssessments: 250
   };
 
   // Dummy Data for Dynamic Forms - Category Based
@@ -295,29 +351,81 @@ const AnalyticsModule = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="flex gap-4 border-b">
-        <button
-          onClick={() => setActiveTab('standard')}
-          className={`pb-2 px-4 font-medium transition-all ${
-            activeTab === 'standard'
-              ? `border-b-2 border-cyan-500 ${theme.colors.text}`
-              : theme.colors.muted
-          }`}
-        >
-          {t('standardAssessments')}
-        </button>
-        <button
-          onClick={() => setActiveTab('dynamic')}
-          className={`pb-2 px-4 font-medium transition-all ${
-            activeTab === 'dynamic'
-              ? `border-b-2 border-cyan-500 ${theme.colors.text}`
-              : theme.colors.muted
-          }`}
-        >
-          {t('dynamicFormsAnalytics')}
-        </button>
-      </div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertTriangle className="w-5 h-5" />
+            <span>Error loading analytics: {error}</span>
+          </div>
+          <button 
+            onClick={fetchAnalyticsData}
+            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Content */}
+      {!loading && !error && (
+        <>
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Card className={`${theme.colors.card} border-0 shadow-lg`}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-sm ${theme.colors.muted}`}>Total Students Assessed</p>
+                    <p className="text-3xl font-bold text-cyan-500">{standardAssessmentsData.totalStudents}</p>
+                  </div>
+                  <Users className="w-12 h-12 text-cyan-500 opacity-20" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className={`${theme.colors.card} border-0 shadow-lg`}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-sm ${theme.colors.muted}`}>Total Assessments</p>
+                    <p className="text-3xl font-bold text-purple-500">{standardAssessmentsData.totalAssessments}</p>
+                  </div>
+                  <BarChart3 className="w-12 h-12 text-purple-500 opacity-20" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="flex gap-4 border-b">
+            <button
+              onClick={() => setActiveTab('standard')}
+              className={`pb-2 px-4 font-medium transition-all ${
+                activeTab === 'standard'
+                  ? `border-b-2 border-cyan-500 ${theme.colors.text}`
+                  : theme.colors.muted
+              }`}
+            >
+              {t('standardAssessments')}
+            </button>
+            <button
+              onClick={() => setActiveTab('dynamic')}
+              className={`pb-2 px-4 font-medium transition-all ${
+                activeTab === 'dynamic'
+                  ? `border-b-2 border-cyan-500 ${theme.colors.text}`
+                  : theme.colors.muted
+              }`}
+            >
+              {t('dynamicFormsAnalytics')}
+            </button>
+          </div>
 
       {/* Standard Assessments Analytics */}
       {activeTab === 'standard' && (
@@ -334,8 +442,17 @@ const AnalyticsModule = () => {
               <CardContent>
                 <LineChart data={standardAssessmentsData.stressLevels} height={250} />
                 <div className="mt-4 pt-4 border-t">
-                  <p className={`text-sm ${theme.colors.muted}`}>Average: 6.3/10</p>
-                  <Badge className="mt-2 bg-yellow-100 text-yellow-800">Moderate</Badge>
+                  <p className={`text-sm ${theme.colors.muted}`}>
+                    Average: {standardAssessmentsData.stressLevels.average}/10
+                  </p>
+                  <Badge className={`mt-2 ${
+                    standardAssessmentsData.stressLevels.average < 4 ? 'bg-green-100 text-green-800' :
+                    standardAssessmentsData.stressLevels.average < 7 ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {standardAssessmentsData.stressLevels.average < 4 ? 'Low' :
+                     standardAssessmentsData.stressLevels.average < 7 ? 'Moderate' : 'High'}
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -363,33 +480,27 @@ const AnalyticsModule = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className={`text-sm ${theme.colors.text}`}>Low Risk (Green)</span>
-                      <span className="font-bold text-green-600">78 students</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '78%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className={`text-sm ${theme.colors.text}`}>Medium Risk (Yellow)</span>
-                      <span className="font-bold text-yellow-600">15 students</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '15%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className={`text-sm ${theme.colors.text}`}>High Risk (Red)</span>
-                      <span className="font-bold text-red-600">7 students</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-red-500 h-2 rounded-full" style={{ width: '7%' }}></div>
-                    </div>
-                  </div>
+                  {standardAssessmentsData.riskAlerts.labels.map((label, index) => {
+                    const value = standardAssessmentsData.riskAlerts.values[index];
+                    const total = standardAssessmentsData.riskAlerts.values.reduce((a, b) => a + b, 0) || 1;
+                    const percentage = Math.round((value / total) * 100);
+                    const color = standardAssessmentsData.riskAlerts.colors[index];
+                    
+                    return (
+                      <div key={label}>
+                        <div className="flex justify-between mb-1">
+                          <span className={`text-sm ${theme.colors.text}`}>{label}</span>
+                          <span className={`font-bold text-${color}-600`}>{value} students</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`bg-${color}-500 h-2 rounded-full`} 
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -442,6 +553,8 @@ const AnalyticsModule = () => {
 
           {/* Coverage Explanation */}
         </div>
+      )}
+        </>
       )}
     </div>
   );
