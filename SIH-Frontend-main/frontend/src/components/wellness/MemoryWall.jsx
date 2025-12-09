@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Plus, X, Upload } from 'lucide-react';
+import { Plus, X, Upload, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import {
   Dialog,
@@ -13,75 +13,36 @@ import { Textarea } from '@components/ui/textarea';
 import { useToast } from '@hooks/use-toast';
 import { useTheme } from '@context/ThemeContext';
 import { useLanguage } from '@context/LanguageContext';
+import memoryService from '@services/memoryService';
 
-const defaultMemories = [
-  {
-    id: 1,
-    title: "LIVE GIG VIBES",
-    date: "Nov 05, 2023",
-    description: "A night full of real beats and raw energy was electric!",
-    imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop"
-  },
-  {
-    id: 2,
-    title: "HALLOWEEN SPOOK",
-    date: "Oct 31, 2023",
-    description: "Costume party frights and delights!",
-    imageUrl: "https://images.unsplash.com/photo-1509557965875-b88c97052f0e?w=400&h=400&fit=crop"
-  },
-  {
-    id: 3,
-    title: "SUMMER SUNSET",
-    date: "Aug 15, 2023",
-    description: "Golden hour at the beach with best friends.",
-    imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop"
-  },
-  {
-    id: 4,
-    title: "BIRTHDAY BASH",
-    date: "Jul 22, 2023",
-    description: "Celebrating another year of adventures!",
-    imageUrl: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=400&fit=crop"
-  },
-  {
-    id: 5,
-    title: "ROAD TRIP",
-    date: "Jun 10, 2023",
-    description: "Miles of open road and endless memories.",
-    imageUrl: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=400&fit=crop"
-  },
-  {
-    id: 6,
-    title: "COZY NIGHTS",
-    date: "Dec 25, 2022",
-    description: "Hot cocoa, fairy lights, and good company.",
-    imageUrl: "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?w=400&h=400&fit=crop"
-  }
-];
-
-const STORAGE_KEY = 'memory-wall-memories';
-
-const loadMemories = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error('Error loading memories:', e);
-  }
-  return defaultMemories;
+/**
+ * Format date from backend (YYYY-MM-DD) to display format (Mon DD, YYYY)
+ */
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: '2-digit', 
+    year: 'numeric' 
+  });
 };
 
-const saveMemories = (memories) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
-  } catch (e) {
-    console.error('Error saving memories:', e);
-  }
+/**
+ * Transform backend memory to component format
+ */
+const transformMemory = (backendMemory) => {
+  return {
+    id: backendMemory.id,
+    title: backendMemory.title.toUpperCase(),
+    date: formatDate(backendMemory.date),
+    description: backendMemory.description || '',
+    imageUrl: backendMemory.photo_url,
+    rawDate: backendMemory.date,
+    created_at: backendMemory.created_at
+  };
 };
 
-const MemoryCard = ({ memory, isLeft }) => {
+const MemoryCard = ({ memory, isLeft, onDelete }) => {
   const rotation = useMemo(() => {
     const base = (memory.id % 3 - 1) * 2;
     return base;
@@ -91,7 +52,7 @@ const MemoryCard = ({ memory, isLeft }) => {
     <div className={`flex items-start gap-12 ${isLeft ? 'flex-row' : 'flex-row-reverse'}`}>
       {/* Polaroid Photo */}
       <div 
-        className="bg-white p-4 pb-14 shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-xl"
+        className="bg-white p-4 pb-14 shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-xl relative group"
         style={{ 
           transform: `rotate(${rotation}deg)`,
         }}
@@ -101,6 +62,14 @@ const MemoryCard = ({ memory, isLeft }) => {
           alt={memory.title}
           className="w-64 h-64 object-cover"
         />
+        {/* Delete button - shows on hover */}
+        <button
+          onClick={() => onDelete(memory.id)}
+          className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center hover:bg-red-600"
+          title="Delete memory"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Note Card */}
@@ -128,6 +97,7 @@ const MemoryCard = ({ memory, isLeft }) => {
 const AddMemoryDialog = ({ onAdd }) => {
   const [open, setOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
@@ -136,6 +106,7 @@ const AddMemoryDialog = ({ onAdd }) => {
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -144,40 +115,30 @@ const AddMemoryDialog = ({ onAdd }) => {
     }
   };
 
-  const handleSubmit = () => {
-    if (!imagePreview || !title.trim() || !description.trim()) {
+  const handleSubmit = async () => {
+    if (!imagePreview || !title.trim()) {
       toast({
         title: "Missing fields",
-        description: "Please add a photo, title, and description.",
+        description: "Please add a photo, title, and date.",
         variant: "destructive"
       });
       return;
     }
 
-    const memoryDate = date || new Date().toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: '2-digit', 
-      year: 'numeric' 
-    });
-
-    onAdd({
-      title: title.toUpperCase(),
-      date: memoryDate,
-      description,
-      imageUrl: imagePreview
+    await onAdd({
+      photo: imageFile,
+      title: title.trim(),
+      date: date,
+      description: description.trim()
     });
 
     // Reset form
     setImagePreview(null);
+    setImageFile(null);
     setTitle('');
     setDescription('');
     setDate('');
     setOpen(false);
-
-    toast({
-      title: "Memory added!",
-      description: "Your memory has been pinned to the wall."
-    });
   };
 
   return (
@@ -194,7 +155,6 @@ const AddMemoryDialog = ({ onAdd }) => {
         <DialogHeader>
           <DialogTitle 
             className="text-2xl text-center text-gray-800"
-            // style={{ fontFamily: "'Pacifico', cursive" }}
           >
             Add a Memory
           </DialogTitle>
@@ -279,22 +239,93 @@ const AddMemoryDialog = ({ onAdd }) => {
 
 const MemoryWall = () => {
   const [memories, setMemories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const { toast } = useToast();
 
+  // Fetch memories from backend
+  const fetchMemories = async () => {
+    setIsLoading(true);
+    try {
+      const response = await memoryService.getAllMemories();
+      if (response.success && response.data) {
+        const transformedMemories = response.data.map(transformMemory);
+        setMemories(transformedMemories);
+      }
+    } catch (err) {
+      console.error('Error fetching memories:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load memories on component mount
   useEffect(() => {
-    setMemories(loadMemories());
+    fetchMemories();
   }, []);
 
-  const handleAddMemory = (newMemory) => {
-    const memory = {
-      ...newMemory,
-      id: Date.now()
-    };
-    const updated = [memory, ...memories];
-    setMemories(updated);
-    saveMemories(updated);
+  // Handle adding a new memory
+  const handleAddMemory = async (newMemoryData) => {
+    try {
+      const response = await memoryService.createMemory(newMemoryData);
+      
+      if (response.success && response.data) {
+        const transformedMemory = transformMemory(response.data);
+        setMemories([transformedMemory, ...memories]);
+        
+        toast({
+          title: "Memory added!",
+          description: "Your memory has been pinned to the wall."
+        });
+      }
+    } catch (err) {
+      console.error('Error creating memory:', err);
+      toast({
+        title: "Error",
+        description: "Failed to create memory. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
+
+  // Handle deleting a memory
+  const handleDeleteMemory = async (memoryId) => {
+    if (!confirm('Are you sure you want to delete this memory?')) {
+      return;
+    }
+
+    try {
+      const response = await memoryService.deleteMemory(memoryId);
+      
+      if (response.success) {
+        setMemories(memories.filter(m => m.id !== memoryId));
+        
+        toast({
+          title: "Memory deleted",
+          description: "Your memory has been removed from the wall."
+        });
+      }
+    } catch (err) {
+      console.error('Error deleting memory:', err);
+      toast({
+        title: "Error",
+        description: "Failed to delete memory. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <section className={`w-full min-h-screen ${theme.colors.background} flex items-center justify-center`}>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: '#7EC8E3' }} />
+          <p className={`${theme.colors.muted} text-lg`}>Loading your memories...</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={`w-full min-h-screen ${theme.colors.background}`}>
@@ -307,14 +338,6 @@ const MemoryWall = () => {
       
       {/* Header */}
       <div className="py-10 px-4 text-center">
-        {/* <h2 
-          className={`text-5xl mb-4 tracking-wide ${theme.colors.text}`}
-          style={{ 
-            fontFamily: "'Pacifico', cursive"
-          }}
-        >
-          Memory Wall
-        </h2> */}
         <p className={`${theme.colors.muted} text-lg`}>
           Moments worth remembering, pinned with love.
         </p>
@@ -362,7 +385,8 @@ const MemoryWall = () => {
                   >
                     <MemoryCard 
                       memory={memory} 
-                      isLeft={isLeft} 
+                      isLeft={isLeft}
+                      onDelete={handleDeleteMemory}
                     />
                   </div>
                 </div>
