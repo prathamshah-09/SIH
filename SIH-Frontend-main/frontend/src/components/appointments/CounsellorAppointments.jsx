@@ -1,9 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useToast } from '../../hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import {
+    getAppointmentRequests,
+    acceptAppointmentRequest,
+    declineAppointmentRequest,
+    getCounsellorSessions,
+    updateSessionNotesAndGoals,
+    addAvailability,
+    getAvailability,
+    deleteAvailability,
+    convertTo12Hour,
+    convertTo24Hour
+} from '../../services/appointmentService';
+import {
+    transformAppointmentRequestsListData,
+    transformCounsellorSessionsData
+} from '../../services/appointmentAdapters';
 
 // --- SVG Icons ---
 const CalendarIcon = ({ className }) => (
@@ -80,8 +97,12 @@ const getFutureDate = (days) => {
 };
 
 const formatDateToKey = (date) => {
-    return date.toISOString().split('T')[0]; // YYYY-MM-DD
-}
+    // Use local date to avoid timezone offset issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`; // YYYY-MM-DD
+};
 
 const initialCounsellorAppointments = [
     // Appointment Requests (Pending)
@@ -169,6 +190,22 @@ const CounsellorAppointments = () => {
     const [newActionText, setNewActionText] = useState({});
     const [editingActionItem, setEditingActionItem] = useState(null);
     const [editingActionText, setEditingActionText] = useState('');
+    
+    // Toast notifications
+    const { toast } = useToast();
+    
+    // Loading and Error States for API
+    const [loadingRequests, setLoadingRequests] = useState(false);
+    const [requestsLoaded, setRequestsLoaded] = useState(false);
+    const [loadingSessions, setLoadingSessions] = useState(false);
+    const [sessionsLoaded, setSessionsLoaded] = useState(false);
+    const [loadingAvailability, setLoadingAvailability] = useState(false);
+    const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+    const [processingRequest, setProcessingRequest] = useState(null);
+    const [updatingSession, setUpdatingSession] = useState(null);
+    const [addingAvailability, setAddingAvailability] = useState(false);
+    const [editingSessionNotes, setEditingSessionNotes] = useState({});
+    const [sessionNotesText, setSessionNotesText] = useState({});
 
     const toggleExpanded = (id) => {
         setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -215,6 +252,94 @@ const CounsellorAppointments = () => {
         setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, actionItems: [...(a.actionItems || []), newItem] } : a));
         setNewActionText(prev => ({ ...prev, [appointmentId]: '' }));
     };
+
+    // Session notes handlers
+    const handleEditSessionNotes = (appointmentId, currentNotes) => {
+        setEditingSessionNotes(prev => ({ ...prev, [appointmentId]: true }));
+        setSessionNotesText(prev => ({ ...prev, [appointmentId]: currentNotes || '' }));
+    };
+
+    const handleCancelEditSessionNotes = (appointmentId) => {
+        setEditingSessionNotes(prev => ({ ...prev, [appointmentId]: false }));
+        setSessionNotesText(prev => ({ ...prev, [appointmentId]: '' }));
+    };
+
+    const handleSaveSessionNotes = async (appointmentId) => {
+        const notes = (sessionNotesText[appointmentId] || '').trim();
+        const appointment = appointments.find(a => a.id === appointmentId);
+        
+        if (!appointment) return;
+
+        setUpdatingSession(appointmentId);
+
+        try {
+            // Get current action items to send with notes
+            const session_goals = appointment.actionItems?.map(item => ({
+                goal: item.text,
+                completed: item.completed
+            })) || [];
+
+            await updateSessionNotesAndGoals(appointmentId, {
+                notes,
+                session_goals
+            });
+
+            // Update local state
+            setAppointments(prev => prev.map(a => 
+                a.id === appointmentId 
+                    ? { ...a, postSessionNotes: notes, sessionNotes: notes }
+                    : a
+            ));
+            
+            setEditingSessionNotes(prev => ({ ...prev, [appointmentId]: false }));
+            toast({
+                title: "Success",
+                description: "Session notes saved successfully!"
+            });
+        } catch (err) {
+            console.error('Error saving session notes:', err);
+            toast({
+                title: "Error",
+                description: "Failed to save session notes. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setUpdatingSession(null);
+        }
+    };
+
+    const handleSaveActionItems = async (appointmentId) => {
+        const appointment = appointments.find(a => a.id === appointmentId);
+        if (!appointment) return;
+
+        setUpdatingSession(appointmentId);
+
+        try {
+            const session_goals = appointment.actionItems?.map(item => ({
+                goal: item.text,
+                completed: item.completed
+            })) || [];
+
+            await updateSessionNotesAndGoals(appointmentId, {
+                notes: appointment.postSessionNotes || appointment.sessionNotes || '',
+                session_goals
+            });
+
+            toast({
+                title: "Success",
+                description: "Action items saved successfully!"
+            });
+        } catch (err) {
+            console.error('Error saving action items:', err);
+            toast({
+                title: "Error",
+                description: "Failed to save action items. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setUpdatingSession(null);
+        }
+    };
     
     useEffect(() => {
         const interval = setInterval(() => {
@@ -235,24 +360,172 @@ const CounsellorAppointments = () => {
         return () => clearInterval(interval);
     }, [appointments]);
 
-    const handleAppointmentAction = (appointmentId, action) => {
-        const updatedAppointments = appointments.map(app => {
-            if (app.id === appointmentId) {
-                switch (action) {
-                    case 'accept':
-                        return { ...app, status: 'upcoming' };
-                    case 'decline':
-                        return { ...app, status: 'declined' };
-                    case 'reschedule':
-                        // In a real app, this would open a reschedule modal
-                        return { ...app, status: 'rescheduling' };
-                    default:
-                        return app;
-                }
+    // Fetch appointment requests from API
+    useEffect(() => {
+        const fetchRequests = async () => {
+            if (requestsLoaded || view !== 'requests') {
+                return;
             }
-            return app;
-        });
-        setAppointments(updatedAppointments);
+            
+            setLoadingRequests(true);
+            try {
+                const response = await getAppointmentRequests();
+                console.log('[CounsellorAppointments] Raw API response:', response);
+                const transformedRequests = transformAppointmentRequestsListData(response);
+                console.log('[CounsellorAppointments] After transformation:', transformedRequests);
+                
+                // Replace pending appointments with real requests
+                const updatedAppointments = appointments.map(app => 
+                    app.status !== 'pending' ? app : null
+                ).filter(Boolean);
+                
+                // Add the fetched requests
+                const finalAppointments = [...transformedRequests, ...updatedAppointments];
+                console.log('[CounsellorAppointments] Setting appointments:', finalAppointments);
+                setAppointments(finalAppointments);
+                setRequestsLoaded(true);
+            } catch (err) {
+                console.error('Error fetching appointment requests:', err);
+                toast({
+                    title: "Error",
+                    description: 'Failed to load appointment requests. Using mock data.',
+                    variant: "destructive"
+                });
+                // Keep mock data if fetch fails
+            } finally {
+                setLoadingRequests(false);
+            }
+        };
+        
+        fetchRequests();
+    }, [view, requestsLoaded]);
+
+    // Fetch sessions from API
+    useEffect(() => {
+        const fetchSessions = async () => {
+            if (sessionsLoaded || view !== 'sessions') {
+                return;
+            }
+            
+            setLoadingSessions(true);
+            try {
+                const response = await getCounsellorSessions();
+                console.log('[CounsellorAppointments] Sessions API response:', response);
+                const transformedSessions = transformCounsellorSessionsData(response);
+                console.log('[CounsellorAppointments] Transformed sessions:', transformedSessions);
+                
+                // Replace upcoming and completed appointments with real sessions
+                const requestsOnly = appointments.filter(app => app.status === 'pending');
+                
+                // Add the fetched sessions
+                const finalAppointments = [...requestsOnly, ...transformedSessions];
+                console.log('[CounsellorAppointments] Setting sessions:', finalAppointments);
+                setAppointments(finalAppointments);
+                setSessionsLoaded(true);
+            } catch (err) {
+                console.error('Error fetching sessions:', err);
+                toast({
+                    title: "Error",
+                    description: 'Failed to load sessions. Using mock data.',
+                    variant: "destructive"
+                });
+                // Keep mock data if fetch fails
+            } finally {
+                setLoadingSessions(false);
+            }
+        };
+        
+        fetchSessions();
+    }, [view, sessionsLoaded]);
+
+    // Fetch availability from API
+    useEffect(() => {
+        const fetchAvailabilityData = async () => {
+            if (availabilityLoaded || view !== 'availability') {
+                return;
+            }
+            
+            setLoadingAvailability(true);
+            try {
+                const response = await getAvailability();
+                console.log('[CounsellorAppointments] Availability API response:', response);
+                
+                // Transform response to availability object { dateKey: [slots] }
+                const availabilityMap = {};
+                if (response.data && Array.isArray(response.data)) {
+                    response.data.forEach(slot => {
+                        const dateKey = slot.date;
+                        const time12 = convertTo12Hour(slot.start_time);
+                        if (!availabilityMap[dateKey]) {
+                            availabilityMap[dateKey] = [];
+                        }
+                        availabilityMap[dateKey].push(time12);
+                    });
+                }
+                
+                setAvailability(availabilityMap);
+                setAvailabilityLoaded(true);
+            } catch (err) {
+                console.error('Error fetching availability:', err);
+                toast({
+                    title: "Error",
+                    description: 'Failed to load availability. Using mock data.',
+                    variant: "destructive"
+                });
+                // Keep mock data if fetch fails
+            } finally {
+                setLoadingAvailability(false);
+            }
+        };
+        
+        fetchAvailabilityData();
+    }, [view, availabilityLoaded, toast]);
+
+    const handleAppointmentAction = async (appointmentId, action) => {
+        setProcessingRequest(appointmentId);
+        
+        try {
+            if (action === 'accept') {
+                await acceptAppointmentRequest(appointmentId);
+                toast({
+                    title: "Success",
+                    description: "Appointment request accepted!"
+                });
+            } else if (action === 'decline') {
+                await declineAppointmentRequest(appointmentId);
+                toast({
+                    title: "Success",
+                    description: "Appointment request declined."
+                });
+            }
+            
+            // Update local state optimistically
+            const updatedAppointments = appointments.map(app => {
+                if (app.id === appointmentId) {
+                    switch (action) {
+                        case 'accept':
+                            return { ...app, status: 'upcoming' };
+                        case 'decline':
+                            return { ...app, status: 'declined' };
+                        case 'reschedule':
+                            return { ...app, status: 'rescheduling' };
+                        default:
+                            return app;
+                    }
+                }
+                return app;
+            });
+            setAppointments(updatedAppointments);
+        } catch (err) {
+            console.error(`Error ${action}ing appointment:`, err);
+            toast({
+                title: "Error",
+                description: `Failed to ${action} appointment. Please try again.`,
+                variant: "destructive"
+            });
+        } finally {
+            setProcessingRequest(null);
+        }
     };
 
     const updateAppointmentDetails = (id, newDetails) => {
@@ -309,22 +582,74 @@ const CounsellorAppointments = () => {
         return calendarDays;
     };
 
-    const handleAddTimeSlot = () => {
+    const handleAddTimeSlot = async () => {
         if (!newTimeSlot.trim() || !/^\d{1,2}:\d{2}\s(AM|PM)$/i.test(newTimeSlot.trim())) {
-            alert("Please enter a valid time format (e.g., 09:00 AM).");
+            toast({
+                title: "Invalid Format",
+                description: "Please enter a valid time format (e.g., 09:00 AM).",
+                variant: "destructive"
+            });
             return;
         }
-        const dateKey = formatDateToKey(selectedAvailabilityDate);
-        const existingSlots = availability[dateKey] || [];
-        const updatedSlots = [...existingSlots, newTimeSlot.trim().toUpperCase()].sort();
-        setAvailability({ ...availability, [dateKey]: updatedSlots });
-        setNewTimeSlot('');
+
+        setAddingAvailability(true);
+
+        try {
+            const dateKey = formatDateToKey(selectedAvailabilityDate);
+            const time24 = convertTo24Hour(newTimeSlot.trim());
+            
+            await addAvailability({
+                date: dateKey,
+                start_time: time24
+            });
+
+            // Update local state
+            const existingSlots = availability[dateKey] || [];
+            const updatedSlots = [...existingSlots, newTimeSlot.trim().toUpperCase()].sort();
+            setAvailability({ ...availability, [dateKey]: updatedSlots });
+            setNewTimeSlot('');
+            toast({
+                title: "Success",
+                description: "Availability added successfully!"
+            });
+        } catch (err) {
+            console.error('Error adding availability:', err);
+            toast({
+                title: "Error",
+                description: err.response?.data?.message || 'Failed to add availability. Please try again.',
+                variant: "destructive"
+            });
+        } finally {
+            setAddingAvailability(false);
+        }
     };
 
-    const handleRemoveTimeSlot = (time) => {
-        const dateKey = formatDateToKey(selectedAvailabilityDate);
-        const updatedSlots = (availability[dateKey] || []).filter(slot => slot !== time);
-        setAvailability({ ...availability, [dateKey]: updatedSlots });
+    const handleRemoveTimeSlot = async (time, availabilityId = null) => {
+        if (!confirm('Are you sure you want to remove this time slot?')) {
+            return;
+        }
+
+        try {
+            if (availabilityId) {
+                await deleteAvailability(availabilityId);
+            }
+
+            // Update local state
+            const dateKey = formatDateToKey(selectedAvailabilityDate);
+            const updatedSlots = (availability[dateKey] || []).filter(slot => slot !== time);
+            setAvailability({ ...availability, [dateKey]: updatedSlots });
+            toast({
+                title: "Success",
+                description: "Availability removed successfully!"
+            });
+        } catch (err) {
+            console.error('Error removing availability:', err);
+            toast({
+                title: "Error",
+                description: 'Failed to remove availability. Please try again.',
+                variant: "destructive"
+            });
+        }
     };
 
     const pendingRequests = appointments.filter(app => app.status === 'pending');
@@ -399,6 +724,18 @@ const CounsellorAppointments = () => {
                                 <h2 className={`text-3xl font-bold ${theme.colors.text} mb-2`}>{t('appointmentRequestsTitle')}</h2>
                                 <p className={`${theme.colors.muted} text-lg`}>{t('reviewRequestsScheduleSessions')}</p>
                             </div>
+
+                            {/* Loading State */}
+                            {loadingRequests ? (
+                                <div className="text-center py-8">
+                                    <div className={`inline-flex items-center justify-center space-x-2 ${theme.colors.muted}`}>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce"></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                    </div>
+                                    <p className={`mt-2 ${theme.colors.muted}`}>Loading appointment requests...</p>
+                                </div>
+                            ) : (
                             
                             <div className="space-y-6">
                                 {pendingRequests.length > 0 ? pendingRequests.map(app => (
@@ -452,11 +789,12 @@ const CounsellorAppointments = () => {
                                                 <div className="mt-3 flex space-x-3">
                                                     <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'accept')}
-                                                        className="bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white"
+                                                        disabled={processingRequest === app.id}
+                                                        className="bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                                         size="sm"
                                                     >
                                                         <CheckIcon className="w-4 h-4 mr-2" />
-                                                        {t('accept')}
+                                                        {processingRequest === app.id ? 'Processing...' : t('accept')}
                                                     </Button>
                                                     {/* <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'reschedule')}
@@ -468,11 +806,12 @@ const CounsellorAppointments = () => {
                                                     </Button> */}
                                                     <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'decline')}
-                                                        className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white"
+                                                        disabled={processingRequest === app.id}
+                                                        className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                                         size="sm"
                                                     >
                                                         <XIcon className="w-4 h-4 mr-2" />
-                                                        {t('decline')}
+                                                        {processingRequest === app.id ? 'Processing...' : t('decline')}
                                                     </Button>
                                                 </div>
                                             </div>
@@ -486,6 +825,7 @@ const CounsellorAppointments = () => {
                                     </div>
                                 )}
                             </div>
+                            )}
                         </div>
                     )}
 
@@ -495,6 +835,19 @@ const CounsellorAppointments = () => {
                                 <h2 className={`text-3xl font-bold ${theme.colors.text} mb-2`}>{t('sessions') || 'Sessions'}</h2>
                                 <p className={`${theme.colors.muted} text-lg`}>{t('reviewStudentNotes')}</p>
                             </div>
+
+                            {/* Loading State */}
+                            {loadingSessions ? (
+                                <div className="text-center py-8">
+                                    <div className={`inline-flex items-center justify-center space-x-2 ${theme.colors.muted}`}>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce"></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                    </div>
+                                    <p className={`mt-2 ${theme.colors.muted}`}>Loading sessions...</p>
+                                </div>
+                            ) : (
+                            <>
                             
                             {/* Upcoming Appointments */}
                             <div>
@@ -586,14 +939,53 @@ const CounsellorAppointments = () => {
                                             <div className={`${expanded[app.id] ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden transition-all duration-300`}> 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                                     <div>
-                                                        <label className={`font-semibold ${theme.colors.text}`}>{t('yourSessionNotesLabel')}</label>
-                                                        <textarea 
-                                                            rows="6" 
-                                                            placeholder={t('yourSessionNotesPlaceholder')} 
-                                                            value={app.postSessionNotes} 
-                                                            onChange={(e) => updateAppointmentDetails(app.id, {postSessionNotes: e.target.value})} 
-                                                            className={`mt-2 w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
-                                                        />
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <label className={`font-semibold ${theme.colors.text}`}>{t('yourSessionNotesLabel')}</label>
+                                                            {!editingSessionNotes[app.id] && (
+                                                                <Button
+                                                                    onClick={() => handleEditSessionNotes(app.id, app.postSessionNotes || app.sessionNotes)}
+                                                                    size="sm"
+                                                                    className="bg-blue-500 text-white text-xs"
+                                                                >
+                                                                    Edit
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        {editingSessionNotes[app.id] ? (
+                                                            <>
+                                                                <textarea 
+                                                                    rows="6" 
+                                                                    placeholder={t('yourSessionNotesPlaceholder')} 
+                                                                    value={sessionNotesText[app.id] || ''} 
+                                                                    onChange={(e) => setSessionNotesText(prev => ({ ...prev, [app.id]: e.target.value }))} 
+                                                                    className={`mt-2 w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
+                                                                />
+                                                                <div className="flex gap-2 mt-2">
+                                                                    <Button
+                                                                        onClick={() => handleSaveSessionNotes(app.id)}
+                                                                        disabled={updatingSession === app.id}
+                                                                        size="sm"
+                                                                        className="bg-green-500 text-white"
+                                                                    >
+                                                                        {updatingSession === app.id ? 'Saving...' : 'Save Notes'}
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => handleCancelEditSessionNotes(app.id)}
+                                                                        disabled={updatingSession === app.id}
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className={`mt-2 p-4 rounded-lg border ${theme.colors.secondary} min-h-[150px]`}>
+                                                                <p className={`${theme.colors.text}`}>
+                                                                    {app.postSessionNotes || app.sessionNotes || t('noNotesProvided')}
+                                                                </p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     
                                                     <div>
@@ -681,6 +1073,18 @@ const CounsellorAppointments = () => {
                                                                 {t('addButton') || 'Add'}
                                                             </Button>
                                                         </div>
+                                                        {app.actionItems.length > 0 && (
+                                                            <div className="mt-3">
+                                                                <Button
+                                                                    onClick={() => handleSaveActionItems(app.id)}
+                                                                    disabled={updatingSession === app.id}
+                                                                    size="sm"
+                                                                    className="w-full bg-green-500 text-white"
+                                                                >
+                                                                    {updatingSession === app.id ? 'Saving...' : 'Save All Action Items'}
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -694,6 +1098,8 @@ const CounsellorAppointments = () => {
                                 )}
                                 </div>
                             </div>
+                            </>
+                            )}
                         </div>
                     )}
 
