@@ -45,6 +45,7 @@ import CommunityView from '@components/community/CommunityView';
 import DirectMessages from '@components/community/DirectMessages';
 import { generateHistoryTitle } from '@lib/utils';
 import { getAllResources, uploadResource, deleteResource, getResourceDownloadUrl } from '@services/resourceService';
+import AnalyticsModule from '@components/admin/AnalyticsModule';
 
 // RealtimeVoice component (copied from StudentDashboard for Voice tab)
 const RealtimeVoice = ({ onAddMessage, theme }) => {
@@ -1839,13 +1840,18 @@ You are not alone, and there are people who want to help. Please reach out to on
       case 'reports':
         return (
           <div className="space-y-6">
-            <h2 className={`text-3xl font-bold ${theme.colors.text}`}>Reports & Analytics</h2>
-            <Card className={`${theme.colors.card} border-0 shadow-xl`}>
-              <CardContent className="p-8 text-center">
-                <BarChart3 className="w-16 h-16 text-cyan-500 mx-auto mb-4" />
-                <p className={`${theme.colors.muted} text-lg`}>Analytics dashboard coming soon...</p>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className={`text-3xl font-bold ${theme.colors.text} flex items-center`}>
+                  <BarChart3 className="w-8 h-8 mr-3 text-cyan-500" />
+                  Platform Analytics
+                </h2>
+                <p className={`${theme.colors.muted} mt-2`}>
+                  View comprehensive mental health assessment analytics for all students
+                </p>
+              </div>
+            </div>
+            <AnalyticsModule />
           </div>
         );
       case 'messages':
