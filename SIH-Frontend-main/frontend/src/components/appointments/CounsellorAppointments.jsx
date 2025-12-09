@@ -1293,5 +1293,5 @@ const CounsellorAppointments = () => {
         </div>
     );
 };
-
+}
 export default CounsellorAppointments;
