@@ -105,7 +105,7 @@ const GRADIENTS = {
   socialIsolation: 'from-[#efd9ff] via-[#f3eafc] to-[#fbf7ff]'
 };
 
-const WellnessTools = () => {
+const WellnessTools = ({ onNavigateToJournaling }) => {
   const { theme, currentTheme } = useTheme();
   const { t } = useLanguage();
   const [selectedProblem, setSelectedProblem] = useState(null);
@@ -204,7 +204,7 @@ const WellnessTools = () => {
         </div>
       </div>
 
-      <div className={`flex flex-wrap md:flex-nowrap justify-center gap-[3%] md:gap-[5%] p-2 sm:p-3 rounded-2xl shadow-xl ${
+      <div className={`flex flex-nowrap overflow-x-auto gap-2 p-2 sm:p-3 rounded-2xl shadow-xl justify-center ${
         currentTheme === 'midnight' 
           ? 'bg-slate-800' 
           : 'bg-gradient-to-r from-gray-50 to-gray-100'
@@ -212,14 +212,22 @@ const WellnessTools = () => {
         {problem.tools.map((tool) => (
           <Button
             key={tool}
-            onClick={() => setActiveTab(tool)}
-            variant={activeTab === tool ? 'animated' : 'outline'}
-            className={`w-[45%] md:w-[20%] py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-300 transform whitespace-nowrap flex-shrink-0 px-1 sm:px-2 ${
-              currentTheme === 'midnight' 
-                ? activeTab !== tool 
-                  ? 'text-white border-slate-600 hover:bg-slate-700' 
-                  : ''
-                : ''
+            onClick={() => {
+              if (tool === 'journaling' && onNavigateToJournaling) {
+                onNavigateToJournaling();
+                return;
+              }
+              setActiveTab(tool);
+            }}
+            variant="outline"
+            className={`py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
+              activeTab === tool
+                ? currentTheme === 'midnight'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-blue-600 text-white border-blue-600'
+                : currentTheme === 'midnight'
+                  ? 'text-white border-slate-600 hover:bg-slate-700'
+                  : 'text-gray-700 border-gray-300 hover:bg-gray-100'
             }`}
           >
             {t(tool)}

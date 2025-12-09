@@ -602,8 +602,13 @@ const CounsellorAppointments = () => {
             const dateKey = formatDateToKey(selectedAvailabilityDate);
             const time24 = convertTo24Hour(newTimeSlot.trim());
             
+            // Create ISO datetime string by combining date and time
+            const [hours, minutes] = time24.split(':');
+            const datetime = new Date(selectedAvailabilityDate);
+            datetime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            
             await addAvailability({
-                date: dateKey,
+                date: datetime.toISOString(),
                 start_time: time24
             });
 
@@ -644,10 +649,6 @@ const CounsellorAppointments = () => {
         setShowTimePicker(false);
     };
 
-    const handleRemoveTimeSlot = (time) => {
-        const dateKey = formatDateToKey(selectedAvailabilityDate);
-        const updatedSlots = (availability[dateKey] || []).filter(slot => slot !== time);
-        setAvailability({ ...availability, [dateKey]: updatedSlots });
     const handleRemoveTimeSlot = async (time, availabilityId = null) => {
         if (!confirm('Are you sure you want to remove this time slot?')) {
             return;
