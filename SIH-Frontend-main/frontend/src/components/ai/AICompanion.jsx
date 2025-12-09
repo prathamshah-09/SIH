@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
-import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Plus, Mic, Send, ChevronDown, Trash2 } from 'lucide-react';
 import ThemeLanguageSelector from '@components/shared/ThemeLanguageSelector';
@@ -438,7 +437,7 @@ const AICompanion = () => {
 
       setChats(prev => prev.filter(c => c.id !== chatId));
       if (currentChatId === chatId) {
-        setCurrentChatId(prev => {
+        setCurrentChatId(() => {
           const remaining = chats.filter(c => c.id !== chatId);
           return remaining[0]?.id || null;
         });
@@ -451,19 +450,21 @@ const AICompanion = () => {
   return (
     <div className={`chat-shell ${theme.colors.background} ${theme.colors.card}`}>
       {/* Header */}
-      <div className="flex-shrink-0 p-4 sm:p-6 border-b">
+      <div className={`flex-shrink-0 p-4 sm:p-6 border-b ${isMidnight ? 'bg-slate-900/80 border-slate-800' : 'bg-gradient-to-r from-blue-50 to-cyan-50'}`}>
         <div className="flex items-center justify-between">
-          <h2 className={`text-xl font-semibold ${theme.colors.text}`}>{t('aiCompanion') || 'AI Companion'}</h2>
+          <h2 className={`text-xl font-semibold ${isMidnight ? 'text-white' : theme.colors.text}`}>{t('aiCompanion') || 'AI Companion'}</h2>
           <div className="flex items-center space-x-2">
-            <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewChat} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800" disabled={!userId}>
+            <button aria-label="New chat" title={t('newChat') || 'New Chat'} onClick={handleNewChat} className={`p-2 rounded-md transition-colors ${isMidnight ? 'text-white hover:bg-slate-800' : 'hover:bg-gray-100'}`} disabled={!userId}>
               <Plus className="w-5 h-5" />
             </button>
 
-            <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowChatsPanel(s => !s)} className="p-2 rounded-md border hover:bg-gray-100 dark:hover:bg-gray-800 relative" disabled={!userId}>
+            <button aria-label="Show history" title={t('showHistory') || 'History'} onClick={() => setShowChatsPanel(s => !s)} className={`p-2 rounded-md border transition-colors ${isMidnight ? 'text-white border-slate-700 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'}`} disabled={!userId}>
               <ChevronDown className="w-5 h-5" />
-
-              {/* history dropdown intentionally left empty; full history panel rendered below header */}
             </button>
+
+            <div className="ml-2 pl-2 border-l border-gray-300 dark:border-slate-700">
+              <ThemeLanguageSelector />
+            </div>
           </div>
         </div>
       </div>
@@ -480,7 +481,15 @@ const AICompanion = () => {
                 {chats.map(c => (
                   <div
                     key={c.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleSelectChat(c.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSelectChat(c.id);
+                      }
+                    }}
                     className={`p-3 rounded-xl cursor-pointer transition-all ${isMidnight ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' : 'bg-white border-gray-100 hover:bg-gray-50'}`}
                   >
                     <div className="flex justify-between items-start">
@@ -533,6 +542,7 @@ const AICompanion = () => {
                 {msg.type === 'audio' ? (
                   <audio controls className="w-56 sm:w-96">
                     <source src={msg.audioUrl} />
+                    <track kind="captions" />
                     Your browser does not support the audio element.
                   </audio>
                 ) : (
