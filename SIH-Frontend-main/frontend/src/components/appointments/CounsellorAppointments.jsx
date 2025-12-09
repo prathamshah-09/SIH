@@ -48,6 +48,12 @@ const CheckIcon = ({ className }) => (
     </svg>
 );
 
+const TrashIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+);
+
 const XIcon = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -57,12 +63,6 @@ const XIcon = ({ className }) => (
 const RefreshIcon = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-    </svg>
-);
-
-const TrashIcon = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
 );
 
@@ -165,6 +165,10 @@ const CounsellorAppointments = () => {
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState(new Date());
     const [newTimeSlot, setNewTimeSlot] = useState('');
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [selectedHour, setSelectedHour] = useState('09');
+    const [selectedMinute, setSelectedMinute] = useState('00');
+    const [selectedPeriod, setSelectedPeriod] = useState('AM');
     const [expanded, setExpanded] = useState({});
     const [newActionText, setNewActionText] = useState({});
     const [editingActionItem, setEditingActionItem] = useState(null);
@@ -319,6 +323,22 @@ const CounsellorAppointments = () => {
         const updatedSlots = [...existingSlots, newTimeSlot.trim().toUpperCase()].sort();
         setAvailability({ ...availability, [dateKey]: updatedSlots });
         setNewTimeSlot('');
+    };
+
+    const handleAddTimeFromPicker = () => {
+        const timeString = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
+        const dateKey = formatDateToKey(selectedAvailabilityDate);
+        const existingSlots = availability[dateKey] || [];
+        
+        // Check if slot already exists
+        if (existingSlots.includes(timeString)) {
+            alert("This time slot already exists!");
+            return;
+        }
+        
+        const updatedSlots = [...existingSlots, timeString].sort();
+        setAvailability({ ...availability, [dateKey]: updatedSlots });
+        setShowTimePicker(false);
     };
 
     const handleRemoveTimeSlot = (time) => {
@@ -732,20 +752,108 @@ const CounsellorAppointments = () => {
                                         <h3 className={`font-bold text-lg ${theme.colors.text} mb-4`}>
                                             {t('availableSlotsForDate', { date: selectedAvailabilityDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) })}
                                         </h3>
+                                        
+                                        {/* Time Picker Toggle Button */}
                                         <div className="mb-4">
-                                            <div className="flex gap-2">
-                                                <input 
-                                                    type="text" 
-                                                    value={newTimeSlot}
-                                                    onChange={(e) => setNewTimeSlot(e.target.value)}
-                                                    placeholder={t('timeExamplePlaceholder')}
-                                                    className={`flex-grow p-2 rounded-lg border focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${isDark ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-gray-300'}`}
-                                                />
-                                                <Button onClick={handleAddTimeSlot} className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:bg-cyan-700">
-                                                    {t('addButton')}
+                                            <Button 
+                                                onClick={() => setShowTimePicker(!showTimePicker)}
+                                                className={`w-full ${isDark ? 'bg-cyan-600 hover:bg-cyan-700' : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700'} text-white flex items-center justify-center gap-2`}
+                                            >
+                                                <ClockIcon className="w-5 h-5" />
+                                                {showTimePicker ? 'Close Time Picker' : 'Select Time'}
+                                            </Button>
+                                        </div>
+
+                                        {/* Time Picker Interface */}
+                                        {showTimePicker && (
+                                            <div className={`mb-4 p-4 rounded-lg border ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-blue-50 border-blue-200'}`}>
+                                                <div className="flex items-center justify-center gap-2 mb-4">
+                                                    <ClockIcon className={`w-6 h-6 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
+                                                    <h4 className={`font-semibold ${theme.colors.text}`}>Pick a Time</h4>
+                                                </div>
+                                                
+                                                <div className="flex items-center justify-center gap-3 mb-4">
+                                                    {/* Hour Selector */}
+                                                    <div className="flex flex-col items-center">
+                                                        <label className={`text-xs mb-2 ${theme.colors.muted}`}>Hour</label>
+                                                        <select 
+                                                            value={selectedHour}
+                                                            onChange={(e) => setSelectedHour(e.target.value)}
+                                                            className={`p-2 rounded-lg border text-center text-lg font-bold focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300'}`}
+                                                        >
+                                                            {Array.from({ length: 12 }, (_, i) => {
+                                                                const hour = (i + 1).toString().padStart(2, '0');
+                                                                return <option key={hour} value={hour}>{hour}</option>;
+                                                            })}
+                                                        </select>
+                                                    </div>
+
+                                                    <span className={`text-2xl font-bold ${theme.colors.text} mt-6`}>:</span>
+
+                                                    {/* Minute Selector */}
+                                                    <div className="flex flex-col items-center">
+                                                        <label className={`text-xs mb-2 ${theme.colors.muted}`}>Minute</label>
+                                                        <select 
+                                                            value={selectedMinute}
+                                                            onChange={(e) => setSelectedMinute(e.target.value)}
+                                                            className={`p-2 rounded-lg border text-center text-lg font-bold focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300'}`}
+                                                        >
+                                                            {['00', '15', '30', '45'].map(min => (
+                                                                <option key={min} value={min}>{min}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+
+                                                    {/* AM/PM Selector */}
+                                                    <div className="flex flex-col items-center">
+                                                        <label className={`text-xs mb-2 ${theme.colors.muted}`}>Period</label>
+                                                        <select 
+                                                            value={selectedPeriod}
+                                                            onChange={(e) => setSelectedPeriod(e.target.value)}
+                                                            className={`p-2 rounded-lg border text-center text-lg font-bold focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300'}`}
+                                                        >
+                                                            <option value="AM">AM</option>
+                                                            <option value="PM">PM</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {/* Preview */}
+                                                <div className={`text-center mb-3 p-2 rounded ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                                                    <span className={`text-sm ${theme.colors.muted}`}>Selected Time: </span>
+                                                    <span className={`text-lg font-bold ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                                        {selectedHour}:{selectedMinute} {selectedPeriod}
+                                                    </span>
+                                                </div>
+
+                                                {/* Add Button */}
+                                                <Button 
+                                                    onClick={handleAddTimeFromPicker}
+                                                    className={`w-full ${isDark ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}
+                                                >
+                                                    Add Time Slot
                                                 </Button>
                                             </div>
-                                        </div>
+                                        )}
+
+                                        {/* Manual Input (Alternative) */}
+                                        {!showTimePicker && (
+                                            <div className="mb-4">
+                                                <p className={`text-xs ${theme.colors.muted} mb-2`}>Or type manually:</p>
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="text" 
+                                                        value={newTimeSlot}
+                                                        onChange={(e) => setNewTimeSlot(e.target.value)}
+                                                        placeholder={t('timeExamplePlaceholder')}
+                                                        className={`flex-grow p-2 rounded-lg border focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${isDark ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-gray-300'}`}
+                                                    />
+                                                    <Button onClick={handleAddTimeSlot} className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:bg-cyan-700">
+                                                        {t('addButton')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="space-y-2 h-64 overflow-y-auto">
                                             {(availability[formatDateToKey(selectedAvailabilityDate)] || []).length > 0 ? (
                                                 (availability[formatDateToKey(selectedAvailabilityDate)] || []).map(time => (
