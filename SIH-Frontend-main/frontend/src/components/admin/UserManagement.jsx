@@ -405,10 +405,10 @@ const UserManagement = () => {
                 {t('addStudent')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-white">
+            <DialogContent className="sm:max-w-[425px] !bg-white">
               <DialogHeader>
-                <DialogTitle>{t('addNewStudentTitle')}</DialogTitle>
-                <DialogDescription>{t('addNewStudentDesc')}</DialogDescription>
+                <DialogTitle className="text-gray-900">{t('addNewStudentTitle')}</DialogTitle>
+                <DialogDescription className="text-gray-600">{t('addNewStudentDesc')}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
@@ -500,10 +500,10 @@ const UserManagement = () => {
                 {t('addCounsellor')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-white">
+            <DialogContent className="sm:max-w-[425px] !bg-white">
               <DialogHeader>
-                <DialogTitle>{t('addNewCounsellorTitle')}</DialogTitle>
-                <DialogDescription>{t('addNewCounsellorDesc')}</DialogDescription>
+                <DialogTitle className="text-gray-900">{t('addNewCounsellorTitle')}</DialogTitle>
+                <DialogDescription className="text-gray-600">{t('addNewCounsellorDesc')}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
