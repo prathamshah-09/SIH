@@ -15,6 +15,7 @@ import AdminDashboard from "@components/dashboard/AdminDashboard";
 import AICompanion from '@components/ai/AICompanion';
 import JournalingPage from '@components/wellness/JournalingPage';
 import LandingPage from '@components/landing/LandingPage';
+import VideoCallPage from '@components/appointments/VideoCallPage';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Component that persists the current pathname and restores it after refresh
@@ -153,6 +154,15 @@ function App() {
                             <AdminDashboard />
                           </ProtectedRoute>
                         } 
+                      />
+
+                      <Route
+                        path="/video-call"
+                        element={
+                          <ProtectedRoute allowedRoles={['student', 'counsellor', 'admin', 'superadmin']}>
+                            <VideoCallPage />
+                          </ProtectedRoute>
+                        }
                       />
 
                       {/* AI Companion - available to all authenticated users */}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../../hooks/use-toast';
@@ -175,13 +176,29 @@ const CounsellorAppointments = () => {
     const { theme, currentTheme } = useTheme();
     const { t } = useLanguage();
     const isDark = currentTheme === 'midnight';
+    const navigate = useNavigate();
     
     const [view, setView] = useState('requests'); // 'requests', 'upcoming', 'past', 'availability'
+    const [availabilityStatus, setAvailabilityStatus] = useState('online'); // 'online' | 'offline'
     const [appointments, setAppointments] = useState(initialCounsellorAppointments);
+    // availability is keyed by date (YYYY-MM-DD) and stores array of slot objects { id, time }
     const [availability, setAvailability] = useState({
-        [formatDateToKey(getFutureDate(2))]: ['09:00 AM', '10:00 AM', '11:00 AM'],
-        [formatDateToKey(getFutureDate(4))]: ['02:00 PM', '03:00 PM'],
-        [formatDateToKey(getFutureDate(5))]: ['09:00 AM', '10:00 AM', '02:00 PM', '03:00 PM', '04:00 PM'],
+        [formatDateToKey(getFutureDate(2))]: [
+            { id: 'local-1', time: '09:00 AM' },
+            { id: 'local-2', time: '10:00 AM' },
+            { id: 'local-3', time: '11:00 AM' }
+        ],
+        [formatDateToKey(getFutureDate(4))]: [
+            { id: 'local-4', time: '02:00 PM' },
+            { id: 'local-5', time: '03:00 PM' }
+        ],
+        [formatDateToKey(getFutureDate(5))]: [
+            { id: 'local-6', time: '09:00 AM' },
+            { id: 'local-7', time: '10:00 AM' },
+            { id: 'local-8', time: '02:00 PM' },
+            { id: 'local-9', time: '03:00 PM' },
+            { id: 'local-10', time: '04:00 PM' }
+        ]
     });
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState(new Date());
@@ -462,7 +479,7 @@ const CounsellorAppointments = () => {
                 const response = await getAvailability();
                 console.log('[CounsellorAppointments] Availability API response:', response);
                 
-                // Transform response to availability object { dateKey: [slots] }
+                // Transform response to availability object { dateKey: [{ id, time }] }
                 const availabilityMap = {};
                 if (response.data && Array.isArray(response.data)) {
                     response.data.forEach(slot => {
@@ -471,7 +488,10 @@ const CounsellorAppointments = () => {
                         if (!availabilityMap[dateKey]) {
                             availabilityMap[dateKey] = [];
                         }
-                        availabilityMap[dateKey].push(time12);
+                        const exists = availabilityMap[dateKey].some(s => s.time === time12);
+                        if (!exists) {
+                            availabilityMap[dateKey].push({ id: slot.id, time: time12 });
+                        }
                     });
                 }
                 
@@ -508,14 +528,12 @@ const CounsellorAppointments = () => {
                     const timeSlot = appointmentToUpdate.time;
                     
                     // Find availability ID that matches this appointment
-                    const matchingAvailability = (availability[dateKey] || []).find(slot => slot === timeSlot);
+                    const matchingAvailability = (availability[dateKey] || []).find(slot => slot.time === timeSlot);
                     
                     if (matchingAvailability) {
-                        // Find the availability ID from the response or from the appointment
-                        // For now, we'll remove from UI and let backend sync on next refresh
                         setAvailability(prev => ({
                             ...prev,
-                            [dateKey]: (prev[dateKey] || []).filter(slot => slot !== timeSlot)
+                            [dateKey]: (prev[dateKey] || []).filter(slot => slot.time !== timeSlot)
                         }));
                     }
                 }
@@ -617,20 +635,32 @@ const CounsellorAppointments = () => {
         try {
             const dateKey = formatDateToKey(selectedAvailabilityDate);
             const time24 = convertTo24Hour(newTimeSlot.trim());
-            
-            // Create ISO datetime string by combining date and time
+
+            // Build a precise datetime (used for validation) and reject past times locally to avoid 422s
             const [hours, minutes] = time24.split(':');
             const datetime = new Date(selectedAvailabilityDate);
-            datetime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            datetime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+            if (datetime < new Date()) {
+                toast({
+                    title: "Invalid Time",
+                    description: "Please pick a future time for availability.",
+                    variant: "destructive"
+                });
+                setAddingAvailability(false);
+                return;
+            }
             
-            await addAvailability({
+            const response = await addAvailability({
                 date: datetime.toISOString(),
                 start_time: time24
             });
 
             // Update local state
+            const newSlotTime = newTimeSlot.trim().toUpperCase();
             const existingSlots = availability[dateKey] || [];
-            const updatedSlots = [...existingSlots, newTimeSlot.trim().toUpperCase()].sort();
+            const newSlot = { id: response?.data?.id || response?.id || `local-${Date.now()}`, time: newSlotTime, mode: availabilityStatus };
+            const updatedSlots = [...existingSlots, newSlot].sort((a, b) => a.time.localeCompare(b.time));
             setAvailability({ ...availability, [dateKey]: updatedSlots });
             setNewTimeSlot('');
             toast({
@@ -639,9 +669,13 @@ const CounsellorAppointments = () => {
             });
         } catch (err) {
             console.error('Error adding availability:', err);
+            const responseData = err.response?.data;
+            const detailText = responseData?.validation
+                ? responseData.validation.map(v => `${v.field}: ${v.message}`).join(', ')
+                : responseData?.details?.join?.(', ');
             toast({
                 title: "Error",
-                description: err.response?.data?.message || 'Failed to add availability. Please try again.',
+                description: detailText || responseData?.message || 'Failed to add availability. Please try again.',
                 variant: "destructive"
             });
         } finally {
@@ -649,35 +683,57 @@ const CounsellorAppointments = () => {
         }
     };
 
-    const handleAddTimeFromPicker = () => {
+    const handleAddTimeFromPicker = async () => {
         const timeString = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
         const dateKey = formatDateToKey(selectedAvailabilityDate);
         const existingSlots = availability[dateKey] || [];
         
         // Check if slot already exists
-        if (existingSlots.includes(timeString)) {
+        if (existingSlots.some(slot => slot.time === timeString)) {
             alert("This time slot already exists!");
             return;
         }
-        
-        const updatedSlots = [...existingSlots, timeString].sort();
-        setAvailability({ ...availability, [dateKey]: updatedSlots });
-        setShowTimePicker(false);
+
+        try {
+            // Build a full datetime to send to backend
+            const time24 = convertTo24Hour(timeString);
+            const [hours, minutes] = time24.split(':');
+            const datetime = new Date(selectedAvailabilityDate);
+            datetime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+            const response = await addAvailability({
+                date: datetime.toISOString(),
+                start_time: time24
+            });
+
+            const newSlot = { id: response?.data?.id || response?.id || `local-${Date.now()}`, time: timeString, mode: availabilityStatus };
+            const updatedSlots = [...existingSlots, newSlot].sort((a, b) => a.time.localeCompare(b.time));
+            setAvailability({ ...availability, [dateKey]: updatedSlots });
+            setShowTimePicker(false);
+            toast({ title: 'Success', description: 'Availability added successfully!' });
+        } catch (err) {
+            console.error('Error adding availability (picker):', err);
+            toast({
+                title: 'Error',
+                description: err.response?.data?.message || 'Failed to add availability.',
+                variant: 'destructive'
+            });
+        }
     };
 
-    const handleRemoveTimeSlot = async (time, availabilityId = null) => {
+    const handleRemoveTimeSlot = async (slot) => {
         if (!confirm('Are you sure you want to remove this time slot?')) {
             return;
         }
 
         try {
-            if (availabilityId) {
-                await deleteAvailability(availabilityId);
+            if (slot?.id && !`${slot.id}`.startsWith('local-')) {
+                await deleteAvailability(slot.id);
             }
 
             // Update local state
             const dateKey = formatDateToKey(selectedAvailabilityDate);
-            const updatedSlots = (availability[dateKey] || []).filter(slot => slot !== time);
+            const updatedSlots = (availability[dateKey] || []).filter(s => s.time !== slot.time || s.id !== slot.id);
             setAvailability({ ...availability, [dateKey]: updatedSlots });
             toast({
                 title: "Success",
@@ -741,6 +797,15 @@ const CounsellorAppointments = () => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
+                    <div className={`mb-6 p-4 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'} shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3`}>
+                        <div className="space-y-1">
+                            <p className={`text-sm font-semibold ${theme.colors.text}`}>Video call (Jitsi)</p>
+                            <p className={`${theme.colors.muted} text-sm`}>Create a room and share the participant link with your student.</p>
+                        </div>
+                        <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg" onClick={() => navigate('/video-call')}>
+                            Open video call page
+                        </Button>
+                    </div>
                     {/* Mobile quick actions: three tappable options (Requests / Sessions / Manage Availability) */}
                     <div className="lg:hidden mb-4">
                         <div className="grid grid-cols-3 gap-3">
@@ -810,6 +875,9 @@ const CounsellorAppointments = () => {
                                                             </div>
                                                             <Badge className={`${isDark ? 'bg-slate-700 text-orange-400' : 'bg-orange-100 text-orange-700'} px-3 py-1`}>
                                                                 {t('pending')}
+                                                            </Badge>
+                                                            <Badge className={`${availabilityStatus === 'online' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'} px-3 py-1`}>
+                                                                {availabilityStatus === 'online' ? 'Online' : 'Offline'}
                                                             </Badge>
                                                         </div>
                                                         {/* Actions moved into collapsible area so dropdown controls visibility on all sizes */}
@@ -1162,7 +1230,7 @@ const CounsellorAppointments = () => {
                                 <h2 className={`text-3xl font-bold ${theme.colors.text} mb-2`}>{t('manageAvailability')}</h2>
                                 <p className={`${theme.colors.muted} text-lg`}>{t('manageAvailabilityDesc')}</p>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <Card className={`${isDark ? 'bg-slate-800 border-slate-700' : theme.colors.card} shadow-lg ${isDark ? 'border' : 'border-0'}`}>
                                     <CardContent className="p-6">
@@ -1191,6 +1259,30 @@ const CounsellorAppointments = () => {
                                         <h3 className={`font-bold text-lg ${theme.colors.text} mb-4`}>
                                             {t('availableSlotsForDate', { date: selectedAvailabilityDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) })}
                                         </h3>
+
+                                        {/* Online/Offline toggle for availability */}
+                                        <div className={`mb-4 p-3 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-200'} flex items-center justify-between gap-3`}>
+                                            <div>
+                                                <p className={`text-sm font-semibold ${theme.colors.text}`}>Status</p>
+                                                <p className={`${theme.colors.muted} text-xs`}>Toggle your availability for bookings.</p>
+                                            </div>
+                                            <div className="flex rounded-full border border-gray-200/70 overflow-hidden shadow-sm">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAvailabilityStatus('online')}
+                                                    className={`px-4 py-2 text-sm font-semibold transition-colors ${availabilityStatus === 'online' ? 'bg-green-500 text-white' : `${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-600'}`}`}
+                                                >
+                                                    Online
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAvailabilityStatus('offline')}
+                                                    className={`px-4 py-2 text-sm font-semibold transition-colors ${availabilityStatus === 'offline' ? 'bg-gray-500 text-white' : `${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-600'}`}`}
+                                                >
+                                                    Offline
+                                                </button>
+                                            </div>
+                                        </div>
                                         
                                         {/* Time Picker Toggle Button */}
                                         <div className="mb-4">
@@ -1295,11 +1387,11 @@ const CounsellorAppointments = () => {
                                         )}
                                         <div className="space-y-2 h-64 overflow-y-auto">
                                             {(availability[formatDateToKey(selectedAvailabilityDate)] || []).length > 0 ? (
-                                                (availability[formatDateToKey(selectedAvailabilityDate)] || []).map(time => (
-                                                    <div key={time} className={`flex items-center justify-between p-3 rounded-lg border ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-cyan-50 border-cyan-200'}`}>
-                                                        <p className={`font-semibold ${theme.colors.text}`}>{time}</p>
+                                                (availability[formatDateToKey(selectedAvailabilityDate)] || []).map(slot => (
+                                                    <div key={slot.id || slot.time} className={`flex items-center justify-between p-3 rounded-lg border ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-cyan-50 border-cyan-200'}`}>
+                                                        <p className={`font-semibold ${theme.colors.text}`}>{slot.time}</p>
                                                         <Button 
-                                                            onClick={() => handleRemoveTimeSlot(time)} 
+                                                            onClick={() => handleRemoveTimeSlot(slot)} 
                                                             variant="ghost"
                                                             size="sm"
                                                             className={isDark ? 'text-red-400 hover:text-red-300 hover:bg-slate-600' : 'text-red-500 hover:text-red-700 hover:bg-red-50'}

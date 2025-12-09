@@ -88,7 +88,10 @@ export const transformCounsellorData = (apiCounsellor) => {
   const availableSlots = available_slots.map(slot => {
     if (slot.start_time) {
       // Convert 24-hour format to 12-hour format
-      return convertTo12Hour(slot.start_time);
+      return {
+        time: convertTo12Hour(slot.start_time),
+        mode: slot.mode || 'online' // default to online when missing
+      };
     }
     return null;
   }).filter(Boolean);
@@ -109,8 +112,8 @@ export const transformCounsellorData = (apiCounsellor) => {
     bio: bio,
     phone: phone,
     imageUrl: avatar_url || generatePlaceholderImage(firstName, lastName),
-    availableSlots: availableSlots,
-    available_slots: available_slots, // Keep original for detailed info
+    availableSlots: availableSlots.map(s => s.time),
+    available_slots: availableSlots, // Keep detailed info including mode
     date: date,
     email: email
   };
