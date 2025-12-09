@@ -1,9 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useToast } from '../../hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import {
+    getAppointmentRequests,
+    acceptAppointmentRequest,
+    declineAppointmentRequest,
+    getCounsellorSessions,
+    updateSessionNotesAndGoals,
+    addAvailability,
+    getAvailability,
+    deleteAvailability,
+    convertTo12Hour,
+    convertTo24Hour
+} from '../../services/appointmentService';
+import {
+    transformAppointmentRequestsListData,
+    transformCounsellorSessionsData
+} from '../../services/appointmentAdapters';
 
 // --- SVG Icons ---
 const CalendarIcon = ({ className }) => (
@@ -48,6 +65,12 @@ const CheckIcon = ({ className }) => (
     </svg>
 );
 
+const TrashIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+);
+
 const XIcon = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -57,12 +80,6 @@ const XIcon = ({ className }) => (
 const RefreshIcon = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-    </svg>
-);
-
-const TrashIcon = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
 );
 
@@ -80,8 +97,12 @@ const getFutureDate = (days) => {
 };
 
 const formatDateToKey = (date) => {
-    return date.toISOString().split('T')[0]; // YYYY-MM-DD
-}
+    // Use local date to avoid timezone offset issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`; // YYYY-MM-DD
+};
 
 const initialCounsellorAppointments = [
     // Appointment Requests (Pending)
@@ -165,10 +186,30 @@ const CounsellorAppointments = () => {
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState(new Date());
     const [newTimeSlot, setNewTimeSlot] = useState('');
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [selectedHour, setSelectedHour] = useState('09');
+    const [selectedMinute, setSelectedMinute] = useState('00');
+    const [selectedPeriod, setSelectedPeriod] = useState('AM');
     const [expanded, setExpanded] = useState({});
     const [newActionText, setNewActionText] = useState({});
     const [editingActionItem, setEditingActionItem] = useState(null);
     const [editingActionText, setEditingActionText] = useState('');
+    
+    // Toast notifications
+    const { toast } = useToast();
+    
+    // Loading and Error States for API
+    const [loadingRequests, setLoadingRequests] = useState(false);
+    const [requestsLoaded, setRequestsLoaded] = useState(false);
+    const [loadingSessions, setLoadingSessions] = useState(false);
+    const [sessionsLoaded, setSessionsLoaded] = useState(false);
+    const [loadingAvailability, setLoadingAvailability] = useState(false);
+    const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+    const [processingRequest, setProcessingRequest] = useState(null);
+    const [updatingSession, setUpdatingSession] = useState(null);
+    const [addingAvailability, setAddingAvailability] = useState(false);
+    const [editingSessionNotes, setEditingSessionNotes] = useState({});
+    const [sessionNotesText, setSessionNotesText] = useState({});
 
     const toggleExpanded = (id) => {
         setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -215,6 +256,94 @@ const CounsellorAppointments = () => {
         setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, actionItems: [...(a.actionItems || []), newItem] } : a));
         setNewActionText(prev => ({ ...prev, [appointmentId]: '' }));
     };
+
+    // Session notes handlers
+    const handleEditSessionNotes = (appointmentId, currentNotes) => {
+        setEditingSessionNotes(prev => ({ ...prev, [appointmentId]: true }));
+        setSessionNotesText(prev => ({ ...prev, [appointmentId]: currentNotes || '' }));
+    };
+
+    const handleCancelEditSessionNotes = (appointmentId) => {
+        setEditingSessionNotes(prev => ({ ...prev, [appointmentId]: false }));
+        setSessionNotesText(prev => ({ ...prev, [appointmentId]: '' }));
+    };
+
+    const handleSaveSessionNotes = async (appointmentId) => {
+        const notes = (sessionNotesText[appointmentId] || '').trim();
+        const appointment = appointments.find(a => a.id === appointmentId);
+        
+        if (!appointment) return;
+
+        setUpdatingSession(appointmentId);
+
+        try {
+            // Get current action items to send with notes
+            const session_goals = appointment.actionItems?.map(item => ({
+                goal: item.text,
+                completed: item.completed
+            })) || [];
+
+            await updateSessionNotesAndGoals(appointmentId, {
+                notes,
+                session_goals
+            });
+
+            // Update local state
+            setAppointments(prev => prev.map(a => 
+                a.id === appointmentId 
+                    ? { ...a, postSessionNotes: notes, sessionNotes: notes }
+                    : a
+            ));
+            
+            setEditingSessionNotes(prev => ({ ...prev, [appointmentId]: false }));
+            toast({
+                title: "Success",
+                description: "Session notes saved successfully!"
+            });
+        } catch (err) {
+            console.error('Error saving session notes:', err);
+            toast({
+                title: "Error",
+                description: "Failed to save session notes. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setUpdatingSession(null);
+        }
+    };
+
+    const handleSaveActionItems = async (appointmentId) => {
+        const appointment = appointments.find(a => a.id === appointmentId);
+        if (!appointment) return;
+
+        setUpdatingSession(appointmentId);
+
+        try {
+            const session_goals = appointment.actionItems?.map(item => ({
+                goal: item.text,
+                completed: item.completed
+            })) || [];
+
+            await updateSessionNotesAndGoals(appointmentId, {
+                notes: appointment.postSessionNotes || appointment.sessionNotes || '',
+                session_goals
+            });
+
+            toast({
+                title: "Success",
+                description: "Action items saved successfully!"
+            });
+        } catch (err) {
+            console.error('Error saving action items:', err);
+            toast({
+                title: "Error",
+                description: "Failed to save action items. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setUpdatingSession(null);
+        }
+    };
     
     useEffect(() => {
         const interval = setInterval(() => {
@@ -235,24 +364,172 @@ const CounsellorAppointments = () => {
         return () => clearInterval(interval);
     }, [appointments]);
 
-    const handleAppointmentAction = (appointmentId, action) => {
-        const updatedAppointments = appointments.map(app => {
-            if (app.id === appointmentId) {
-                switch (action) {
-                    case 'accept':
-                        return { ...app, status: 'upcoming' };
-                    case 'decline':
-                        return { ...app, status: 'declined' };
-                    case 'reschedule':
-                        // In a real app, this would open a reschedule modal
-                        return { ...app, status: 'rescheduling' };
-                    default:
-                        return app;
-                }
+    // Fetch appointment requests from API
+    useEffect(() => {
+        const fetchRequests = async () => {
+            if (requestsLoaded || view !== 'requests') {
+                return;
             }
-            return app;
-        });
-        setAppointments(updatedAppointments);
+            
+            setLoadingRequests(true);
+            try {
+                const response = await getAppointmentRequests();
+                console.log('[CounsellorAppointments] Raw API response:', response);
+                const transformedRequests = transformAppointmentRequestsListData(response);
+                console.log('[CounsellorAppointments] After transformation:', transformedRequests);
+                
+                // Replace pending appointments with real requests
+                const updatedAppointments = appointments.map(app => 
+                    app.status !== 'pending' ? app : null
+                ).filter(Boolean);
+                
+                // Add the fetched requests
+                const finalAppointments = [...transformedRequests, ...updatedAppointments];
+                console.log('[CounsellorAppointments] Setting appointments:', finalAppointments);
+                setAppointments(finalAppointments);
+                setRequestsLoaded(true);
+            } catch (err) {
+                console.error('Error fetching appointment requests:', err);
+                toast({
+                    title: "Error",
+                    description: 'Failed to load appointment requests. Using mock data.',
+                    variant: "destructive"
+                });
+                // Keep mock data if fetch fails
+            } finally {
+                setLoadingRequests(false);
+            }
+        };
+        
+        fetchRequests();
+    }, [view, requestsLoaded]);
+
+    // Fetch sessions from API
+    useEffect(() => {
+        const fetchSessions = async () => {
+            if (sessionsLoaded || view !== 'sessions') {
+                return;
+            }
+            
+            setLoadingSessions(true);
+            try {
+                const response = await getCounsellorSessions();
+                console.log('[CounsellorAppointments] Sessions API response:', response);
+                const transformedSessions = transformCounsellorSessionsData(response);
+                console.log('[CounsellorAppointments] Transformed sessions:', transformedSessions);
+                
+                // Replace upcoming and completed appointments with real sessions
+                const requestsOnly = appointments.filter(app => app.status === 'pending');
+                
+                // Add the fetched sessions
+                const finalAppointments = [...requestsOnly, ...transformedSessions];
+                console.log('[CounsellorAppointments] Setting sessions:', finalAppointments);
+                setAppointments(finalAppointments);
+                setSessionsLoaded(true);
+            } catch (err) {
+                console.error('Error fetching sessions:', err);
+                toast({
+                    title: "Error",
+                    description: 'Failed to load sessions. Using mock data.',
+                    variant: "destructive"
+                });
+                // Keep mock data if fetch fails
+            } finally {
+                setLoadingSessions(false);
+            }
+        };
+        
+        fetchSessions();
+    }, [view, sessionsLoaded]);
+
+    // Fetch availability from API
+    useEffect(() => {
+        const fetchAvailabilityData = async () => {
+            if (availabilityLoaded || view !== 'availability') {
+                return;
+            }
+            
+            setLoadingAvailability(true);
+            try {
+                const response = await getAvailability();
+                console.log('[CounsellorAppointments] Availability API response:', response);
+                
+                // Transform response to availability object { dateKey: [slots] }
+                const availabilityMap = {};
+                if (response.data && Array.isArray(response.data)) {
+                    response.data.forEach(slot => {
+                        const dateKey = slot.date;
+                        const time12 = convertTo12Hour(slot.start_time);
+                        if (!availabilityMap[dateKey]) {
+                            availabilityMap[dateKey] = [];
+                        }
+                        availabilityMap[dateKey].push(time12);
+                    });
+                }
+                
+                setAvailability(availabilityMap);
+                setAvailabilityLoaded(true);
+            } catch (err) {
+                console.error('Error fetching availability:', err);
+                toast({
+                    title: "Error",
+                    description: 'Failed to load availability. Using mock data.',
+                    variant: "destructive"
+                });
+                // Keep mock data if fetch fails
+            } finally {
+                setLoadingAvailability(false);
+            }
+        };
+        
+        fetchAvailabilityData();
+    }, [view, availabilityLoaded, toast]);
+
+    const handleAppointmentAction = async (appointmentId, action) => {
+        setProcessingRequest(appointmentId);
+        
+        try {
+            if (action === 'accept') {
+                await acceptAppointmentRequest(appointmentId);
+                toast({
+                    title: "Success",
+                    description: "Appointment request accepted!"
+                });
+            } else if (action === 'decline') {
+                await declineAppointmentRequest(appointmentId);
+                toast({
+                    title: "Success",
+                    description: "Appointment request declined."
+                });
+            }
+            
+            // Update local state optimistically
+            const updatedAppointments = appointments.map(app => {
+                if (app.id === appointmentId) {
+                    switch (action) {
+                        case 'accept':
+                            return { ...app, status: 'upcoming' };
+                        case 'decline':
+                            return { ...app, status: 'declined' };
+                        case 'reschedule':
+                            return { ...app, status: 'rescheduling' };
+                        default:
+                            return app;
+                    }
+                }
+                return app;
+            });
+            setAppointments(updatedAppointments);
+        } catch (err) {
+            console.error(`Error ${action}ing appointment:`, err);
+            toast({
+                title: "Error",
+                description: `Failed to ${action} appointment. Please try again.`,
+                variant: "destructive"
+            });
+        } finally {
+            setProcessingRequest(null);
+        }
     };
 
     const updateAppointmentDetails = (id, newDetails) => {
@@ -309,22 +586,94 @@ const CounsellorAppointments = () => {
         return calendarDays;
     };
 
-    const handleAddTimeSlot = () => {
+    const handleAddTimeSlot = async () => {
         if (!newTimeSlot.trim() || !/^\d{1,2}:\d{2}\s(AM|PM)$/i.test(newTimeSlot.trim())) {
-            alert("Please enter a valid time format (e.g., 09:00 AM).");
+            toast({
+                title: "Invalid Format",
+                description: "Please enter a valid time format (e.g., 09:00 AM).",
+                variant: "destructive"
+            });
             return;
         }
+
+        setAddingAvailability(true);
+
+        try {
+            const dateKey = formatDateToKey(selectedAvailabilityDate);
+            const time24 = convertTo24Hour(newTimeSlot.trim());
+            
+            await addAvailability({
+                date: dateKey,
+                start_time: time24
+            });
+
+            // Update local state
+            const existingSlots = availability[dateKey] || [];
+            const updatedSlots = [...existingSlots, newTimeSlot.trim().toUpperCase()].sort();
+            setAvailability({ ...availability, [dateKey]: updatedSlots });
+            setNewTimeSlot('');
+            toast({
+                title: "Success",
+                description: "Availability added successfully!"
+            });
+        } catch (err) {
+            console.error('Error adding availability:', err);
+            toast({
+                title: "Error",
+                description: err.response?.data?.message || 'Failed to add availability. Please try again.',
+                variant: "destructive"
+            });
+        } finally {
+            setAddingAvailability(false);
+        }
+    };
+
+    const handleAddTimeFromPicker = () => {
+        const timeString = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
         const dateKey = formatDateToKey(selectedAvailabilityDate);
         const existingSlots = availability[dateKey] || [];
-        const updatedSlots = [...existingSlots, newTimeSlot.trim().toUpperCase()].sort();
+        
+        // Check if slot already exists
+        if (existingSlots.includes(timeString)) {
+            alert("This time slot already exists!");
+            return;
+        }
+        
+        const updatedSlots = [...existingSlots, timeString].sort();
         setAvailability({ ...availability, [dateKey]: updatedSlots });
-        setNewTimeSlot('');
+        setShowTimePicker(false);
     };
 
     const handleRemoveTimeSlot = (time) => {
         const dateKey = formatDateToKey(selectedAvailabilityDate);
         const updatedSlots = (availability[dateKey] || []).filter(slot => slot !== time);
         setAvailability({ ...availability, [dateKey]: updatedSlots });
+    const handleRemoveTimeSlot = async (time, availabilityId = null) => {
+        if (!confirm('Are you sure you want to remove this time slot?')) {
+            return;
+        }
+
+        try {
+            if (availabilityId) {
+                await deleteAvailability(availabilityId);
+            }
+
+            // Update local state
+            const dateKey = formatDateToKey(selectedAvailabilityDate);
+            const updatedSlots = (availability[dateKey] || []).filter(slot => slot !== time);
+            setAvailability({ ...availability, [dateKey]: updatedSlots });
+            toast({
+                title: "Success",
+                description: "Availability removed successfully!"
+            });
+        } catch (err) {
+            console.error('Error removing availability:', err);
+            toast({
+                title: "Error",
+                description: 'Failed to remove availability. Please try again.',
+                variant: "destructive"
+            });
+        }
     };
 
     const pendingRequests = appointments.filter(app => app.status === 'pending');
@@ -399,6 +748,18 @@ const CounsellorAppointments = () => {
                                 <h2 className={`text-3xl font-bold ${theme.colors.text} mb-2`}>{t('appointmentRequestsTitle')}</h2>
                                 <p className={`${theme.colors.muted} text-lg`}>{t('reviewRequestsScheduleSessions')}</p>
                             </div>
+
+                            {/* Loading State */}
+                            {loadingRequests ? (
+                                <div className="text-center py-8">
+                                    <div className={`inline-flex items-center justify-center space-x-2 ${theme.colors.muted}`}>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce"></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                    </div>
+                                    <p className={`mt-2 ${theme.colors.muted}`}>Loading appointment requests...</p>
+                                </div>
+                            ) : (
                             
                             <div className="space-y-6">
                                 {pendingRequests.length > 0 ? pendingRequests.map(app => (
@@ -452,11 +813,12 @@ const CounsellorAppointments = () => {
                                                 <div className="mt-3 flex space-x-3">
                                                     <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'accept')}
-                                                        className="bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white"
+                                                        disabled={processingRequest === app.id}
+                                                        className="bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                                         size="sm"
                                                     >
                                                         <CheckIcon className="w-4 h-4 mr-2" />
-                                                        {t('accept')}
+                                                        {processingRequest === app.id ? 'Processing...' : t('accept')}
                                                     </Button>
                                                     {/* <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'reschedule')}
@@ -468,11 +830,12 @@ const CounsellorAppointments = () => {
                                                     </Button> */}
                                                     <Button
                                                         onClick={() => handleAppointmentAction(app.id, 'decline')}
-                                                        className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white"
+                                                        disabled={processingRequest === app.id}
+                                                        className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg hover:scale-105 transition-all duration-200 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                                         size="sm"
                                                     >
                                                         <XIcon className="w-4 h-4 mr-2" />
-                                                        {t('decline')}
+                                                        {processingRequest === app.id ? 'Processing...' : t('decline')}
                                                     </Button>
                                                 </div>
                                             </div>
@@ -486,6 +849,7 @@ const CounsellorAppointments = () => {
                                     </div>
                                 )}
                             </div>
+                            )}
                         </div>
                     )}
 
@@ -495,6 +859,19 @@ const CounsellorAppointments = () => {
                                 <h2 className={`text-3xl font-bold ${theme.colors.text} mb-2`}>{t('sessions') || 'Sessions'}</h2>
                                 <p className={`${theme.colors.muted} text-lg`}>{t('reviewStudentNotes')}</p>
                             </div>
+
+                            {/* Loading State */}
+                            {loadingSessions ? (
+                                <div className="text-center py-8">
+                                    <div className={`inline-flex items-center justify-center space-x-2 ${theme.colors.muted}`}>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce"></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                    </div>
+                                    <p className={`mt-2 ${theme.colors.muted}`}>Loading sessions...</p>
+                                </div>
+                            ) : (
+                            <>
                             
                             {/* Upcoming Appointments */}
                             <div>
@@ -586,14 +963,53 @@ const CounsellorAppointments = () => {
                                             <div className={`${expanded[app.id] ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden transition-all duration-300`}> 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                                     <div>
-                                                        <label className={`font-semibold ${theme.colors.text}`}>{t('yourSessionNotesLabel')}</label>
-                                                        <textarea 
-                                                            rows="6" 
-                                                            placeholder={t('yourSessionNotesPlaceholder')} 
-                                                            value={app.postSessionNotes} 
-                                                            onChange={(e) => updateAppointmentDetails(app.id, {postSessionNotes: e.target.value})} 
-                                                            className={`mt-2 w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
-                                                        />
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <label className={`font-semibold ${theme.colors.text}`}>{t('yourSessionNotesLabel')}</label>
+                                                            {!editingSessionNotes[app.id] && (
+                                                                <Button
+                                                                    onClick={() => handleEditSessionNotes(app.id, app.postSessionNotes || app.sessionNotes)}
+                                                                    size="sm"
+                                                                    className="bg-blue-500 text-white text-xs"
+                                                                >
+                                                                    Edit
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        {editingSessionNotes[app.id] ? (
+                                                            <>
+                                                                <textarea 
+                                                                    rows="6" 
+                                                                    placeholder={t('yourSessionNotesPlaceholder')} 
+                                                                    value={sessionNotesText[app.id] || ''} 
+                                                                    onChange={(e) => setSessionNotesText(prev => ({ ...prev, [app.id]: e.target.value }))} 
+                                                                    className={`mt-2 w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${theme.colors.card}`}
+                                                                />
+                                                                <div className="flex gap-2 mt-2">
+                                                                    <Button
+                                                                        onClick={() => handleSaveSessionNotes(app.id)}
+                                                                        disabled={updatingSession === app.id}
+                                                                        size="sm"
+                                                                        className="bg-green-500 text-white"
+                                                                    >
+                                                                        {updatingSession === app.id ? 'Saving...' : 'Save Notes'}
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => handleCancelEditSessionNotes(app.id)}
+                                                                        disabled={updatingSession === app.id}
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className={`mt-2 p-4 rounded-lg border ${theme.colors.secondary} min-h-[150px]`}>
+                                                                <p className={`${theme.colors.text}`}>
+                                                                    {app.postSessionNotes || app.sessionNotes || t('noNotesProvided')}
+                                                                </p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     
                                                     <div>
@@ -681,6 +1097,18 @@ const CounsellorAppointments = () => {
                                                                 {t('addButton') || 'Add'}
                                                             </Button>
                                                         </div>
+                                                        {app.actionItems.length > 0 && (
+                                                            <div className="mt-3">
+                                                                <Button
+                                                                    onClick={() => handleSaveActionItems(app.id)}
+                                                                    disabled={updatingSession === app.id}
+                                                                    size="sm"
+                                                                    className="w-full bg-green-500 text-white"
+                                                                >
+                                                                    {updatingSession === app.id ? 'Saving...' : 'Save All Action Items'}
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -694,6 +1122,8 @@ const CounsellorAppointments = () => {
                                 )}
                                 </div>
                             </div>
+                            </>
+                            )}
                         </div>
                     )}
 
@@ -732,20 +1162,108 @@ const CounsellorAppointments = () => {
                                         <h3 className={`font-bold text-lg ${theme.colors.text} mb-4`}>
                                             {t('availableSlotsForDate', { date: selectedAvailabilityDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) })}
                                         </h3>
+                                        
+                                        {/* Time Picker Toggle Button */}
                                         <div className="mb-4">
-                                            <div className="flex gap-2">
-                                                <input 
-                                                    type="text" 
-                                                    value={newTimeSlot}
-                                                    onChange={(e) => setNewTimeSlot(e.target.value)}
-                                                    placeholder={t('timeExamplePlaceholder')}
-                                                    className={`flex-grow p-2 rounded-lg border focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${isDark ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-gray-300'}`}
-                                                />
-                                                <Button onClick={handleAddTimeSlot} className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:bg-cyan-700">
-                                                    {t('addButton')}
+                                            <Button 
+                                                onClick={() => setShowTimePicker(!showTimePicker)}
+                                                className={`w-full ${isDark ? 'bg-cyan-600 hover:bg-cyan-700' : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700'} text-white flex items-center justify-center gap-2`}
+                                            >
+                                                <ClockIcon className="w-5 h-5" />
+                                                {showTimePicker ? 'Close Time Picker' : 'Select Time'}
+                                            </Button>
+                                        </div>
+
+                                        {/* Time Picker Interface */}
+                                        {showTimePicker && (
+                                            <div className={`mb-4 p-4 rounded-lg border ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-blue-50 border-blue-200'}`}>
+                                                <div className="flex items-center justify-center gap-2 mb-4">
+                                                    <ClockIcon className={`w-6 h-6 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
+                                                    <h4 className={`font-semibold ${theme.colors.text}`}>Pick a Time</h4>
+                                                </div>
+                                                
+                                                <div className="flex items-center justify-center gap-3 mb-4">
+                                                    {/* Hour Selector */}
+                                                    <div className="flex flex-col items-center">
+                                                        <label className={`text-xs mb-2 ${theme.colors.muted}`}>Hour</label>
+                                                        <select 
+                                                            value={selectedHour}
+                                                            onChange={(e) => setSelectedHour(e.target.value)}
+                                                            className={`p-2 rounded-lg border text-center text-lg font-bold focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300'}`}
+                                                        >
+                                                            {Array.from({ length: 12 }, (_, i) => {
+                                                                const hour = (i + 1).toString().padStart(2, '0');
+                                                                return <option key={hour} value={hour}>{hour}</option>;
+                                                            })}
+                                                        </select>
+                                                    </div>
+
+                                                    <span className={`text-2xl font-bold ${theme.colors.text} mt-6`}>:</span>
+
+                                                    {/* Minute Selector */}
+                                                    <div className="flex flex-col items-center">
+                                                        <label className={`text-xs mb-2 ${theme.colors.muted}`}>Minute</label>
+                                                        <select 
+                                                            value={selectedMinute}
+                                                            onChange={(e) => setSelectedMinute(e.target.value)}
+                                                            className={`p-2 rounded-lg border text-center text-lg font-bold focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300'}`}
+                                                        >
+                                                            {['00', '15', '30', '45'].map(min => (
+                                                                <option key={min} value={min}>{min}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+
+                                                    {/* AM/PM Selector */}
+                                                    <div className="flex flex-col items-center">
+                                                        <label className={`text-xs mb-2 ${theme.colors.muted}`}>Period</label>
+                                                        <select 
+                                                            value={selectedPeriod}
+                                                            onChange={(e) => setSelectedPeriod(e.target.value)}
+                                                            className={`p-2 rounded-lg border text-center text-lg font-bold focus:ring-2 focus:ring-cyan-400 ${isDark ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300'}`}
+                                                        >
+                                                            <option value="AM">AM</option>
+                                                            <option value="PM">PM</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {/* Preview */}
+                                                <div className={`text-center mb-3 p-2 rounded ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                                                    <span className={`text-sm ${theme.colors.muted}`}>Selected Time: </span>
+                                                    <span className={`text-lg font-bold ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                                        {selectedHour}:{selectedMinute} {selectedPeriod}
+                                                    </span>
+                                                </div>
+
+                                                {/* Add Button */}
+                                                <Button 
+                                                    onClick={handleAddTimeFromPicker}
+                                                    className={`w-full ${isDark ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}
+                                                >
+                                                    Add Time Slot
                                                 </Button>
                                             </div>
-                                        </div>
+                                        )}
+
+                                        {/* Manual Input (Alternative) */}
+                                        {!showTimePicker && (
+                                            <div className="mb-4">
+                                                <p className={`text-xs ${theme.colors.muted} mb-2`}>Or type manually:</p>
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="text" 
+                                                        value={newTimeSlot}
+                                                        onChange={(e) => setNewTimeSlot(e.target.value)}
+                                                        placeholder={t('timeExamplePlaceholder')}
+                                                        className={`flex-grow p-2 rounded-lg border focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 ${isDark ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-gray-300'}`}
+                                                    />
+                                                    <Button onClick={handleAddTimeSlot} className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:bg-cyan-700">
+                                                        {t('addButton')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="space-y-2 h-64 overflow-y-auto">
                                             {(availability[formatDateToKey(selectedAvailabilityDate)] || []).length > 0 ? (
                                                 (availability[formatDateToKey(selectedAvailabilityDate)] || []).map(time => (

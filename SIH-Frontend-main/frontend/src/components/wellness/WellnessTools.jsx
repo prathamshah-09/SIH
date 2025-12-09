@@ -134,7 +134,7 @@ const WellnessTools = ({ onNavigateToJournaling }) => {
       <div className="space-y-6 pb-8">
         <div className="text-center">
           <h2 className={`text-2xl sm:text-3xl font-extrabold ${theme.colors.text} mb-3`}>
-            {t('selectProblem') || 'What are you dealing with today?'}
+            {t('selectProblem') || ''}
           </h2>
         </div>
 

@@ -319,7 +319,7 @@ const MemoryWall = () => {
           Moments worth remembering, pinned with love.
         </p>
       </div>
-      
+
       {/* Timeline Container with smooth scroll */}
       <div 
         className="relative px-8 pb-24 overflow-y-auto scroll-smooth"
